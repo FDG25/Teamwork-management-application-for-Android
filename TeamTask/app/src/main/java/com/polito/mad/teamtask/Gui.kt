@@ -1697,9 +1697,12 @@ class AppFactory(
 class AppViewModel(
     val appModel: AppModel
 ) : ViewModel() {
-    //val userId = appModel.userId
+    val userId = appModel.userId
+
     // User
     //val userId by mutableStateOf("GQQwO62zw1M2TGBvoojK")
+
+    /*
     val auth = FirebaseAuth.getInstance()
     var userId = auth.currentUser?.uid.toString()
 
@@ -1735,7 +1738,7 @@ class AppViewModel(
             }
         }
     }
-
+    */
 
     // Login status
     private val _isLoggedIn = MutableStateFlow(false)
@@ -1812,10 +1815,12 @@ fun AppMainScreen(
     val isLoggedIn by appVM.isLoggedIn.collectAsState()
     val isSignUpFlow by appVM.isSignUpFlow.collectAsState()
 
+    /*
     if(isLoggedIn==true) {
         appVM.fetchCurrentUser()
         Log.e("login", appVM.userId)
     }
+    */
 
 
     // Load database
