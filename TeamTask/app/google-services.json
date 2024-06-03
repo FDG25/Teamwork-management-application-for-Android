@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "1057705652233",
+    "project_id": "teamtask-55f5e",
+    "storage_bucket": "teamtask-55f5e.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1057705652233:android:97376dbe6973390e8a08d8",
+        "android_client_info": {
+          "package_name": "com.polito.mad.teamtask"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1057705652233-52oa1g2cjmqfpu5mj2b4870ta5fp5tld.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.polito.mad.teamtask",
+            "certificate_hash": "1b507d2b8fbd45cc648b0b386e15435fa98ecf6f"
+          }
+        },
+        {
+          "client_id": "1057705652233-fabqplcpreute2ivg58jh67a1obu1gp4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.polito.mad.teamtask",
+            "certificate_hash": "343479f6562d9d676ed70b80aa9d06710f530b14"
+          }
+        },
+        {
+          "client_id": "1057705652233-gejvdsthkqu8d36d0vcvffbk0efc9d70.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBf6d0J4a9DS4Jt4avwdZkN6UEOpduX2Yo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1057705652233-gejvdsthkqu8d36d0vcvffbk0efc9d70.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

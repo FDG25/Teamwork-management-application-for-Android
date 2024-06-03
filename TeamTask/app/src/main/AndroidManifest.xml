@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Internet access -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- THE PERMISSIONS SPECIFIED HERE ARE THOSE SHOWED UP WHEN YOU GO IN
+    THE SMARTPHONE SETTINGS AND ON THE PERMISSIONS FOR TEAMTASK-->
+    <uses-feature android:name="android.hardware.camera.any" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <application
+        android:name=".TeamTask"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@drawable/teamtasklogo"
+        android:label="@string/app_name"
+        android:roundIcon="@drawable/teamtasklogo"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.TeamTask"
+        tools:targetApi="31">
+        <activity
+            android:name=".MainActivity"
+            android:windowSoftInputMode="adjustResize"
+            android:exported="true"
+            android:theme="@style/Theme.TeamTask">
+            <!-- android:launchMode="singleTask"> --> <!-- ensures that a new instance of your activity is not created if an instance already exists.  This helps in avoiding the app being launched inside WhatsApp or any other app. -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Intent filter for deep link handling -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
+                <data android:host="teamtask.com" />
+                <data android:pathPrefix="/invite" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".CameraActivity" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/path_provider" />
+        </provider>
+
+        <!-- <uses-permission android:name="android.permission.CAMERA" /> -->
+    </application>
+
+</manifest>

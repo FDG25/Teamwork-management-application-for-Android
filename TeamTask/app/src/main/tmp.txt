@@ -1,0 +1,173 @@
+###### CHIAVI ######
+
+Comments
+    0 - 05dK0s6oiyJesGlp0jH3
+    1 - 0VFj8t0q9H52LEFqhUkh
+    2 - ALy0XNAUTbXTD33RMC54
+    3 - MCtbGQ5J7wNq8Rg6YySK
+    4 - U7KGR2Gd3VMW4LHEkeB6
+    5 - lwoE1HgdS5EQjxltaNS0
+    6 - xCDt0aedqyV7dfiBDmzm
+
+Notifications
+    0 - 07Q35WYkUa128Gfyx0T2
+    1 - 32QkzhjdIRdiO2aZpZtO
+    2 - BBvgfJW2kGnn9TsBhuqA
+    3 - ECfRfsqzebmA6O6hF2u0
+    4 - J3tMh5DMgVrlrwm3FiOv
+    5 - KaaTdmZN2oPk8lHQLqFD
+    6 - XtqCyegUFSlYneQEwPjO
+    7 - huQme6lqURLD9RT1dQ4k
+    8 - pQXHBosutgxKlyWJVqr3
+    9 - wNXr1QV1H3Glq623VmpY
+
+People
+    0 - GQQwO62zw1M2TGBvoojK
+    1 - Nfv7ZeVM6bRf7JWrUcry
+    2 - NvorEEWrDuu1SO9qRJtx
+    3 - QmOr0AEHvFtkxgibopg8
+    4 - YDUnZlCCfr6UBNMFl80q
+    5 - euqiPmZEZ0og9Xr9KHPB
+    6 - n5WzNjgdB1Ze87AzNwP6
+    7 - pCGXtqe1YUZjLoTw4Xcs
+    8 - sfObUYlW03pG8NKHds07
+    9 - uvLnfNtOK0BHoiRGH8I1
+
+Private messages
+    0 - 4oR3d1h0hnHhMSv9WsjC
+    1 - J8v371wxyTEV76hT0Z54
+    2 - TZk4FlEzy1mNm06CPqQG
+    3 - UlhS9gTecZmHOTLwCd4J
+    4 - VYi9cXJjsxFaGPpUdomJ
+    5 - bOqMU8pUphqVOBrF8KME
+    6 - hWDCSuXPKEIWyb0Cuhzu
+    7 - iE9Up1iMlPTR144IYJk1
+    8 - kZUv6r5LVPieGl6Qga7x
+    9 - zb2YjWKZNQi92kBvOXWf
+
+Task replies
+    0 - Citp28JQgrEybiEacHi8
+    1 - KMzMXEU3eUEeOyvbr0Ob
+    2 - KkEA31fk6KzsMDhIPFaz
+    3 - kebko6i0aEnBvoXCWOxZ
+
+Tasks
+    0 - 9dA7vp3d8M0lajgLjL2q
+    1 - AMORjs3odhqqCJzsNo8e
+    2 - CJLnRe9GCKXIB57nL2To
+    3 - MeXamClOJtClYkbEOkwa
+    4 - QA0pfmoPjJ2ZZeO2yevL
+    5 - Vn26W6vtttbHYaYfsnRb
+    6 - auuGIWqnPexKRfYBxXJu
+    7 - ch5yZb3O7x3q3EYiH5Qb
+    8 - ftREVueRne3WEiUipdkE
+    9 - nUvOWBsRmnahmHcBO99b
+
+Team messages
+    0 - 5weLSm8lClrBkqEXnhFG
+    1 - GidLiswCH42BRWUIPLvc
+    2 - JjX4oBlbWrYRRd4a7VkX
+    3 - SLBx6lHq4K7yx7cdNdgH
+    4 - SqjjDmfXJOgxNrknHI2K
+    5 - VR8C9bAVtU7UzvBdZty5
+    6 - Zueny9odMxL98AnSB0wJ
+    7 - aO8PbRaPaACiKr6vpskg
+    8 - rNfukjeJqY4sdEn3RhVH
+    9 - vNmzpi4JGCywQkcRNFDn
+
+Teams
+    0 - ALx2Fsv1mFmK9idVgh8s
+    1 - C2AxhSNL4ydnTsWYtdoJ
+    2 - HuilGAPVWlTcB4C7yVEC
+    3 - I55o5cF68RYDrjzZfpn4
+    4 - NHgJB5PMIywqc6s7cZTq
+    5 - Ol5q2ak8XBXa5JPdvTlL
+    6 - rcK7JkW5UGbiYOZ99n36
+    7 - sUQOZ7ETu2nWNe88d7Nu
+
+
+
+
+###### DISPOSIZIONI ######
+
+Team-Task
+    Team ALx2Fsv1mFmK9idVgh8s: Task nUvOWBsRmnahmHcBO99bdA7vp3d8M0lajgLjL2q, Task ftREVueRne3WEiUipdkE
+    Team C2AxhSNL4ydnTsWYtdoJ: Task AMORjs3odhqqCJzsNo8e, Task nUvOWBsRmnahmHcBO99b
+    Team HuilGAPVWlTcB4C7yVEC: Task CJLnRe9GCKXIB57nL2To
+    Team I55o5cF68RYDrjzZfpn4: Task MeXamClOJtClYkbEOkwa
+    Team NHgJB5PMIywqc6s7cZTq: Task QA0pfmoPjJ2ZZeO2yevL
+    Team Ol5q2ak8XBXa5JPdvTlL: Task Vn26W6vtttbHYaYfsnRb
+    Team rcK7JkW5UGbiYOZ99n36: Task auuGIWqnPexKRfYBxXJu
+    Team sUQOZ7ETu2nWNe88d7Nu: Task ch5yZb3O7x3q3EYiH5Qb
+
+Team-Person:
+    Team ALx2Fsv1mFmK9idVgh8s: Person GQQwO62zw1M2TGBvoojK, Person YDUnZlCCfr6UBNMFl80q, Person pCGXtqe1YUZjLoTw4Xcs
+    Team C2AxhSNL4ydnTsWYtdoJ: Person Nfv7ZeVM6bRf7JWrUcry, Person euqiPmZEZ0og9Xr9KHPB
+    Team HuilGAPVWlTcB4C7yVEC: Person NvorEEWrDuu1SO9qRJtx, Person sfObUYlW03pG8NKHds07
+    Team I55o5cF68RYDrjzZfpn4: Person QmOr0AEHvFtkxgibopg8
+    Team NHgJB5PMIywqc6s7cZTq: Person YDUnZlCCfr6UBNMFl80q, Person uvLnfNtOK0BHoiRGH8I1
+    Team Ol5q2ak8XBXa5JPdvTlL: 
+    Team rcK7JkW5UGbiYOZ99n36: 
+    Team sUQOZ7ETu2nWNe88d7Nu: 
+
+Task-Person:
+    Task nUvOWBsRmnahmHcBO99bdA7vp3d8M0lajgLjL2q: Person GQQwO62zw1M2TGBvoojK, Person NvorEEWrDuu1SO9qRJtx
+    Task AMORjs3odhqqCJzsNo8e: Person Nfv7ZeVM6bRf7JWrUcry, Person QmOr0AEHvFtkxgibopg8
+    Task CJLnRe9GCKXIB57nL2To: Person YDUnZlCCfr6UBNMFl80q
+    Task MeXamClOJtClYkbEOkwa: Person euqiPmZEZ0og9Xr9KHPB
+    Task QA0pfmoPjJ2ZZeO2yevL: Person n5WzNjgdB1Ze87AzNwP6
+    Task Vn26W6vtttbHYaYfsnRb: Person pCGXtqe1YUZjLoTw4Xcs
+    Task auuGIWqnPexKRfYBxXJu: 
+    Task ch5yZb3O7x3q3EYiH5Qb: 
+    Task ftREVueRne3WEiUipdkE: Person sfObUYlW03pG8NKHds07
+    Task nUvOWBsRmnahmHcBO99b: Person uvLnfNtOK0BHoiRGH8I1
+
+Comments:
+    05dK0s6oiyJesGlp0jH3: Person GQQwO62zw1M2TGBvoojK su Task nUvOWBsRmnahmHcBO99bdA7vp3d8M0lajgLjL2q
+    0VFj8t0q9H52LEFqhUkh: Person YDUnZlCCfr6UBNMFl80q su Task CJLnRe9GCKXIB57nL2To
+    ALy0XNAUTbXTD33RMC54: Person Nfv7ZeVM6bRf7JWrUcry su Task AMORjs3odhqqCJzsNo8e
+    MCtbGQ5J7wNq8Rg6YySK: Person NvorEEWrDuu1SO9qRJtx su Task nUvOWBsRmnahmHcBO99bdA7vp3d8M0lajgLjL2q
+    U7KGR2Gd3VMW4LHEkeB6: Person euqiPmZEZ0og9Xr9KHPB su Task MeXamClOJtClYkbEOkwa
+    lwoE1HgdS5EQjxltaNS0: Person n5WzNjgdB1Ze87AzNwP6 su Task QA0pfmoPjJ2ZZeO2yevL
+
+Notifications:
+    07Q35WYkUa128Gfyx0T2: Task nUvOWBsRmnahmHcBO99bdA7vp3d8M0lajgLjL2q, inviato da Person GQQwO62zw1M2TGBvoojK a Person NvorEEWrDuu1SO9qRJtx
+    32QkzhjdIRdiO2aZpZtO: Task AMORjs3odhqqCJzsNo8e, inviato da Person Nfv7ZeVM6bRf7JWrUcry a Person QmOr0AEHvFtkxgibopg8
+    BBvgfJW2kGnn9TsBhuqA: Task nUvOWBsRmnahmHcBO99bdA7vp3d8M0lajgLjL2q, inviato da Person NvorEEWrDuu1SO9qRJtx a Person GQQwO62zw1M2TGBvoojK
+    ECfRfsqzebmA6O6hF2u0: Task AMORjs3odhqqCJzsNo8e, inviato da Person QmOr0AEHvFtkxgibopg8 a Person Nfv7ZeVM6bRf7JWrUcry
+    J3tMh5DMgVrlrwm3FiOv: Task nUvOWBsRmnahmHcBO99bdA7vp3d8M0lajgLjL2q, inviato da Person GQQwO62zw1M2TGBvoojK a Person NvorEEWrDuu1SO9qRJtx
+    KaaTdmZN2oPk8lHQLqFD: Task nUvOWBsRmnahmHcBO99bdA7vp3d8M0lajgLjL2q, inviato da Person NvorEEWrDuu1SO9qRJtx a Person GQQwO62zw1M2TGBvoojK
+    XtqCyegUFSlYneQEwPjO: Task AMORjs3odhqqCJzsNo8e, inviato da Person Nfv7ZeVM6bRf7JWrUcry a Person QmOr0AEHvFtkxgibopg8
+    huQme6lqURLD9RT1dQ4k: Task AMORjs3odhqqCJzsNo8e, inviato da Person QmOr0AEHvFtkxgibopg8 a Person Nfv7ZeVM6bRf7JWrUcry
+    pQXHBosutgxKlyWJVqr3: Task nUvOWBsRmnahmHcBO99bdA7vp3d8M0lajgLjL2q, inviato da Person GQQwO62zw1M2TGBvoojK a Person NvorEEWrDuu1SO9qRJtx
+    wNXr1QV1H3Glq623VmpY: Task nUvOWBsRmnahmHcBO99bdA7vp3d8M0lajgLjL2q, inviato da Person NvorEEWrDuu1SO9qRJtx a Person GQQwO62zw1M2TGBvoojK
+
+Private messages:
+    4oR3d1h0hnHhMSv9WsjC: inviato da Person GQQwO62zw1M2TGBvoojK a Person Nfv7ZeVM6bRf7JWrUcry
+    J8v371wxyTEV76hT0Z54: inviato da Person NvorEEWrDuu1SO9qRJtx a Person QmOr0AEHvFtkxgibopg8
+    TZk4FlEzy1mNm06CPqQG: inviato da Person YDUnZlCCfr6UBNMFl80q a Person euqiPmZEZ0og9Xr9KHPB
+    UlhS9gTecZmHOTLwCd4J: inviato da Person n5WzNjgdB1Ze87AzNwP6 a Person pCGXtqe1YUZjLoTw4Xcs
+    VYi9cXJjsxFaGPpUdomJ: inviato da Person sfObUYlW03pG8NKHds07 a Person uvLnfNtOK0BHoiRGH8I1
+    bOqMU8pUphqVOBrF8KME: inviato da Person Nfv7ZeVM6bRf7JWrUcry a Person GQQwO62zw1M2TGBvoojK
+    hWDCSuXPKEIWyb0Cuhzu: inviato da Person QmOr0AEHvFtkxgibopg8 a Person NvorEEWrDuu1SO9qRJtx
+    iE9Up1iMlPTR144IYJk1: inviato da Person euqiPmZEZ0og9Xr9KHPB a Person YDUnZlCCfr6UBNMFl80q
+    kZUv6r5LVPieGl6Qga7x: inviato da Person pCGXtqe1YUZjLoTw4Xcs a Person n5WzNjgdB1Ze87AzNwP6
+    zb2YjWKZNQi92kBvOXWf: inviato da Person uvLnfNtOK0BHoiRGH8I1 a Person sfObUYlW03pG8NKHds07
+
+Task replies:
+    Citp28JQgrEybiEacHi8: riferito a Comment 05dK0s6oiyJesGlp0jH3 inviato da Person NvorEEWrDuu1SO9qRJtx
+    KMzMXEU3eUEeOyvbr0Ob: riferito a Comment ALy0XNAUTbXTD33RMC54 inviato da Person QmOr0AEHvFtkxgibopg8
+    KkEA31fk6KzsMDhIPFaz: riferito a Comment MCtbGQ5J7wNq8Rg6YySK inviato da Person GQQwO62zw1M2TGBvoojK
+    kebko6i0aEnBvoXCWOxZ: riferito a Comment 0VFj8t0q9H52LEFqhUkh inviato da Person YDUnZlCCfr6UBNMFl80q
+
+Team messages
+    5weLSm8lClrBkqEXnhFG - inviato da Person GQQwO62zw1M2TGBvoojK in Team ALx2Fsv1mFmK9idVgh8s
+    GidLiswCH42BRWUIPLvc - inviato da Person YDUnZlCCfr6UBNMFl80q in Team ALx2Fsv1mFmK9idVgh8s
+    JjX4oBlbWrYRRd4a7VkX - inviato da Person pCGXtqe1YUZjLoTw4Xcs in Team ALx2Fsv1mFmK9idVgh8s
+    SLBx6lHq4K7yx7cdNdgH - inviato da Person GQQwO62zw1M2TGBvoojK in Team ALx2Fsv1mFmK9idVgh8s
+    SqjjDmfXJOgxNrknHI2K - inviato da Person Nfv7ZeVM6bRf7JWrUcry in Team C2AxhSNL4ydnTsWYtdoJ
+    VR8C9bAVtU7UzvBdZty5 - inviato da Person euqiPmZEZ0og9Xr9KHPB in Team C2AxhSNL4ydnTsWYtdoJ
+    Zueny9odMxL98AnSB0wJ - inviato da Person NvorEEWrDuu1SO9qRJtx in Team HuilGAPVWlTcB4C7yVEC
+    aO8PbRaPaACiKr6vpskg - inviato da Person sfObUYlW03pG8NKHds07 in Team HuilGAPVWlTcB4C7yVEC
+    rNfukjeJqY4sdEn3RhVH - inviato da Person QmOr0AEHvFtkxgibopg8 in Team I55o5cF68RYDrjzZfpn4
+    vNmzpi4JGCywQkcRNFDn - inviato da Person YDUnZlCCfr6UBNMFl80q in Team NHgJB5PMIywqc6s7cZTq
