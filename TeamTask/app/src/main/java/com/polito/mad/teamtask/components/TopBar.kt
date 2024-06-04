@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
@@ -39,7 +40,6 @@ import com.polito.mad.teamtask.R
 import com.polito.mad.teamtask.Task
 import com.polito.mad.teamtask.Team
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -387,7 +387,7 @@ fun TopBar(
         "teams/{teamId}/tasksCalendar", "teams/{teamId}/statistics" -> {
             val teamId = Actions.getInstance().getStringParameter("teamId")
 
-            val teamName = teams.find { it.first == teamId }?.second?.name
+            val team = teams.find { it.first == teamId }
 
             TopAppBar(
                 // Back button
@@ -414,14 +414,24 @@ fun TopBar(
                             modifier = Modifier.size(30.dp)
                         )
                         Spacer(modifier = Modifier.width(5.dp))
-                        if (teamName != null) {
-                            Text(
-                                teamName,
+                        if (team?.second?.name != null) {
+                            Column(
                                 modifier = Modifier.weight(1f),
-                                style = typography.titleLarge,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    team.second.name,
+                                    style = typography.titleMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    team.second.category,
+                                    style = typography.labelSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     }
                 },
@@ -824,11 +834,16 @@ fun TopBar(
 
             val id = Actions.getInstance().getStringParameter("chatId")
 
-            val topAppBarLabel = if (isGroupChat) {
-                teams.find { it.first == id }?.second?.name
+            val topAppBarLabel: String?
+            var teamCategory: String? = null
+
+            if (isGroupChat) {
+                val team = teams.find { it.first == id }
+                topAppBarLabel = team?.second?.name
+                teamCategory = team?.second?.category
             } else {
                 val person = people.find { it.first == id }
-                person?.second?.name + " " + person?.second?.surname
+                topAppBarLabel = person?.second?.name + " " + person?.second?.surname
             }
 
             TopAppBar(
@@ -862,14 +877,23 @@ fun TopBar(
                             }
                         )
                         Spacer(modifier = Modifier.width(5.dp))
-                        if (topAppBarLabel != null) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.Center
+                        ) {
                             Text(
-                                topAppBarLabel,
-                                modifier = Modifier.weight(1f),
-                                style = typography.titleLarge,
+                                topAppBarLabel ?: "",
+                                style = if (!isGroupChat) typography.titleLarge else typography.titleMedium,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
+                            if (isGroupChat)
+                                Text(
+                                    teamCategory!!,
+                                    style = typography.labelSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                         }
                     }
                 },

@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "1057705652233-ef3jikjl8dftgahrr8hkfth06jmumtt8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.polito.mad.teamtask",
+            "certificate_hash": "000ae43aaa612f62662c307ebcd4ba28dde9fc84"
+          }
+        },
+        {
           "client_id": "1057705652233-fabqplcpreute2ivg58jh67a1obu1gp4.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

@@ -12,6 +12,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -72,8 +73,15 @@ class MainActivity : ComponentActivity() {
                         "teams" to emptyList<Long>()
                     )
 
+<<<<<<< Updated upstream
                     db.collection("people").document(uid).set(newUser).await()
                     Log.d("MainActivity", "User document added with UID: $uid")
+=======
+                    db.collection("people").add(newUser).await()
+                    //LocalContext.current.getSharedPreferences()
+
+                    Log.d("MainActivity", "User document added: ${user.uid}")
+>>>>>>> Stashed changes
                 } else {
                     Log.w("MainActivity", "User is null")
                 }

@@ -165,7 +165,11 @@ fun CategoryFilterScreen(
                     modifier = Modifier.weight(1f)
                 ) {
                     Button(
-                        onClick = { teamsVM.clearSelectedCategories() },
+                        onClick = {
+                            teamsVM.clearSelectedCategories()
+                            teamsVM.setIsFilterActive(false)
+                            Actions.getInstance().goToTeams()
+                        },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = palette.primary,
                             contentColor = palette.secondary

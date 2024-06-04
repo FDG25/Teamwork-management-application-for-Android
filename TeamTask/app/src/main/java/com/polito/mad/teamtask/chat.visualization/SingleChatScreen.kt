@@ -46,6 +46,7 @@ import com.polito.mad.teamtask.R
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transform
@@ -62,6 +63,8 @@ class SingleChatViewModel(private val myModel: AppModel) : ViewModel() {
     }
 
     val clientId = myModel.auth.currentUser?.uid
+
+
 
     var messagesFlow: (chatId: String, isGroup: Boolean) -> Flow<List<Message>> =
         { chatId, isGroup ->
@@ -254,6 +257,8 @@ fun SingleChatScreen(
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
+
+
 
     val messages by vm.messagesFlow(chatId, isGroupChat).collectAsState(initial = listOf())
     val teamMembers by vm.teamMembersFlow(chatId, isGroupChat).collectAsState(initial = listOf())

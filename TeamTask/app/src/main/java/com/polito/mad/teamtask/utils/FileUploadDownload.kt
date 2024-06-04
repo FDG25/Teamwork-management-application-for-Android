@@ -160,6 +160,7 @@ fun isFileAlreadyDownloaded(destinationPath: String, context: Context): Uri? {
     }
 }
 
+//delete a file from device given a uri
 suspend fun deleteFileFromUri(uri: Uri, context: Context) {
     try {
         context.contentResolver.delete(uri, null, null)
