@@ -168,18 +168,19 @@ class ProfileFormViewModel : ViewModel() {
         val db = FirebaseFirestore.getInstance()
         val userDocument = db.collection("people").document(userId)
 
-        val imageFileName = if (imageUri != null) "${userId}" else null
+        val imageFileName = if (imageUri != null) userId else ""
 
-        val updatedData = mutableMapOf<String, Any?>(
+        val updatedData = mapOf<String, Any>(
             "name" to nameValue,
             "surname" to surnameValue,
             "username" to usernameValue,
             "location" to locationValue,
             "bio" to descriptionValue,
+            "image" to imageFileName
         )
 
         try {
-            userDocument.update(updatedData as Map<String, Any>).await()
+            userDocument.update(updatedData).await()
             // Successfully updated
             isLoading = false // Hide loading screen
             Actions.getInstance().goToProfile()

@@ -95,13 +95,14 @@ class ChatViewModel : ViewModel() {
                     val team = teams.find { it.first == message.teamId }?.second
                     val sender = people.find { it.first == message.senderId }?.second
 
+
                     // Fetch team image URL from Firebase Storage
-                    val teamPicRef = FirebaseStorage.getInstance().reference.child("teamImages")
-                    teamPicRef.listAll().addOnSuccessListener { listResult ->
-                        val matchingItem = listResult.items.firstOrNull { it.name.startsWith(team?.image ?: "") }
-                        matchingItem?.downloadUrl?.addOnSuccessListener { uri ->
+                    if(team!=null && team.image.isNotEmpty()) {
+                        val teamPicRef =
+                            FirebaseStorage.getInstance().reference.child("teamImages/${team.image}")
+                        teamPicRef.downloadUrl.addOnSuccessListener { uri ->
                             _messages.value = _messages.value.map {
-                                if (it.username == team?.name) {
+                                if (it.username == team.name) {
                                     it.copy(profilePic = uri.toString())
                                 } else {
                                     it

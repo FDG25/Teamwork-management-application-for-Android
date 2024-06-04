@@ -46,6 +46,7 @@ import com.polito.mad.teamtask.R
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transform
@@ -194,15 +195,18 @@ class SingleChatViewModel(private val myModel: AppModel) : ViewModel() {
                     .map { peopleList ->
                         peopleList
                             .map {
-                            val imageUri: Uri? =
-                                FirebaseStorage.getInstance().reference.child("profileImages/${it.second.image}").downloadUrl.await()
+                                var imageUri: Uri? = null
 
-                            MemberTag(
-                                it.first,
-                                it.second.username,
-                                imageUri ?: Uri.parse(""),
-                            )
-                        }
+                                if (it.second.image.isNotEmpty())
+                                    imageUri =
+                                        FirebaseStorage.getInstance().reference.child("profileImages/${it.second.image}").downloadUrl.await()
+
+                                MemberTag(
+                                    it.first,
+                                    it.second.username,
+                                    imageUri ?: Uri.parse(""),
+                                )
+                            }
                     }
             } else MutableStateFlow(emptyList())
         }
@@ -254,6 +258,7 @@ fun SingleChatScreen(
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
+
 
     val messages by vm.messagesFlow(chatId, isGroupChat).collectAsState(initial = listOf())
     val teamMembers by vm.teamMembersFlow(chatId, isGroupChat).collectAsState(initial = listOf())

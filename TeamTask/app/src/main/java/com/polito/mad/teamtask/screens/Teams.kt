@@ -96,13 +96,10 @@ class TeamsViewModel(private val myModel: AppModel) : ViewModel() {
     fun fetchTeamImage(imageName: String, teamId: String) {
         viewModelScope.launch {
             try {
-                val imageRef = storage.reference.child("teamImages")
-                val result: ListResult = imageRef.listAll().await()
-                val matchingItem = result.items.firstOrNull { it.name.startsWith(imageName) }
+                val imageRef = storage.reference.child("teamImages/$imageName").downloadUrl.await()
 
-                if (matchingItem != null) {
-                    val uri = matchingItem.downloadUrl.await()
-                    _teamImages.value = _teamImages.value.toMutableMap().apply { put(teamId, uri) }
+                if (imageRef != null) {
+                    _teamImages.value = _teamImages.value.toMutableMap().apply { put(teamId, imageRef) }
                 } else {
                     _teamImages.value = _teamImages.value.toMutableMap().apply { put(teamId, null) }
                 }
