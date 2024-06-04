@@ -55,7 +55,6 @@ class MainActivity : ComponentActivity() {
                     val salt = generateSalt()
                     val hashedPassword = hashPassword(password, salt)
                     val newUser = hashMapOf(
-                        "uid" to uid,
                         "email" to email.lowercase(),
                         "name" to name,
                         "surname" to surname,
@@ -71,8 +70,8 @@ class MainActivity : ComponentActivity() {
                         "teams" to emptyList<Long>()
                     )
 
-                    db.collection("people").add(newUser).await()
-                    Log.d("MainActivity", "User document added: ${user.uid}")
+                    db.collection("people").document(uid).set(newUser).await()
+                    Log.d("MainActivity", "User document added with UID: $uid")
                 } else {
                     Log.w("MainActivity", "User is null")
                 }
@@ -166,8 +165,12 @@ class MainActivity : ComponentActivity() {
             try {
                 val credential = GoogleAuthProvider.getCredential(account?.idToken, null)
                 auth.signInWithCredential(credential).await()
-                viewModel.updateLoginStatus(true)
-                saveLoginStatus(true)
+                Log.e("ciaudkkd", credential.toString())
+                if(auth.currentUser?.uid != null) {
+                    Log.d("MainActivity", "prova")
+                    viewModel.updateLoginStatus(true)
+                    saveLoginStatus(true)
+                }
                 Log.d("MainActivity", "signInWithCredential:success")
             } catch (e: Exception) {
                 viewModel.updateLoginStatus(false)
@@ -188,11 +191,12 @@ class MainActivity : ComponentActivity() {
                     emailState.value = email
                     val documents = db.collection("people").whereEqualTo("email", email).get().await()
                     if (documents.isEmpty) {
-                        // Email does not exist, proceed with adding the new user
+                        Log.d("MainActivity", "entered email")
+                        // Email does not exist
                         viewModel.updateLoginStatus(false)
                         saveLoginStatus(false)
                         viewModel.updateIsSignUpFlow(true)
-                        Log.d("MainActivity", "signInWithCredential:success")
+                        //Log.d("MainActivity", "signInWithCredential:success")
                     } else {
                         val userDocument = documents.documents[0]
                         val loginMethod = userDocument.getString("loginMethod")
@@ -233,7 +237,6 @@ class MainActivity : ComponentActivity() {
                         val loginMethod = "google"
                         val emailVerified = user?.isEmailVerified ?: false
                         val newUser = hashMapOf(
-                            "uid" to uid,
                             "email" to email.lowercase(),
                             "name" to name,
                             "surname" to surname,
@@ -248,9 +251,12 @@ class MainActivity : ComponentActivity() {
                         )
 
                         if (uid != null) {
-                            db.collection("people").add(newUser).await()
-                            Log.d("MainActivity", "User document added: ${user.uid}")
+                            db.collection("people").document(uid).set(newUser).await()
+                            Log.d("MainActivity", "User document added with UID: $uid")
                         }
+                        viewModel.updateLoginStatus(true)
+                        saveLoginStatus(true)
+
                     } else {
                         performFirebaseSignInWithGoogle(account)
                         Log.d("MainActivity", "Email already exists, signing in")
@@ -358,6 +364,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun signOut() {
+        auth.currentUser?.uid?.let { Log.e("prova", it) }
         auth.signOut()
         googleSignInClient.signOut().addOnCompleteListener(this) {
             viewModel.updateLoginStatus(false)

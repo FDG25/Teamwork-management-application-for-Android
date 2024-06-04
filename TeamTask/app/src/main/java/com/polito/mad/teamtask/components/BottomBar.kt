@@ -29,6 +29,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.google.firebase.auth.FirebaseAuth
 import com.polito.mad.teamtask.Actions
 import com.polito.mad.teamtask.R
 
@@ -42,8 +43,11 @@ fun BottomBar (
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
-
+    val auth = FirebaseAuth.getInstance()
     val currentRoute = Actions.getInstance().getCurrentRoute()
+
+    Log.e("prova", currentRoute.toString())
+    auth.currentUser?.let { Log.e("prova", it.uid) }
 
     when (currentRoute) {
         "firstScreen" -> {}

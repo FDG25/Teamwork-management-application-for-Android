@@ -61,7 +61,7 @@ class SingleChatViewModel(private val myModel: AppModel) : ViewModel() {
         iHaveToRecompose = !iHaveToRecompose
     }
 
-    val clientId = myModel.userId
+    val clientId = myModel.auth.currentUser?.uid
 
     var messagesFlow: (chatId: String, isGroup: Boolean) -> Flow<List<Message>> =
         { chatId, isGroup ->
@@ -73,7 +73,7 @@ class SingleChatViewModel(private val myModel: AppModel) : ViewModel() {
                             DateTimeFormatter.ISO_DATE_TIME
                         )
 
-                        if (it.second.senderId == myModel.userId) {
+                        if (it.second.senderId == myModel.auth.currentUser?.uid) {
                             ClientMessage(
                                 it.first,
                                 //Gson().fromJson(it.second.body?:"", AnnotatedString::class.java),
@@ -130,7 +130,7 @@ class SingleChatViewModel(private val myModel: AppModel) : ViewModel() {
                                 DateTimeFormatter.ISO_DATE_TIME
                             )
 
-                            if (it.second.senderId == myModel.userId) {
+                            if (it.second.senderId == myModel.auth.currentUser?.uid) {
                                 ClientMessage(
                                     it.first,
                                     createAnnotatedStringFromString(it.second.body, teamMembers),
@@ -271,12 +271,14 @@ fun SingleChatScreen(
 
     Scaffold(
         bottomBar = {
-            WriteMessage(
-                sendMessage = vm::sendMessage,
-                groupUsers = teamMembers.ifEmpty { null },
-                chatId = chatId,
-                clientId = vm.clientId
-            )
+            vm.clientId?.let {
+                WriteMessage(
+                    sendMessage = vm::sendMessage,
+                    groupUsers = teamMembers.ifEmpty { null },
+                    chatId = chatId,
+                    clientId = it
+                )
+            }
         },
         //modifier = Modifier.imePadding()
     ) { padding ->

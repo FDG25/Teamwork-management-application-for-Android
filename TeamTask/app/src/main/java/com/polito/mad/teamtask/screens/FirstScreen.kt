@@ -1,6 +1,7 @@
 package com.polito.mad.teamtask
 
 import android.content.res.Configuration
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -242,9 +243,9 @@ class LoginSignupViewModel: ViewModel() {
                 passwordError.isBlank() && confirmPasswordError.isBlank() && checkedStateError.isBlank()
             ) {
                 val isEmailValid = verifyEmailAddress()
-                val isUsernameValid = verifyUsername()
+                //val isUsernameValid = verifyUsername()
 
-                if (isEmailValid && isUsernameValid) {
+                if (isEmailValid) {
                     signUpWithEmail(
                         nameValue,
                         surnameValue,
@@ -265,9 +266,6 @@ class LoginSignupViewModel: ViewModel() {
                 } else {
                     if(!isEmailValid) {
                         emailAddressError = "Email already exists!"
-                    }
-                    if(!isUsernameValid) {
-                        usernameError = "Username already exists!"
                     }
                 }
             }
@@ -350,8 +348,8 @@ class LoginSignupViewModel: ViewModel() {
                 val isUsernameValid = verifyUsername()
                 if (isUsernameValid) {
                     performPendingGoogleSignIn(usernameValue)
-                    appViewModel.updateLoginStatus(true)
-                    saveLoginStatus(true)
+                    //appViewModel.updateLoginStatus(true)
+                    //saveLoginStatus(true)
                     setUsername("")
                     setCheckState(false)
                 }
@@ -684,6 +682,7 @@ fun FirstScreenComponent (
                                         setShowBottomMenu(false)
                                     }
                                     if (!isShowingLogin) { //SIGNUP WITH GOOGLE
+                                        Log.e("ciau", "ciau")
                                         signUpWithGoogle()
                                         setShowBottomMenu(false)
                                     }

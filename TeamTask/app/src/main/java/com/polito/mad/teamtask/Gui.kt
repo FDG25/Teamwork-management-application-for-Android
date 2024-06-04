@@ -20,6 +20,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -288,31 +289,38 @@ class AppModel(
     }
 
     val applicationContext = context
+    val auth = FirebaseAuth.getInstance()
 
     private val currentDateTime =
         "1970-01-01T00:00:00+00:00" //LocalDateTime.parse(LocalDateTime.now().toString(), DateTimeFormatter.ISO_DATE_TIME).toString()
 
     val db = Firebase.firestore
     val TAG = "TTDB"
-    val userId by mutableStateOf("GQQwO62zw1M2TGBvoojK")
+    //val userId by mutableStateOf("GQQwO62zw1M2TGBvoojK")
 
     // --- Functions ---
     // Logged-in user
     fun getPersonal(): Flow<Pair<String, Person>> = callbackFlow {
-        val listener = db.collection("people")
-            .document(userId)
-            .addSnapshotListener { r, e ->
-                if (r != null) {
-                    val person = r.toObject(Person::class.java)
-                    val id = r.id
-                    if (person != null) trySend(Pair(id, person))
-                    else trySend(Pair("-1", Person())) // TODO: Check correctness
-                } else {
-                    Log.e("ERROR", e.toString())
-                    trySend(Pair("-1", Person())) // TODO: Check correctness
+        val listener = auth.currentUser?.uid?.let {
+            db.collection("people")
+                .document(it)
+                .addSnapshotListener { r, e ->
+                    if (r != null) {
+                        val person = r.toObject(Person::class.java)
+                        val id = r.id
+                        if (person != null) trySend(Pair(id, person))
+                        else trySend(Pair("-1", Person())) // TODO: Check correctness
+                    } else {
+                        Log.e("ERROR", e.toString())
+                        trySend(Pair("-1", Person())) // TODO: Check correctness
+                    }
                 }
+        }
+        awaitClose {
+            if (listener != null) {
+                listener.remove()
             }
-        awaitClose { listener.remove() }
+        }
     }
 
     // People
@@ -356,42 +364,48 @@ class AppModel(
 
     // Tasks
     fun getTasks(): Flow<List<Pair<String, Task>>> = callbackFlow {
-        val listener = db.collection("tasks")
-            .whereArrayContains("people", userId)
-            .addSnapshotListener { r, e ->
-                if (r != null) {
-                    val l = mutableListOf<Pair<String, Task>>()
+        val listener = auth.currentUser?.uid?.let {
+            db.collection("tasks")
+                .whereArrayContains("people", it)
+                .addSnapshotListener { r, e ->
+                    if (r != null) {
+                        val l = mutableListOf<Pair<String, Task>>()
 
-                    for (obj in r) {
-                        val id = obj.id
-                        val teamId = obj.getString("teamId") ?: "Toy team 1"
-                        val title = obj.getString("title") ?: ""
-                        val description = obj.getString("description") ?: ""
-                        val creatorId = obj.getString("creatorId") ?: ""
-                        val creationDate = obj.getString("creationDate") ?: currentDateTime
-                        val deadline = obj.getString("deadline") ?: currentDateTime
-                        val prioritized = obj.getBoolean("prioritized") ?: false
-                        val status = obj.getString("status") ?: ""
-                        val tags = obj.get("tags") as List<String>
-                        val recurrence = obj.getString("recurrence") ?: ""
-                        val people = obj.get("people") as List<String>
+                        for (obj in r) {
+                            val id = obj.id
+                            val teamId = obj.getString("teamId") ?: "Toy team 1"
+                            val title = obj.getString("title") ?: ""
+                            val description = obj.getString("description") ?: ""
+                            val creatorId = obj.getString("creatorId") ?: ""
+                            val creationDate = obj.getString("creationDate") ?: currentDateTime
+                            val deadline = obj.getString("deadline") ?: currentDateTime
+                            val prioritized = obj.getBoolean("prioritized") ?: false
+                            val status = obj.getString("status") ?: ""
+                            val tags = obj.get("tags") as List<String>
+                            val recurrence = obj.getString("recurrence") ?: ""
+                            val people = obj.get("people") as List<String>
 
-                        val task = Task(
-                            teamId as String, title, description, creatorId,
-                            creationDate, deadline, prioritized, status,
-                            tags, recurrence, people
-                        )
+                            val task = Task(
+                                teamId as String, title, description, creatorId,
+                                creationDate, deadline, prioritized, status,
+                                tags, recurrence, people
+                            )
 
-                        l.add(Pair(id, task))
+                            l.add(Pair(id, task))
+                        }
+
+                        trySend(l)
+                    } else {
+                        Log.e("ERROR", e.toString())
+                        trySend(emptyList())
                     }
-
-                    trySend(l)
-                } else {
-                    Log.e("ERROR", e.toString())
-                    trySend(emptyList())
                 }
+        }
+        awaitClose {
+            if (listener != null) {
+                listener.remove()
             }
-        awaitClose { listener.remove() }
+        }
     }
 
 
@@ -436,8 +450,8 @@ class AppModel(
         val listener = db.collection("private_messages")
             .where(
                 Filter.or(
-                    Filter.equalTo("senderId", userId),
-                    Filter.equalTo("receiverId", userId)
+                    Filter.equalTo("senderId", auth.currentUser?.uid),
+                    Filter.equalTo("receiverId", auth.currentUser?.uid)
                 )
             )
             .addSnapshotListener { r, e ->
@@ -502,75 +516,87 @@ class AppModel(
 
     // Teams
     fun getTeams(): Flow<List<Pair<String, Team>>> = callbackFlow {
-        val listener = db.collection("teams")
-            .whereArrayContains("members", userId)
-            .addSnapshotListener { r, e ->
-                if (r != null) {
-                    val l = mutableListOf<Pair<String, Team>>()
+        val listener = auth.currentUser?.uid?.let {
+            db.collection("teams")
+                .whereArrayContains("members", it)
+                .addSnapshotListener { r, e ->
+                    if (r != null) {
+                        val l = mutableListOf<Pair<String, Team>>()
 
-                    for (obj in r) {
-                        val id = obj.id
-                        val name = obj.getString("name") ?: ""
-                        val image = obj.getString("image") ?: ""
-                        val ownerId = obj.getString("ownerId") ?: "Toy person 1"
-                        val admins = obj.get("admins") as List<String>
-                        val inviteLink = obj.getString("inviteLink") ?: ""
-                        val creationDate = obj.getString("creationDate") ?: ""
-                        val category = obj.getString("category") ?: ""
-                        val members = obj.get("members") as List<String>
-                        val tasks = obj.get("tasks") as List<String>
+                        for (obj in r) {
+                            val id = obj.id
+                            val name = obj.getString("name") ?: ""
+                            val image = obj.getString("image") ?: ""
+                            val ownerId = obj.getString("ownerId") ?: "Toy person 1"
+                            val admins = obj.get("admins") as List<String>
+                            val inviteLink = obj.getString("inviteLink") ?: ""
+                            val creationDate = obj.getString("creationDate") ?: ""
+                            val category = obj.getString("category") ?: ""
+                            val members = obj.get("members") as List<String>
+                            val tasks = obj.get("tasks") as List<String>
 
-                        val team = Team(
-                            name, image, ownerId, admins, inviteLink,
-                            creationDate, category, members, tasks
-                        )
+                            val team = Team(
+                                name, image, ownerId, admins, inviteLink,
+                                creationDate, category, members, tasks
+                            )
 
-                        l.add(Pair(id, team))
+                            l.add(Pair(id, team))
+                        }
+
+                        trySend(l)
+                    } else {
+                        Log.e("ERROR", e.toString())
+                        trySend(emptyList())
                     }
-
-                    trySend(l)
-                } else {
-                    Log.e("ERROR", e.toString())
-                    trySend(emptyList())
                 }
+        }
+        awaitClose {
+            if (listener != null) {
+                listener.remove()
             }
-        awaitClose { listener.remove() }
+        }
     }
 
     // Notifications
     fun getNotifications(): Flow<List<Pair<String, Notification>>> = callbackFlow {
-        val listener = db.collection("notifications")
-            .whereArrayContains("receivers", userId)
-            .addSnapshotListener { r, e ->
-                if (r != null) {
-                    val l = mutableListOf<Pair<String, Notification>>()
+        val listener = auth.currentUser?.uid?.let {
+            db.collection("notifications")
+                .whereArrayContains("receivers", it)
+                .addSnapshotListener { r, e ->
+                    if (r != null) {
+                        val l = mutableListOf<Pair<String, Notification>>()
 
-                    for (obj in r) {
-                        val id = obj.id
-                        val senderId = obj.getString("senderId") ?: "Toy person 1"
-                        val taskId = obj.getString("taskId") ?: "Toy task 1"
-                        val body = obj.getString("body") ?: ""
-                        val timestamp = obj.getString("timestamp") ?: currentDateTime
-                        val typology = obj.getLong("typology") ?: 0L
-                        val teamId = obj.getString("teamId") ?: ""
-                        val fromGroup = obj.getBoolean("fromGroup") ?: false
-                        val receivers = obj.get("receivers") as List<String>
+                        for (obj in r) {
+                            val id = obj.id
+                            val senderId = obj.getString("senderId") ?: "Toy person 1"
+                            val taskId = obj.getString("taskId") ?: "Toy task 1"
+                            val body = obj.getString("body") ?: ""
+                            val timestamp = obj.getString("timestamp") ?: currentDateTime
+                            val typology = obj.getLong("typology") ?: 0L
+                            val teamId = obj.getString("teamId") ?: ""
+                            val fromGroup = obj.getBoolean("fromGroup") ?: false
+                            val receivers = obj.get("receivers") as List<String>
 
-                        val n = Notification(
-                            senderId, taskId, body, timestamp,
-                            typology, teamId, fromGroup, receivers
-                        )
+                            val n = Notification(
+                                senderId, taskId, body, timestamp,
+                                typology, teamId, fromGroup, receivers
+                            )
 
-                        l.add(Pair(id, n))
+                            l.add(Pair(id, n))
+                        }
+
+                        trySend(l)
+                    } else {
+                        Log.e("ERROR", e.toString())
+                        trySend(emptyList())
                     }
-
-                    trySend(l)
-                } else {
-                    Log.e("ERROR", e.toString())
-                    trySend(emptyList())
                 }
+        }
+        awaitClose {
+            if (listener != null) {
+                listener.remove()
             }
-        awaitClose { listener.remove() }
+        }
     }
 
     // Team messages
@@ -606,7 +632,7 @@ class AppModel(
     // Team participants
     fun getTeamParticipants(): Flow<List<TeamParticipant>> = callbackFlow {
         val listener = db.collection("team_participants")
-            .where(Filter.equalTo("personId", userId))
+            .where(Filter.equalTo("personId", auth.currentUser?.uid))
             .addSnapshotListener { r, e ->
                 if (r != null) {
                     val tps = r.toObjects(TeamParticipant::class.java)
@@ -637,7 +663,7 @@ class AppModel(
     // User notifications
     fun getUserNotifications(): Flow<List<UserNotification>> = callbackFlow {
         val listener = db.collection("user_notifications")
-            .where(Filter.equalTo("userId", userId))
+            .where(Filter.equalTo("userId", auth.currentUser?.uid))
             .addSnapshotListener { r, e ->
                 if (r != null) {
                     val uns = r.toObjects(UserNotification::class.java)
@@ -711,10 +737,10 @@ class AppModel(
                     Filter.or(
                         Filter.or(
                             Filter.equalTo("senderId", personId),
-                            Filter.equalTo("receiverId", userId)
+                            Filter.equalTo("receiverId", auth.currentUser?.uid)
                         ),
                         Filter.or(
-                            Filter.equalTo("senderId", userId),
+                            Filter.equalTo("senderId", auth.currentUser?.uid),
                             Filter.equalTo("receiverId", personId)
                         ),
                     )
@@ -936,7 +962,7 @@ class AppModel(
             listOf("9dA7vp3d8M0lajgLjL2q")
         )
         try {
-            db.collection("people").document(userId).set(person)
+            auth.currentUser?.uid?.let { db.collection("people").document(it).set(person) }
         } catch (e: Exception) {
 
         }
@@ -1553,36 +1579,42 @@ class AppModel(
         try {
             CoroutineScope(Dispatchers.IO).launch {
                 if (isGroupChat) {
-                    val messageToSend = TeamMessage(
-                        chatId,
-                        userId,
-                        message.date.format(DateTimeFormatter.ISO_DATE_TIME),
-                        message.body.text,
-                        null,
-                    )
-                    newDocument = db.collection("team_messages").add(messageToSend).await()
+                    val messageToSend = auth.currentUser?.uid?.let {
+                        TeamMessage(
+                            chatId,
+                            it,
+                            message.date.format(DateTimeFormatter.ISO_DATE_TIME),
+                            message.body.text,
+                            null,
+                        )
+                    }
+                    newDocument = messageToSend?.let { db.collection("team_messages").add(it).await() }
                 } else {
-                    val messageToSend = PrivateMessage(
-                        userId,
-                        chatId,
-                        message.date.format(DateTimeFormatter.ISO_DATE_TIME),
-                        message.body.text,
-                        null,
-                        false
-                    )
-                    newDocument = db.collection("private_messages").add(messageToSend).await()
+                    val messageToSend = auth.currentUser?.uid?.let {
+                        PrivateMessage(
+                            it,
+                            chatId,
+                            message.date.format(DateTimeFormatter.ISO_DATE_TIME),
+                            message.body.text,
+                            null,
+                            false
+                        )
+                    }
+                    newDocument = messageToSend?.let { db.collection("private_messages").add(it).await() }
                 }
 
                 //upload files to firebase storage and eventually update the message with the media if they correctly been uploaded
                 if (message.files != null) {
                     try {
                         filesRef =
-                            uploadFilesToFirebaseStorage(
-                                message.files.map { it.firebaseUri },
-                                userId,
-                                chatId,
-                                applicationContext
-                            )
+                            auth.currentUser?.uid?.let {
+                                uploadFilesToFirebaseStorage(
+                                    message.files.map { it.firebaseUri },
+                                    it,
+                                    chatId,
+                                    applicationContext
+                                )
+                            }
 
                         if (isGroupChat)
                             db.collection("team_messages").document(newDocument?.id ?: "")
@@ -1606,7 +1638,7 @@ class AppModel(
             db.collection("team_messages").document(message.id).get().addOnSuccessListener {
                 val messageToDelete = it.toObject(TeamMessage::class.java)
                 if (messageToDelete != null) {
-                    if (messageToDelete.senderId == userId) {
+                    if (messageToDelete.senderId == auth.currentUser?.uid) {
                         db.collection("team_messages").document(message.id).delete()
                     }
                 }
@@ -1615,7 +1647,7 @@ class AppModel(
             db.collection("private_messages").document(message.id).get().addOnSuccessListener {
                 val messageToDelete = it.toObject(PrivateMessage::class.java)
                 if (messageToDelete != null) {
-                    if (messageToDelete.senderId == userId) {
+                    if (messageToDelete.senderId == auth.currentUser?.uid) {
                         db.collection("private_messages").document(message.id).delete()
                     }
                 }
@@ -1625,40 +1657,52 @@ class AppModel(
     }
 
     fun createTeam(teamName: String, teamCategory: String, imageUri: Uri?): Boolean {
-        val newTeam = Team(
-            name = teamName,
-            "",
-            ownerId = userId,
-            admins = emptyList(),
-            "https://teamtask.com/invite/0",
-            creationDate = LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME),
-            category = teamCategory,
-            members = listOf(userId),
-            tasks = emptyList()
-        )
+        val newTeam = auth.currentUser?.let {
+            Team(
+                name = teamName,
+                "",
+                ownerId = it.uid,
+                admins = emptyList(),
+                "https://teamtask.com/invite/0",
+                creationDate = LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME),
+                category = teamCategory,
+                members = listOf(auth.currentUser!!.uid),
+                tasks = emptyList()
+            )
+        }
         try {
             CoroutineScope(Dispatchers.IO).launch {
                 //create team
-                val team = db.collection("teams").add(newTeam).await()
+                val team = newTeam?.let { db.collection("teams").add(it).await() }
                 //add team partecipant logged user id as owner
-                db.collection("team_participants").add(
-                    TeamParticipant(
-                        team.id,
-                        userId,
-                        false,
-                        "Owner",
-                        0L,
-                        0L
-                    )
-                )
+                if (team != null) {
+                    auth.currentUser?.uid?.let {
+                        TeamParticipant(
+                            team.id,
+                            it,
+                            false,
+                            "Owner",
+                            0L,
+                            0L
+                        )
+                    }?.let {
+                        db.collection("team_participants").add(
+                            it
+                        )
+                    }
+                }
 
                 //add team to userId
-                db.collection("people").document(userId).update("teams", FieldValue.arrayUnion(team.id))
+                if (team != null) {
+                    auth.currentUser?.uid?.let { db.collection("people").document(it).update("teams", FieldValue.arrayUnion(team.id)) }
+                }
 
                 //upload image if present
                 if (imageUri != null) {
-                    val imageRef = uploadTeamImage(imageUri, team.id, applicationContext)
-                    db.collection("teams").document(team.id).update("image", imageRef)
+                    val imageRef = team?.let { uploadTeamImage(imageUri, it.id, applicationContext) }
+                    if (team != null) {
+                        db.collection("teams").document(team.id).update("image", imageRef)
+                    }
                 }
             }
             return true
@@ -1697,49 +1741,6 @@ class AppFactory(
 class AppViewModel(
     val appModel: AppModel
 ) : ViewModel() {
-    val userId = appModel.userId
-
-    // User
-    //val userId by mutableStateOf("GQQwO62zw1M2TGBvoojK")
-
-    /*
-    val auth = FirebaseAuth.getInstance()
-    var userId = auth.currentUser?.uid.toString()
-
-    fun fetchCurrentUser() {
-        viewModelScope.launch {
-            try {
-                val auth = FirebaseAuth.getInstance()
-                val currentUser = auth.currentUser
-                if (currentUser != null) {
-                    val userUid = currentUser.uid
-                    val db = Firebase.firestore
-                    val querySnapshot = db.collection("people")
-                        .whereEqualTo("uid", userUid)
-                        .get()
-                        .await()
-
-                    if (querySnapshot.documents.isNotEmpty()) {
-                        val userDocument = querySnapshot.documents[0]
-                        userId = userDocument.id
-                        Log.e("provovo", userId)
-                        updateLoginStatus(true)
-                    } else {
-                        // Handle user document not found
-                        updateLoginStatus(false)
-                    }
-                } else {
-                    updateLoginStatus(false)
-                }
-            } catch (e: Exception) {
-                // Handle exception
-                e.printStackTrace()
-                updateLoginStatus(false)
-            }
-        }
-    }
-    */
-
     // Login status
     private val _isLoggedIn = MutableStateFlow(false)
     val isLoggedIn: StateFlow<Boolean> get() = _isLoggedIn
@@ -1815,15 +1816,8 @@ fun AppMainScreen(
     val isLoggedIn by appVM.isLoggedIn.collectAsState()
     val isSignUpFlow by appVM.isSignUpFlow.collectAsState()
 
-    /*
-    if(isLoggedIn==true) {
-        appVM.fetchCurrentUser()
-        Log.e("login", appVM.userId)
-    }
-    */
+    val auth = FirebaseAuth.getInstance()
 
-
-    // Load database
     val personal by appVM.getPersonal().collectAsState(initial = Pair("", Person()))
     val people by appVM.getPeople().collectAsState(initial = listOf())
     val tasks by appVM.getTasks().collectAsState(initial = listOf())
@@ -1834,32 +1828,37 @@ fun AppMainScreen(
     val notifications by appVM.getNotifications().collectAsState(initial = listOf())
     val teamMessages by appVM.getTeamMessages().collectAsState(initial = listOf())
     val teamParticipants by appVM.getTeamParticipants().collectAsState(initial = listOf())
-    val realTeamParticipants by appVM.getRealTeamParticipants().collectAsState(initial = listOf())
+    val realTeamParticipants by appVM.getRealTeamParticipants()
+        .collectAsState(initial = listOf())
     val userNotifications by appVM.getUserNotifications().collectAsState(initial = listOf())
-    //val teamTasks by appVM.getTeamTasks("ALx2Fsv1mFmK9idVgh8s").collectAsState(initial = listOf()) //TODO: HARDCODED
-
 
     // Get the list of team IDs the user is part of
     val teamIds = teams.map { it.first }
 
+    Log.e("ppp", isLoggedIn.toString())
+
     Scaffold(
         topBar = {
-            TopBar(
-                navController,
-                appVM.userId,
-                signOut,
-                profileVM.showMenu,
-                profileVM::setShowMen,
-                profileVM.showBackButtonModal,
-                profileVM::setBackButtModal,
-                profileVM::goBackToPresentation,
-                profileVM::editProfile,
-                profileVM::validate,
-                profileVM::cancelEditProfile,
-                people,
-                teams,
-                tasks
-            )
+            if(isLoggedIn) {
+                auth.currentUser?.let {
+                    TopBar(
+                        navController,
+                        it.uid,
+                        signOut,
+                        profileVM.showMenu,
+                        profileVM::setShowMen,
+                        profileVM.showBackButtonModal,
+                        profileVM::setBackButtModal,
+                        profileVM::goBackToPresentation,
+                        profileVM::editProfile,
+                        profileVM::validate,
+                        profileVM::cancelEditProfile,
+                        people,
+                        teams,
+                        tasks
+                    )
+                }
+            }
         },
         bottomBar = {
             BottomBar(
@@ -1912,14 +1911,10 @@ fun AppMainScreen(
 
                         //Log.d("FilteredTasks", filteredTasks.toString())
 
-                        if (people.isEmpty() || teamParticipants.isEmpty()) {
-                            LoadingScreen()
-                        } else {
-                            HomeScreen(
-                                filteredTeams, teams,
-                                filteredTasks, tasks, Actions.getInstance().goToTaskComments
-                            )
-                        }
+                        HomeScreen(
+                            filteredTeams, teams,
+                            filteredTasks, tasks, Actions.getInstance().goToTaskComments
+                        )
                     }
 
                     composable("homeCalendar") {
@@ -2133,7 +2128,7 @@ fun AppMainScreen(
                         }
 
                         // Render the chat screen
-                        ChatScreen(combinedMessages, people, teams, appVM.userId)
+                        auth.currentUser?.let { it1 -> ChatScreen(combinedMessages, people, teams, it1.uid) }
                     }
 
                     composable("chats/{isGroupChat}/{chatId}") { navBackStackEntry ->
@@ -2148,16 +2143,13 @@ fun AppMainScreen(
                         val filteredNotifications = userNotifications
                             .map { un -> un.notificationId }
 
-                        if (notifications.isEmpty() || filteredNotifications.isEmpty() || userNotifications.isEmpty() || teams.isEmpty() || people.isEmpty()) {
-                            NotImplementedScreen()
-                        } else {
-                            NotificationsScreen(
-                                filteredNotifications,
-                                notifications, userNotifications,
-                                teams, people,
-                                Actions.getInstance().goToTaskComments
-                            )
-                        }
+
+                        NotificationsScreen(
+                            filteredNotifications,
+                            notifications, userNotifications,
+                            teams, people,
+                            Actions.getInstance().goToTaskComments
+                        )
                     }
 
                     composable("accounts/{accountId}") { backStackEntry ->
@@ -2168,13 +2160,15 @@ fun AppMainScreen(
                     } // TODO: Implement
 
                     composable("profile") {
-                        ProfileScreen(
-                            personal, appVM.userId, teams, teamParticipants,
-                            profileVM
-                        )
+                        auth.currentUser?.let { it1 ->
+                            ProfileScreen(
+                                personal, it1.uid, teams, teamParticipants,
+                                profileVM
+                            )
+                        }
                     }
                     composable("profile/edit") {
-                        EditProfilePane(personal, appVM.userId, profileVM)
+                        auth.currentUser?.let { it1 -> EditProfilePane(personal, it1.uid, profileVM) }
                     }
 
                     composable(
@@ -2193,6 +2187,7 @@ fun AppMainScreen(
         }
     }
 }
+
 
 
 @Composable
