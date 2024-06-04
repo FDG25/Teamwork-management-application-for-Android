@@ -62,16 +62,22 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import com.polito.mad.teamtask.Actions
 import com.polito.mad.teamtask.ui.theme.CaribbeanCurrent
 import kotlinx.coroutines.launch
@@ -79,6 +85,9 @@ import kotlinx.coroutines.tasks.await
 
 
 class ProfileFormViewModel : ViewModel() {
+    private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
+    val auth = FirebaseAuth.getInstance()
+
     private var originalName: String = ""
     private var originalSurname: String = ""
     private var originalEmailAddress: String = ""
@@ -102,6 +111,36 @@ class ProfileFormViewModel : ViewModel() {
     var showLogoutModal by mutableStateOf(false)
     fun setShwLogoutModal(bool: Boolean) {
         showLogoutModal = bool
+    }
+
+    var showDeleteAccountModal by mutableStateOf(false)
+    fun setShwDeleteAccountModal(bool: Boolean) {
+        showDeleteAccountModal = bool
+    }
+
+    var emailAddressValueForDelete by mutableStateOf("")
+        private set
+    var emailAddressErrorForDelete by mutableStateOf("")
+        private set
+    fun setEmailAddresValueForDelete(a: String) {
+        emailAddressValueForDelete = a.trim()
+        emailAddressErrorForDelete = ""
+    }
+
+
+    fun validateEmailForDeleteAccount(onLogout: () -> Unit, updateAccountBeenDeletedStatus: (Boolean) -> Unit) {
+        viewModelScope.launch {
+                if (emailAddressValueForDelete == auth.currentUser?.email) {
+                    deleteAccount(onLogout)
+                    setShwDeleteAccountModal(false)
+                    setEmailAddresValueForDelete("")
+                    emailAddressErrorForDelete = ""
+                    updateAccountBeenDeletedStatus(true)
+                    //onLogout() //i moved it to deleteaccount, which is an asynchronous operation (viewModelScope.launch), otherwise onLogout is done before the deleteaccount and the account is not deleted because no auth.currentuser.uid exists
+                } else {
+                    emailAddressErrorForDelete = "Inserted email is not correct!"
+                }
+        }
     }
 
     fun goBackToPresentation() {
@@ -173,7 +212,6 @@ class ProfileFormViewModel : ViewModel() {
 
     // Update Firestore database using coroutines
     suspend fun updateProfileInFirestore(userId: String) {
-        val db = FirebaseFirestore.getInstance()
         val userDocument = db.collection("people").document(userId)
 
         val imageFileName = if (imageUri != null) userId else ""
@@ -226,6 +264,37 @@ class ProfileFormViewModel : ViewModel() {
             }
         }
     }
+
+
+    suspend fun deleteDocumentByUid() {
+        val userDocument = auth.currentUser?.let { db.collection("people").document(it.uid) }
+        Log.e("oddo", "oddo2")
+        try {
+            val document = userDocument?.get()?.await()
+            if (document != null) {
+                if (document.exists()) {
+                    document.reference.delete().await()
+                } else {
+                    // Handle case where no document found with the uid
+                }
+            }
+        } catch (e: Exception) {
+            // Handle potential errors during deletion
+        }
+    }
+
+    fun deleteAccount(onLogout: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                deleteDocumentByUid()
+                // Handle successful deletion (e.g., show a success message)
+                onLogout()
+            } catch (e: Exception) {
+                // Handle potential errors during deletion (e.g., show an error message)
+            }
+        }
+    }
+
 
     // ----- Profile Picture -----
     var imageUri by mutableStateOf<Uri?>(null)
@@ -328,7 +397,6 @@ class ProfileFormViewModel : ViewModel() {
     }
 
     private suspend fun checkUsernameExists(username: String, userId: String): Boolean {
-        val db = FirebaseFirestore.getInstance()
         return try {
             val querySnapshot = db.collection("people")
                 .whereEqualTo("username", username)
@@ -410,7 +478,6 @@ class ProfileFormViewModel : ViewModel() {
 
     fun fetchProfileImage(userId: String) {
         viewModelScope.launch {
-            val db = FirebaseFirestore.getInstance()
             val storage = FirebaseStorage.getInstance()
 
             //isLoading = true
@@ -455,22 +522,25 @@ class ProfileFormViewModel : ViewModel() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen (
     user: Pair<String, Person>,
     userId: String,
     teams: List<Pair<String, Team>>, teamParticipants: List<TeamParticipant>,
-    vm: ProfileFormViewModel = viewModel(), onLogout: () -> Unit
+    vm: ProfileFormViewModel = viewModel(), onLogout: () -> Unit, updateAccountBeenDeletedStatus: (Boolean) -> Unit
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
+    val auth = FirebaseAuth.getInstance()
+
 
     LaunchedEffect(userId) {
         vm.fetchProfileImage(userId)
         vm.initialize(user)
     }
 
-    if(vm.showLogoutModal) {
+    if (vm.showLogoutModal) {
         AlertDialog(
             onDismissRequest = {
                 vm.setShwLogoutModal(false)
@@ -504,7 +574,74 @@ fun ProfileScreen (
             }
         )
     }
-
+    if (vm.showDeleteAccountModal) {
+        AlertDialog(
+            onDismissRequest = {
+                vm.setShwDeleteAccountModal(false)
+            },
+            title = { Text(text = "Delete Account", color = palette.error) },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "Write \"" + (auth.currentUser?.email
+                            ?: "your email") + "\" and press \"Delete\" to permanently delete your account:"
+                    )
+                    Spacer(modifier = Modifier.height(15.dp))
+                    TextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = vm.emailAddressValueForDelete,
+                        onValueChange = vm::setEmailAddresValueForDelete,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            imeAction = ImeAction.Done
+                        ),
+                        colors = TextFieldDefaults.colors(
+                            // your colors
+                        ),
+                        isError = vm.emailAddressErrorForDelete.isNotBlank()
+                    )
+                    if (vm.emailAddressErrorForDelete.isNotBlank()) {
+                        Text(
+                            text = vm.emailAddressErrorForDelete,
+                            color = palette.error,
+                            style = typography.bodySmall,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            maxLines = 3
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    vm.validateEmailForDeleteAccount(onLogout, updateAccountBeenDeletedStatus)
+                }) {
+                    Text(
+                        text = "Delete",
+                        style = typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CaribbeanCurrent
+                    )
+                }
+            },
+            dismissButton = {
+                Button(onClick = {
+                    vm.setEmailAddresValueForDelete("")
+                    vm.setShwDeleteAccountModal(false)
+                }) {
+                    Text(
+                        text = "Cancel",
+                        style = typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CaribbeanCurrent
+                    )
+                }
+            }
+        )
+    }
     if(LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE){
         Row (
             modifier = Modifier.padding(start = 16.dp, end = 16.dp )
@@ -590,6 +727,7 @@ fun ProfileScreen (
 }
 
 
+
 // ----- Profile edit -----
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -657,7 +795,9 @@ fun EditProfilePane(
         BoxWithConstraints {
             if (this.maxHeight >= this.maxWidth) {
                 LazyColumn(
-                    modifier = Modifier.fillMaxWidth().padding(contentPadding),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(contentPadding),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     item { Spacer(modifier = Modifier.height(25.dp)) }

@@ -46,6 +46,8 @@ import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 fun TopBar(
     navController: NavHostController,
     userId: String,
+    setShwDeleteAccountModal: (Boolean) -> Unit,
+    deleteAccount: () -> Unit,
     setShwLogoutModal: (Boolean) -> Unit,
     showMenu: Boolean,
     setShowMen: (Boolean) -> Unit,
@@ -174,6 +176,7 @@ fun TopBar(
                                 )
                             },
                             onClick = {
+                                setShwDeleteAccountModal(true)
                                 setShowMen(false)
                             },
                             leadingIcon = {
@@ -194,6 +197,7 @@ fun TopBar(
                             },
                             onClick = {
                                 setShwLogoutModal(true)
+                                setShowMen(false)
                             },
                             leadingIcon = {
                                 Image(

@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -73,6 +76,7 @@ import com.polito.mad.teamtask.screens.SpecificTeamViewModel
 import com.polito.mad.teamtask.screens.TeamsScreen
 import com.polito.mad.teamtask.screens.TeamsViewModel
 import com.polito.mad.teamtask.tasks.ShowTaskDetails
+import com.polito.mad.teamtask.ui.theme.CaribbeanCurrent
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 import com.polito.mad.teamtask.utils.uploadFilesToFirebaseStorage
 import com.polito.mad.teamtask.utils.uploadTeamImage
@@ -1748,6 +1752,10 @@ class AppViewModel(
     private val _isSignUpFlow = MutableStateFlow(false)
     val isSignUpFlow: StateFlow<Boolean> get() = _isSignUpFlow
 
+    private val _isAccountBeenDeleted = MutableStateFlow(false)
+    val isAccountBeenDeleted: StateFlow<Boolean> get() = _isAccountBeenDeleted
+
+
     // Function to update login status
     fun updateLoginStatus(isLoggedIn: Boolean) {
         _isLoggedIn.value = isLoggedIn
@@ -1756,6 +1764,10 @@ class AppViewModel(
     fun updateIsSignUpFlow(isSignUpFlow: Boolean) {
         _isSignUpFlow.value = isSignUpFlow
     }
+    fun updateAccountBeenDeletedStatus(isAccountBeenDeleted: Boolean) {
+        _isAccountBeenDeleted.value = isAccountBeenDeleted
+    }
+
 
     fun getPersonal() = appModel.getPersonal()
 
@@ -1812,9 +1824,11 @@ fun AppMainScreen(
 ) {
     val navController = rememberNavController()
     Actions.initialize(navController) // Initialize Actions here
+    val typography = TeamTaskTypography
 
     val isLoggedIn by appVM.isLoggedIn.collectAsState()
     val isSignUpFlow by appVM.isSignUpFlow.collectAsState()
+    val isAccountBeenDeleted by appVM.isAccountBeenDeleted.collectAsState()
 
     val auth = FirebaseAuth.getInstance()
 
@@ -1844,6 +1858,8 @@ fun AppMainScreen(
                     TopBar(
                         navController,
                         it.uid,
+                        profileVM::setShwDeleteAccountModal,
+                        {profileVM.deleteAccount(signOut)},
                         profileVM::setShwLogoutModal,
                         profileVM.showMenu,
                         profileVM::setShowMen,
@@ -1882,6 +1898,27 @@ fun AppMainScreen(
             ) {
                 if (!isLoggedIn ) {
                     composable("firstScreen") {
+                        if(isAccountBeenDeleted){
+                            AlertDialog(
+                                onDismissRequest = {
+                                    appVM.updateAccountBeenDeletedStatus(false)
+                                },
+                                title = { Text(text = "Account Deleted") },
+                                text = { Text(text = "Your account has been deleted successfully!") },
+                                confirmButton = {
+                                    Button(onClick = {
+                                        appVM.updateAccountBeenDeletedStatus(false)
+                                    }) {
+                                        Text(
+                                            text = "Yes",
+                                            style = typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = CaribbeanCurrent
+                                        )
+                                    }
+                                }
+                            )
+                        }
                         FirstScreen(
                             email = email,
                             signInWithGoogle = signInWithGoogle,
@@ -2162,7 +2199,7 @@ fun AppMainScreen(
                         auth.currentUser?.let { it1 ->
                             ProfileScreen(
                                 personal, it1.uid, teams, teamParticipants,
-                                profileVM, onLogout = signOut
+                                profileVM, onLogout = signOut, updateAccountBeenDeletedStatus = appVM::updateAccountBeenDeletedStatus
                             )
                         }
                     }
