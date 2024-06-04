@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Divider
@@ -38,6 +39,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -66,6 +68,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.firebase.firestore.FirebaseFirestore
+import com.polito.mad.teamtask.components.BackButton
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -767,7 +770,8 @@ fun FirstScreenComponent (
             LoginWithEmail(
                 emailAddressValue, emailAddressError, setEmailAddress,
                 passwordValue, passwordVisible, setPasswordToBeVisible, setPassword,
-                validateLogin, loginError
+                validateLogin, loginError,
+                setShowLogin, setShowForm, clearValuesAndErrors
             )
         }
         if (!isShowingLogin && !isContinuingWithGoogle) {
@@ -783,7 +787,7 @@ fun FirstScreenComponent (
                 passwordValue, passwordVisible, setPasswordToBeVisible, passwordError, setPassword,
                 confirmPasswordValue, confirmPasswordVisible, setConfirmPasswordToBeVisible, confirmPasswordError, setConfirmPassword,
                 checkedState, setCheckState, checkedStateError,
-                validateSignup
+                validateSignup, setShowForm, clearValuesAndErrors
             )
         }
     }
@@ -798,129 +802,154 @@ fun LoginWithGoogle (
 
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginWithEmail(
     emailAddressValue: String, emailAddressError: String, setEmailAddress: (String) -> Unit,
     passwordValue: String, passwordVisible: Boolean, setPasswordToBeVisible: (Boolean) -> Unit, setPassword: (String) -> Unit,
     validateLogin: () -> Unit,
-    loginError: String
+    loginError: String,
+    setShowLogin: (Boolean) -> Unit,
+    setShowForm: (Boolean) -> Unit,
+    clearValuesAndErrors: () -> Unit
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
 
     Spacer(Modifier.height(100.dp))
+    LazyColumn {
+        item{
+            CenterAlignedTopAppBar(
+                // Back button
+                navigationIcon = {
+                    BackButton(onClick = {
+                        setShowLogin(false)
+                        setShowForm(false)
+                        clearValuesAndErrors()
+                    })
+                },
 
-    Column (
-        modifier = Modifier.padding(16.dp)
-    ) {
-        TextField(
-            modifier = Modifier.fillMaxWidth(),
-            value = emailAddressValue.lowercase(),
-            onValueChange = setEmailAddress,
-            label = { Text("Enter your email address") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions.Default.copy(
-                imeAction = ImeAction.Done
-            ),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = palette.surfaceVariant,
-                unfocusedContainerColor = palette.surfaceVariant,
-                disabledContainerColor = palette.surfaceVariant,
-                cursorColor = palette.secondary,
-                focusedIndicatorColor = palette.secondary,
-                unfocusedIndicatorColor = palette.onSurfaceVariant,
-                errorIndicatorColor = palette.error,
-                focusedLabelColor = palette.secondary,
-                unfocusedLabelColor = palette.onSurfaceVariant,
-                errorLabelColor = palette.error,
-                selectionColors = TextSelectionColors(palette.primary, palette.surface)
-            ),
-            isError = emailAddressError.isNotBlank()
-        )
-        if (emailAddressError.isNotBlank()) {
-            Text(
-                text = emailAddressError,
-                color = palette.error,
-                style = typography.bodySmall,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                maxLines = 3
+                // Title
+                title = { Text("Log in", style = typography.titleLarge) },
+
+                colors = TopAppBarDefaults.topAppBarColors(palette.primary),
             )
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        TextField(
-            value = passwordValue,
-            onValueChange = { setPassword(it) },
-            label = { Text("Enter your password") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password,
-                imeAction = ImeAction.Done
-            ),
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            trailingIcon = {
-                Image(
-                    painter = painterResource(R.drawable.outline_remove_red_eye_24),
-                    contentDescription = "Show or Hide password",
-                    colorFilter = ColorFilter.tint(if (passwordVisible) palette.secondary else palette.onSurfaceVariant),
-                    modifier = Modifier.clickable(onClick = { setPasswordToBeVisible(!passwordVisible) })
+        item{
+            Column (
+                modifier = Modifier.padding(16.dp)
+            ) {
+                TextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = emailAddressValue.lowercase(),
+                    onValueChange = setEmailAddress,
+                    label = { Text("Enter your email address") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Done
+                    ),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = palette.surfaceVariant,
+                        unfocusedContainerColor = palette.surfaceVariant,
+                        disabledContainerColor = palette.surfaceVariant,
+                        cursorColor = palette.secondary,
+                        focusedIndicatorColor = palette.secondary,
+                        unfocusedIndicatorColor = palette.onSurfaceVariant,
+                        errorIndicatorColor = palette.error,
+                        focusedLabelColor = palette.secondary,
+                        unfocusedLabelColor = palette.onSurfaceVariant,
+                        errorLabelColor = palette.error,
+                        selectionColors = TextSelectionColors(palette.primary, palette.surface)
+                    ),
+                    isError = emailAddressError.isNotBlank()
                 )
-            },
-            modifier = Modifier
-                .height(56.dp)
-                .fillMaxWidth(),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = palette.surfaceVariant,
-                unfocusedContainerColor = palette.surfaceVariant,
-                disabledContainerColor = palette.surfaceVariant,
-                cursorColor = palette.secondary,
-                focusedIndicatorColor = palette.secondary,
-                unfocusedIndicatorColor = palette.onSurfaceVariant,
-                errorIndicatorColor = palette.error,
-                focusedLabelColor = palette.secondary,
-                unfocusedLabelColor = palette.onSurfaceVariant,
-                errorLabelColor = palette.error,
-                selectionColors = TextSelectionColors(palette.primary, palette.surface)
-            )
-        )
-        if (loginError.isNotBlank()) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = loginError,
-                color = palette.error,
-                style = typography.bodySmall,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                maxLines = 3
-            )
-        }
+                if (emailAddressError.isNotBlank()) {
+                    Text(
+                        text = emailAddressError,
+                        color = palette.error,
+                        style = typography.bodySmall,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        maxLines = 3
+                    )
+                }
 
-        Spacer(modifier = Modifier.height(100.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-        Button(
-            onClick = {
-                validateLogin()
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = palette.primary, contentColor = palette.secondary)
-        ) {
-            Text(
-                "Log in",
-                style = typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = palette.secondary
-            )
+                TextField(
+                    value = passwordValue,
+                    onValueChange = { setPassword(it) },
+                    label = { Text("Enter your password") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done
+                    ),
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        Image(
+                            painter = painterResource(R.drawable.outline_remove_red_eye_24),
+                            contentDescription = "Show or Hide password",
+                            colorFilter = ColorFilter.tint(if (passwordVisible) palette.secondary else palette.onSurfaceVariant),
+                            modifier = Modifier.clickable(onClick = { setPasswordToBeVisible(!passwordVisible) })
+                        )
+                    },
+                    modifier = Modifier
+                        .height(56.dp)
+                        .fillMaxWidth(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = palette.surfaceVariant,
+                        unfocusedContainerColor = palette.surfaceVariant,
+                        disabledContainerColor = palette.surfaceVariant,
+                        cursorColor = palette.secondary,
+                        focusedIndicatorColor = palette.secondary,
+                        unfocusedIndicatorColor = palette.onSurfaceVariant,
+                        errorIndicatorColor = palette.error,
+                        focusedLabelColor = palette.secondary,
+                        unfocusedLabelColor = palette.onSurfaceVariant,
+                        errorLabelColor = palette.error,
+                        selectionColors = TextSelectionColors(palette.primary, palette.surface)
+                    )
+                )
+                if (loginError.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = loginError,
+                        color = palette.error,
+                        style = typography.bodySmall,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        maxLines = 3
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(100.dp))
+
+                Button(
+                    onClick = {
+                        validateLogin()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = palette.primary, contentColor = palette.secondary)
+                ) {
+                    Text(
+                        "Log in",
+                        style = typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = palette.secondary
+                    )
+                }
+            }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignupWithEmail (
     nameValue: String, nameError: String, setName: (String) -> Unit,
@@ -930,12 +959,28 @@ fun SignupWithEmail (
     passwordValue: String, passwordVisible: Boolean, setPasswordToBeVisible: (Boolean) -> Unit, passwordError: String, setPassword: (String) -> Unit,
     confirmPasswordValue: String, confirmPasswordVisible: Boolean, setConfirmPasswordToBeVisible: (Boolean) -> Unit, confirmPasswordError: String, setConfirmPassword: (String) -> Unit,
     checkedState: Boolean, setCheckState: (Boolean) -> Unit, checkedStateError: String,
-    validateSignup: () -> Unit
+    validateSignup: () -> Unit, setShowForm: (Boolean) -> Unit, clearValuesAndErrors: () -> Unit
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
 
     LazyColumn {
+        item{
+            CenterAlignedTopAppBar(
+                // Back button
+                navigationIcon = {
+                    BackButton(onClick = {
+                        setShowForm(false)
+                        clearValuesAndErrors()
+                    })
+                },
+
+                // Title
+                title = { Text("Sign up", style = typography.titleLarge) },
+
+                colors = TopAppBarDefaults.topAppBarColors(palette.primary),
+            )
+        }
         item {
             Column(
                 modifier = Modifier
@@ -1198,7 +1243,7 @@ fun SignupWithEmail (
                     )
                 }
 
-                Spacer(modifier = Modifier.height(40.dp))
+                Spacer(modifier = Modifier.height(25.dp))
 
                 // CHECKBOX
                 Row(modifier = Modifier.padding(8.dp)) {
@@ -1212,7 +1257,8 @@ fun SignupWithEmail (
                     Text(
                         text = "By signing up, I confirm that I accept TeamTask's Terms and Condition and have read the Privacy Policy",
                         modifier = Modifier.padding(start = 8.dp),
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        style = typography.bodySmall
                     )
                 }
                 if(checkedStateError.isNotBlank()){
@@ -1250,11 +1296,12 @@ fun SignupWithEmail (
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompleteSignupWithGoogle (
     usernameValue: String, usernameError: String, setUsername: (String) -> Unit,
     checkedState: Boolean, setCheckState: (Boolean) -> Unit, checkedStateError: String,
-    validateCompleteSignupWithGoogle: () -> Unit
+    validateCompleteSignupWithGoogle: () -> Unit,
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
@@ -1318,7 +1365,8 @@ fun CompleteSignupWithGoogle (
                     Text(
                         text = "By signing up, I confirm that I accept TeamTask's Terms and Condition and have read the Privacy Policy",
                         modifier = Modifier.padding(start = 8.dp),
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        style = typography.bodySmall
                     )
                 }
                 if(checkedStateError.isNotBlank()){
@@ -1457,10 +1505,34 @@ fun FirstScreen(
                 }
             )
         }
-        CompleteSignupWithGoogle (
-            vm.usernameValue, vm.usernameError, vm::setUsername,
-            vm.checkedState, vm::setCheckState, vm.checkedStateError,
-        ) { vm.validateCompleteSignupWithGoogle(saveLoginStatus, performPendingGoogleSignIn, appViewModel) }
+        Column {
+            CenterAlignedTopAppBar(
+                // Back button
+                navigationIcon = {
+                    BackButton(onClick = {
+                        resetPendingGoogleSignInAccount()
+                        updateIsSignUpFlow(false)
+                        appViewModel.updateLoginStatus(false)
+                        saveLoginStatus(false)
+                        vm.clearValuesAndErrors()
+                    })
+                },
+
+                // Title
+                title = { Text("Sign up", style = typography.titleLarge) },
+
+                colors = TopAppBarDefaults.topAppBarColors(palette.primary),
+            )
+            CompleteSignupWithGoogle(
+                vm.usernameValue, vm.usernameError, vm::setUsername,
+                vm.checkedState, vm::setCheckState, vm.checkedStateError,
+            ) {
+                vm.validateCompleteSignupWithGoogle(
+                    saveLoginStatus,
+                    performPendingGoogleSignIn,
+                    appViewModel
+                )
+            }
+        }
     }
 }
-

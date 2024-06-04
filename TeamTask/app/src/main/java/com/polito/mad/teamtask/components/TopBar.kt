@@ -1030,7 +1030,7 @@ fun TopBar(
 
 
 @Composable
-private fun BackButton(
+fun BackButton(
     onClick: () -> Unit
 ) {
     val palette = MaterialTheme.colorScheme
