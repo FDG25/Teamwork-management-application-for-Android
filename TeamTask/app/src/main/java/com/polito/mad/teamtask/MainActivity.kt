@@ -22,6 +22,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.polito.mad.teamtask.screens.LoadingScreen
 import com.polito.mad.teamtask.ui.theme.CaribbeanCurrent
 import com.polito.mad.teamtask.ui.theme.TeamTaskTheme
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
@@ -40,6 +41,7 @@ class MainActivity : ComponentActivity() {
     // State for showing alert dialog
     private val isEmailAlreadyRegistered = mutableStateOf(false)
     private val emailState = mutableStateOf("")
+    private val isLoading = mutableStateOf(false)
 
     // SIGN UP WITH EMAIL AND PASSWORD
     private fun signUpWithEmail(
@@ -98,6 +100,7 @@ class MainActivity : ComponentActivity() {
 
     private fun signInWithEmail(email: String, password: String) {
         lifecycleScope.launch {
+            isLoading.value = true // Show loading dialog
             try {
                 val documents = db.collection("people").whereEqualTo("email", email.lowercase()).get().await()
                 if (!documents.isEmpty) {
@@ -112,6 +115,8 @@ class MainActivity : ComponentActivity() {
                 viewModel.updateLoginStatus(false)
                 saveLoginStatus(false)
                 Log.w("MainActivity", "signInWithEmail:failure", e)
+            } finally {
+                isLoading.value = false // Hide loading dialog
             }
         }
     }
@@ -162,12 +167,11 @@ class MainActivity : ComponentActivity() {
 
     private fun performFirebaseSignInWithGoogle(account: GoogleSignInAccount?) {
         lifecycleScope.launch {
+            isLoading.value = true // Show loading dialog
             try {
                 val credential = GoogleAuthProvider.getCredential(account?.idToken, null)
                 auth.signInWithCredential(credential).await()
-                Log.e("ciaudkkd", credential.toString())
                 if(auth.currentUser?.uid != null) {
-                    Log.d("MainActivity", "prova")
                     viewModel.updateLoginStatus(true)
                     saveLoginStatus(true)
                 }
@@ -176,6 +180,8 @@ class MainActivity : ComponentActivity() {
                 viewModel.updateLoginStatus(false)
                 saveLoginStatus(false)
                 Log.w("MainActivity", "signInWithCredential:failure", e)
+            } finally {
+                isLoading.value = false // Hide loading dialog
             }
         }
     }
@@ -219,6 +225,7 @@ class MainActivity : ComponentActivity() {
 
     private fun performFirebaseSignUpWithGoogle(account: GoogleSignInAccount?, username: String) {
         lifecycleScope.launch {
+            isLoading.value = true // Show loading dialog
             try {
                 val credential = GoogleAuthProvider.getCredential(account?.idToken, null)
                 auth.signInWithCredential(credential).await()
@@ -254,6 +261,7 @@ class MainActivity : ComponentActivity() {
                             db.collection("people").document(uid).set(newUser).await()
                             Log.d("MainActivity", "User document added with UID: $uid")
                         }
+                        //I MOVED HERE THESE 2 LINES FROM validateCompleteSignupWithGoogle OF FIRSTSCREEN.KT:
                         viewModel.updateLoginStatus(true)
                         saveLoginStatus(true)
 
@@ -264,6 +272,8 @@ class MainActivity : ComponentActivity() {
                 }
             } catch (e: Exception) {
                 Log.w("MainActivity", "Error during Google sign-up: ${e.message}")
+            } finally {
+                isLoading.value = false // Hide loading dialog
             }
         }
     }
@@ -332,6 +342,23 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         }
+                    )
+                }
+                // Show loading screen if isLoading is true
+                if (isLoading.value) {
+                    LoadingScreen()
+                } else {
+                    AppMainScreen(
+                        email = emailState.value,
+                        signInWithGoogle = this::signInWithGoogle,
+                        signOut = this::signOut,
+                        signUpWithGoogle = this::signUpWithGoogle,
+                        saveLoginStatus = this::saveLoginStatus,
+                        performPendingGoogleSignIn = this::performPendingGoogleSignIn,
+                        resetPendingGoogleSignInAccount = this::resetPendingGoogleSignInAccount,
+                        signUpWithEmail = this::signUpWithEmail,
+                        signInWithEmail = this::signInWithEmail,
+                        appVM = viewModel
                     )
                 }
 
