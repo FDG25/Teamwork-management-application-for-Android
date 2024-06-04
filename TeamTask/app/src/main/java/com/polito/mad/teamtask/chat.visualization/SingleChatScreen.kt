@@ -64,8 +64,6 @@ class SingleChatViewModel(private val myModel: AppModel) : ViewModel() {
 
     val clientId = myModel.auth.currentUser?.uid
 
-
-
     var messagesFlow: (chatId: String, isGroup: Boolean) -> Flow<List<Message>> =
         { chatId, isGroup ->
             if (!isGroup) {
@@ -197,15 +195,18 @@ class SingleChatViewModel(private val myModel: AppModel) : ViewModel() {
                     .map { peopleList ->
                         peopleList
                             .map {
-                            val imageUri: Uri? =
-                                FirebaseStorage.getInstance().reference.child("profileImages/${it.second.image}").downloadUrl.await()
+                                var imageUri: Uri? = null
 
-                            MemberTag(
-                                it.first,
-                                it.second.username,
-                                imageUri ?: Uri.parse(""),
-                            )
-                        }
+                                if (it.second.image.isNotEmpty())
+                                    imageUri =
+                                        FirebaseStorage.getInstance().reference.child("profileImages/${it.second.image}").downloadUrl.await()
+
+                                MemberTag(
+                                    it.first,
+                                    it.second.username,
+                                    imageUri ?: Uri.parse(""),
+                                )
+                            }
                     }
             } else MutableStateFlow(emptyList())
         }
@@ -257,7 +258,6 @@ fun SingleChatScreen(
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
-
 
 
     val messages by vm.messagesFlow(chatId, isGroupChat).collectAsState(initial = listOf())

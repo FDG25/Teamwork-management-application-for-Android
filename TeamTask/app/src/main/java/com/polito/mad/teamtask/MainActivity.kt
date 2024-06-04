@@ -73,15 +73,12 @@ class MainActivity : ComponentActivity() {
                         "teams" to emptyList<Long>()
                     )
 
-<<<<<<< Updated upstream
                     db.collection("people").document(uid).set(newUser).await()
                     Log.d("MainActivity", "User document added with UID: $uid")
-=======
                     db.collection("people").add(newUser).await()
                     //LocalContext.current.getSharedPreferences()
 
                     Log.d("MainActivity", "User document added: ${user.uid}")
->>>>>>> Stashed changes
                 } else {
                     Log.w("MainActivity", "User is null")
                 }
