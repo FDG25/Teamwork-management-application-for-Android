@@ -62,15 +62,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewModelScope
 import com.polito.mad.teamtask.Actions
+import com.polito.mad.teamtask.ui.theme.CaribbeanCurrent
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -94,6 +97,11 @@ class ProfileFormViewModel : ViewModel() {
 
     fun setBackButtModal(bool: Boolean) {
         showBackButtonModal = bool
+    }
+
+    var showLogoutModal by mutableStateOf(false)
+    fun setShwLogoutModal(bool: Boolean) {
+        showLogoutModal = bool
     }
 
     fun goBackToPresentation() {
@@ -452,11 +460,49 @@ fun ProfileScreen (
     user: Pair<String, Person>,
     userId: String,
     teams: List<Pair<String, Team>>, teamParticipants: List<TeamParticipant>,
-    vm: ProfileFormViewModel = viewModel()
+    vm: ProfileFormViewModel = viewModel(), onLogout: () -> Unit
 ) {
+    val palette = MaterialTheme.colorScheme
+    val typography = TeamTaskTypography
+
     LaunchedEffect(userId) {
         vm.fetchProfileImage(userId)
         vm.initialize(user)
+    }
+
+    if(vm.showLogoutModal) {
+        AlertDialog(
+            onDismissRequest = {
+                vm.setShwLogoutModal(false)
+            },
+            title = { Text(text = "Log out") },
+            text = { Text(text = "Are you sure that you want to log out?") },
+            confirmButton = {
+                Button(onClick = {
+                    onLogout()
+                    vm.setShwLogoutModal(false)
+                }) {
+                    Text(
+                        text = "Yes",
+                        style = typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CaribbeanCurrent
+                    )
+                }
+            },
+            dismissButton = {
+                Button(onClick = {
+                    vm.setShwLogoutModal(false)
+                }) {
+                    Text(
+                        text = "Cancel",
+                        style = typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CaribbeanCurrent
+                    )
+                }
+            }
+        )
     }
 
     if(LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE){
@@ -636,7 +682,6 @@ fun EditProfilePane(
                         )
                     }
                 }
-
                 if (vm.showBottomSheet) {
                     ModalBottomSheet(
                         onDismissRequest = { vm.setShowBottomMenu(false) },

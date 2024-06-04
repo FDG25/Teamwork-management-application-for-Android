@@ -1844,7 +1844,7 @@ fun AppMainScreen(
                     TopBar(
                         navController,
                         it.uid,
-                        signOut,
+                        profileVM::setShwLogoutModal,
                         profileVM.showMenu,
                         profileVM::setShowMen,
                         profileVM.showBackButtonModal,
@@ -1889,7 +1889,6 @@ fun AppMainScreen(
                             isSignUpFlow = isSignUpFlow,
                             updateIsSignUpFlow = appVM::updateIsSignUpFlow,
                             saveLoginStatus = saveLoginStatus,
-                            onLogout = signOut,
                             performPendingGoogleSignIn = performPendingGoogleSignIn,
                             resetPendingGoogleSignInAccount = resetPendingGoogleSignInAccount,
                             signUpWithEmail = signUpWithEmail,
@@ -2163,7 +2162,7 @@ fun AppMainScreen(
                         auth.currentUser?.let { it1 ->
                             ProfileScreen(
                                 personal, it1.uid, teams, teamParticipants,
-                                profileVM
+                                profileVM, onLogout = signOut
                             )
                         }
                     }

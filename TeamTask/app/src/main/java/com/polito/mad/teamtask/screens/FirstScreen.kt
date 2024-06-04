@@ -1413,7 +1413,6 @@ fun FirstScreen(
     isSignUpFlow: Boolean,
     updateIsSignUpFlow: (Boolean) -> Unit,
     saveLoginStatus: (Boolean) -> Unit,
-    onLogout: () -> Unit,
     performPendingGoogleSignIn: (String) -> Unit,
     resetPendingGoogleSignInAccount: () -> Unit,
     signUpWithEmail: (String, String, String, String, String) -> Unit,
