@@ -490,6 +490,7 @@ fun ProfileVerification (
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        /*
         if (emailVerified && loginMethod=="email") {
             Row (
                 verticalAlignment = Alignment.CenterVertically,
@@ -510,7 +511,8 @@ fun ProfileVerification (
                     modifier = Modifier.padding(top = 1.dp)
                 )
             }
-        } else if (!emailVerified && loginMethod=="email") {
+        } else if (!emailVerified &&
+            loginMethod=="email") {
             Row (
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 8.dp)
@@ -531,14 +533,47 @@ fun ProfileVerification (
                 )
             }
         }
+         */
 
+        if (loginMethod=="email") {
+            Row (
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Image (
+                    painter = painterResource(R.drawable.email_logo),
+                    contentDescription = "Email Logo",
+                )
+
+                Spacer(Modifier.width(12.dp))
+
+                Text (
+                    text = "Account created with Email",
+                    style = typography.bodySmall,
+                    fontStyle = FontStyle.Italic,
+                    color = palette.onSurfaceVariant
+                )
+            }
+        }
         if (loginMethod=="google") {
-            Text (
-                text = "Account created with Google",
-                style = typography.bodySmall,
-                fontStyle = FontStyle.Italic,
-                color = palette.onSurfaceVariant
-            )
+            Row (
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Image (
+                    painter = painterResource(R.drawable.google_logo),
+                    contentDescription = "Google Logo",
+                )
+
+                Spacer(Modifier.width(12.dp))
+
+                Text (
+                    text = "Account created with Google",
+                    style = typography.bodySmall,
+                    fontStyle = FontStyle.Italic,
+                    color = palette.onSurfaceVariant
+                )
+            }
         }
     }
 }
