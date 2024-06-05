@@ -6,6 +6,7 @@ import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.net.Uri
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import android.util.Log
@@ -110,7 +111,10 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 import com.google.zxing.WriterException
 import com.polito.mad.teamtask.Actions
 import com.polito.mad.teamtask.Person
@@ -128,9 +132,11 @@ import com.polito.mad.teamtask.components.tasks.TagsDropdownMenu
 import com.polito.mad.teamtask.ui.theme.Jet
 import com.polito.mad.teamtask.ui.theme.Mulish
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
@@ -157,7 +163,8 @@ data class PersonData (
     val surname: String,
     val username: String,
     val role: String,
-    val permission: String
+    val permission: String,
+    val image: String
 )
 
 enum class TaskCreationStep {
@@ -169,7 +176,19 @@ enum class TaskCreationStep {
 class SpecificTeamViewModel: ViewModel() {
     fun init(toDoTasks: List<ToDoTask>, teampeople: List<PersonData>, filteredPeople: List<PersonData>) {
         _toDoTasks.value = toDoTasks
-        _teampeople.value = teampeople
+        //_teampeople.value = teampeople
+
+        viewModelScope.launch {
+            val updatedTeamPeople = teampeople.map {
+                if (it.image.isNotBlank()) {
+                    val image =
+                        FirebaseStorage.getInstance().reference.child("profileImages/${it.image}")
+                    val url = image.downloadUrl.await()
+                    it.copy(image = url.toString())
+                } else it
+            }
+            _teampeople.value = updatedTeamPeople
+        }
         // Assuming filteredPeople is used to initialize some other state, if necessary
     }
 
@@ -676,10 +695,10 @@ class SpecificTeamViewModel: ViewModel() {
 
     // Task people
     private val _taskpeople = mutableStateOf(listOf(
-        PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner"),
-        PersonData("1", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin"),
-        PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", ""),
-        PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", ""),
+        PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+        PersonData("1", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin", ""),
+        PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
+        PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
     ).sortedBy { it.name })
 
     // Provide an immutable view of the taskpeople to the UI
@@ -783,22 +802,22 @@ class SpecificTeamViewModel: ViewModel() {
 
     // Team people
     private val _teampeople = mutableStateOf(listOf(
-        PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner"),
-        PersonData("1", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin"),
-        PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", ""),
-        PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", ""),
-        PersonData("4", "Alessandro", "Romano", "alessandro_romano", "Lead Developer", "Admin"),
-        PersonData("5", "Francesca", "Ferrari", "francesca_ferrari", "Recruiter", ""),
-        PersonData("6", "Matteo", "Galli", "matteo_galli", "Product Manager", ""),
-        PersonData("7", "Laura", "Conti", "laura_conti", "Support Specialist", ""),
-        PersonData("8", "Giulio", "Lisci", "g_straights", "Head Hunter", ""),
-        PersonData("9", "Giacomo", "Fiorentini", "g_fio", "Junior Developer", ""),
-        PersonData("10", "Pietro", "Lamborghini", "lambostone", "Recruiter", ""),
-        PersonData("11", "Matteo", "Innocenzi", "m_guilty", "Product Manager", ""),
-        PersonData("12", "Marco", "Pagani", "marpag", "Junior Developer", ""),
-        PersonData("13", "Adriano", "Novizi", "newey", "Senior Developer", ""),
-        PersonData("14", "Pietro", "Pascoli", "pipa", "Recruiter", ""),
-        PersonData("15", "Matteo", "Boldi", "boolds", "Product Designer", ""),
+        PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+        PersonData("1", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin", ""),
+        PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
+        PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
+        PersonData("4", "Alessandro", "Romano", "alessandro_romano", "Lead Developer", "Admin", ""),
+        PersonData("5", "Francesca", "Ferrari", "francesca_ferrari", "Recruiter", "", ""),
+        PersonData("6", "Matteo", "Galli", "matteo_galli", "Product Manager", "", ""),
+        PersonData("7", "Laura", "Conti", "laura_conti", "Support Specialist", "", ""),
+        PersonData("8", "Giulio", "Lisci", "g_straights", "Head Hunter", "", ""),
+        PersonData("9", "Giacomo", "Fiorentini", "g_fio", "Junior Developer", "", ""),
+        PersonData("10", "Pietro", "Lamborghini", "lambostone", "Recruiter", "", ""),
+        PersonData("11", "Matteo", "Innocenzi", "m_guilty", "Product Manager", "", ""),
+        PersonData("12", "Marco", "Pagani", "marpag", "Junior Developer", "", ""),
+        PersonData("13", "Adriano", "Novizi", "newey", "Senior Developer", "", ""),
+        PersonData("14", "Pietro", "Pascoli", "pipa", "Recruiter", "", ""),
+        PersonData("15", "Matteo", "Boldi", "boolds", "Product Designer", "", ""),
     ).sortedBy { it.name })
 
     // Provide an immutable view of the teampeople to the UI
@@ -843,58 +862,58 @@ class SpecificTeamViewModel: ViewModel() {
     private val _toDoTasks = mutableStateOf(listOf(
         ToDoTask("0", "Task 1", "Completed", 1, "Weekly", "2024-04-30T12:53:00+02:00", "2024-04-01T09:00:00+02:00",
             listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner"),
-                PersonData("1", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin"),
-                PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", ""),
-                PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", ""),
+                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                PersonData("1", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin", ""),
+                PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
+                PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
             ).sortedBy { it.name },
             listOf("#test1", "#test2")),
         ToDoTask("1", "Task 2", "Expired", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
             listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner"),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", ""),
+                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
             ).sortedBy { it.name },
             listOf("#test1", "#test2")),
         ToDoTask("2", "Task 2.5", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
             listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner"),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", ""),
+                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
             ).sortedBy { it.name },
             listOf("#test1", "#test2")),
         ToDoTask("3", "Task 2.6", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
             listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner"),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", ""),
+                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
             ).sortedBy { it.name },
             listOf("#test1", "#test2")),
         ToDoTask("4", "Task 2.7", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
             listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner"),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", ""),
+                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
             ).sortedBy { it.name },
             listOf("#test1", "#test2")),
         ToDoTask("5", "Task 2.8", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
             listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner"),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", ""),
+                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
             ).sortedBy { it.name },
             listOf("#test1", "#test2")),
         ToDoTask("6", "Task 3", "Scheduled", 1, "Never", "2024-05-07T13:36:00+02:00", "2024-04-02T11:00:00+02:00",
             listOf(
-                PersonData("0", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin"),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", ""),
+                PersonData("0", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin", ""),
+                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
             ).sortedBy { it.name },
             listOf("#test4", "#test5")),
         ToDoTask("7", "Task 4", "Scheduled", 0, "Monthly", "2024-05-30T12:12:00+02:00", "2024-04-02T12:00:00+02:00",
             listOf(
-                PersonData("0", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", ""),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", ""),
+                PersonData("0", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
+                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
             ).sortedBy { it.name },
             listOf("#test1", "#test2")),
         ToDoTask("8", "Task 5", "Scheduled", 1, "Yearly", "2024-05-07T22:21:00+02:00", "2024-04-03T08:00:00+02:00",
             listOf(
-                PersonData("0", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", ""),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", ""),
+                PersonData("0", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
+                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
             ).sortedBy { it.name },
             listOf("#test4", "#test5"))
     ))
@@ -2526,7 +2545,7 @@ fun AddMemberToTeamScreen(
     vm: SpecificTeamViewModel = viewModel(),
     ) {
     val urlPrefix = "https://teamtask.com/invite/"
-    val hashedString = generateHash(teamId.toString())
+    val hashedString = generateHash(teamId)
     val inviteLink = urlPrefix + hashedString
     val textState = remember { mutableStateOf(inviteLink) }
 
@@ -2890,7 +2909,6 @@ fun Tab3Screen (
                 addSelectedTeamPeopleToTask, removePersonFromTeam,
                 filteredPeople,
                 searchQuery, onSearchQueryChanged, setShowTeamLinkOrQrCode, isInTeamPeople = true
-
             )
         }
     }
@@ -3709,7 +3727,8 @@ fun SpecificTeamScreen(
                     surname = person.surname,
                     username = person.username,
                     role = "", // Assuming role is not available in your current data structure
-                    permission = "" // Assuming permission is not available in your current data structure
+                    permission = "", // Assuming permission is not available in your current data structure
+                    image = ""
                 )
             },
             tags = task.tags
@@ -3723,7 +3742,8 @@ fun SpecificTeamScreen(
             surname = person.surname,
             username = person.username,
             role = person.role,
-            permission = person.permission
+            permission = person.permission,
+            image = person.image
         )
     }
 
@@ -3734,7 +3754,8 @@ fun SpecificTeamScreen(
             surname = person.surname,
             username = person.username,
             role = "", // Assuming role is not available in your current data structure
-            permission = "" // Assuming permission is not available in your current data structure
+            permission = "", // Assuming permission is not available in your current data structure
+            image = ""
         )
     }
 
@@ -4039,18 +4060,31 @@ private fun PeopleEntry (
         }
 
         // Account image
-        Image(
-            painter = painterResource(id = when (person.name.length%5) {
-                1 -> userImages[0]
-                2 -> userImages[1]
-                3 -> userImages[2]
-                4 -> userImages[3]
-                else -> userImages[2]
-            }),
-            contentDescription = "Task Image",
-            modifier = Modifier
+//        Image(
+//            painter = painterResource(id = when (person.name.length%5) {
+//                1 -> userImages[0]
+//                2 -> userImages[1]
+//                3 -> userImages[2]
+//                4 -> userImages[3]
+//                else -> userImages[2]
+//            }),
+//            contentDescription = "Task Image",
+//            modifier = Modifier
+//                .size(48.dp)
+//                .clip(CircleShape)
+//        )
+
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(person.image)
+                .crossfade(true)
+                //.error()
+                .build(),
+            contentDescription = "Member Pic",
+            Modifier
                 .size(48.dp)
-                .clip(CircleShape)
+                .clip(CircleShape),
+            contentScale = ContentScale.Crop
         )
 
         Spacer(modifier = Modifier.width(8.dp))
@@ -4642,58 +4676,58 @@ fun ShowProfile(
     var toDoTasks = listOf(
         ToDoTask("0", "Task 1", "Completed", 1, "Weekly", "2024-04-30T12:53:00+02:00", "2024-04-01T09:00:00+02:00",
             listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner"),
-                PersonData("1", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin"),
-                PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", ""),
-                PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", ""),
+                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                PersonData("1", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin", ""),
+                PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
+                PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
             ).sortedBy { it.name },
             listOf("#test1", "#test2")),
         ToDoTask("1", "Task 2", "Expired", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
             listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner"),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", ""),
+                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
             ).sortedBy { it.name },
             listOf("#test1", "#test2")),
         ToDoTask("2", "Task 2.5", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
             listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner"),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", ""),
+                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
             ).sortedBy { it.name },
             listOf("#test1", "#test2")),
         ToDoTask("3", "Task 2.6", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
             listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner"),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", ""),
+                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
             ).sortedBy { it.name },
             listOf("#test1", "#test2")),
         ToDoTask("4", "Task 2.7", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
             listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner"),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", ""),
+                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
             ).sortedBy { it.name },
             listOf("#test1", "#test2")),
         ToDoTask("5", "Task 2.8", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
             listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner"),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", ""),
+                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
             ).sortedBy { it.name },
             listOf("#test1", "#test2")),
         ToDoTask("6", "Task 3", "Scheduled", 1, "Never", "2024-05-07T13:36:00+02:00", "2024-04-02T11:00:00+02:00",
             listOf(
-                PersonData("0", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin"),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", ""),
+                PersonData("0", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin", ""),
+                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
             ).sortedBy { it.name },
             listOf("#test4", "#test5")),
         ToDoTask("7", "Task 4", "Scheduled", 0, "Monthly", "2024-05-30T12:12:00+02:00", "2024-04-02T12:00:00+02:00",
             listOf(
-                PersonData("0", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", ""),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", ""),
+                PersonData("0", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
+                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
             ).sortedBy { it.name },
             listOf("#test1", "#test2")),
         ToDoTask("8", "Task 5", "Scheduled", 1, "Yearly", "2024-05-07T22:21:00+02:00", "2024-04-03T08:00:00+02:00",
             listOf(
-                PersonData("0", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", ""),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", ""),
+                PersonData("0", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
+                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
             ).sortedBy { it.name },
             listOf("#test4", "#test5"))
     )
@@ -4809,4 +4843,9 @@ fun ShowProfile(
 
 }
 
+suspend fun downloadMemberPic(image: String): Uri? {
+    val storage = FirebaseStorage.getInstance()
+    val uri = storage.reference.child("profileImages/$image").downloadUrl.await()
+    return uri
+}
 

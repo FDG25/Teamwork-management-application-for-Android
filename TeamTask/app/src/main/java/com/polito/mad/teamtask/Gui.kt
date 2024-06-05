@@ -75,6 +75,7 @@ import com.polito.mad.teamtask.screens.SpecificTeamScreen
 import com.polito.mad.teamtask.screens.SpecificTeamViewModel
 import com.polito.mad.teamtask.screens.TeamsScreen
 import com.polito.mad.teamtask.screens.TeamsViewModel
+import com.polito.mad.teamtask.screens.generateHash
 import com.polito.mad.teamtask.tasks.ShowTaskDetails
 import com.polito.mad.teamtask.ui.theme.CaribbeanCurrent
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
@@ -1680,12 +1681,17 @@ class AppModel(
                 val team = newTeam?.let { db.collection("teams").add(it).await() }
                 //add team partecipant logged user id as owner
                 if (team != null) {
+                    //generate hash
+                    val hash = generateHash(team.id)
+                    //save invite link
+                    db.collection("teams").document(team.id).update("inviteLink", hash)
+
                     auth.currentUser?.uid?.let {
                         TeamParticipant(
                             team.id,
                             it,
                             false,
-                            "Owner",
+                            "",
                             0L,
                             0L
                         )
@@ -2056,7 +2062,8 @@ fun AppMainScreen(
                                                 surname = person.second.surname,
                                                 username = person.second.username,
                                                 role = participant.role,  // Extract role from participant
-                                                permission = permission  // Set permission based on ownerId and admins list
+                                                permission = permission,  // Set permission based on ownerId and admins list
+                                                image = person.second.image
                                             )
                                         )
                                     }

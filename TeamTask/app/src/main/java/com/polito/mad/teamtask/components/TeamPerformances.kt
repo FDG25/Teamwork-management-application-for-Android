@@ -64,22 +64,22 @@ class TeamStatisticsViewModel : ViewModel() {
         totalTasksCompleted = 10,
         people = listOf(
             StatisticsDataPerson(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner"),
+                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
                 totalTasksAssigned = 5,
                 totalTasksCompleted = 3
             ),
             StatisticsDataPerson(
-                PersonData("1", "Mario", "Rossi", "username1", "CTO", "Admin"),
+                PersonData("1", "Mario", "Rossi", "username1", "CTO", "Admin", ""),
                 totalTasksAssigned = 6,
                 totalTasksCompleted = 5
             ),
             StatisticsDataPerson(
-                PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", ""),
+                PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
                 totalTasksAssigned = 4,
                 totalTasksCompleted = 4
             ),
             StatisticsDataPerson(
-                PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", ""),
+                PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
                 totalTasksAssigned = 5,
                 totalTasksCompleted = 2
             )
