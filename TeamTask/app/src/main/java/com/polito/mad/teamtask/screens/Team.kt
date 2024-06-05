@@ -113,6 +113,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.google.zxing.WriterException
@@ -174,6 +175,8 @@ enum class TaskCreationStep {
 }
 
 class SpecificTeamViewModel: ViewModel() {
+    val auth = FirebaseAuth.getInstance()
+
     fun init(toDoTasks: List<ToDoTask>, teampeople: List<PersonData>, filteredPeople: List<PersonData>) {
         _toDoTasks.value = toDoTasks
         //_teampeople.value = teampeople
@@ -190,6 +193,137 @@ class SpecificTeamViewModel: ViewModel() {
             _teampeople.value = updatedTeamPeople
         }
         // Assuming filteredPeople is used to initialize some other state, if necessary
+    }
+
+    // Method to retrieve team information by invite hash
+    suspend fun retrieveTeamInfoByInviteHash(hash: String): Pair<Team?, String> {
+        return try {
+            val currentUser = auth.currentUser
+            val userStatus: String
+
+            if (currentUser == null) {
+                return Pair(null, "User not logged in")
+            } else {
+                val userId = currentUser.uid
+
+                val teamQuery = db.collection("teams").whereEqualTo("inviteLink", hash).get().await()
+                if (teamQuery.documents.isNotEmpty()) {
+                    val teamDocument = teamQuery.documents.first()
+                    val teamData = teamDocument.data
+
+                    if (teamData != null) {
+                        // Process the team data
+                        val teamMemberIds = teamData["members"] as? List<String> ?: emptyList()
+                        val teamOwnerId = teamData["ownerId"] as? String ?: ""
+                        val teamAdminIds = teamData["admins"] as? List<String> ?: emptyList()
+                        val teamName = teamData["name"] as? String ?: ""
+                        val teamImage = teamData["image"] as? String ?: ""
+                        val inviteLink = teamData["inviteLink"] as? String ?: ""
+                        val creationDate = teamData["creationDate"] as? String ?: ""
+                        val category = teamData["category"] as? String ?: ""
+                        val tasks = teamData["tasks"] as? List<String> ?: emptyList()
+
+                        val team = Team(
+                            name = teamName,
+                            image = teamImage,
+                            ownerId = teamOwnerId,
+                            admins = teamAdminIds,
+                            inviteLink = inviteLink,
+                            creationDate = creationDate,
+                            category = category,
+                            members = teamMemberIds,
+                            tasks = tasks
+                        )
+
+                        // Check if the current user is already a member of the team
+                        val isUserInTeam = teamMemberIds.contains(userId) || teamOwnerId == userId || teamAdminIds.contains(userId)
+
+                        userStatus = if (isUserInTeam) {
+                            "User already a member of the team"
+                        } else {
+                            "User not a member of the team"
+                        }
+
+                        val statusWithId = "$userStatus-${teamDocument.id}"
+                        return Pair(team, statusWithId)
+                    } else {
+                        userStatus = "Team not found"
+                    }
+                } else {
+                    userStatus = "Team not found"
+                }
+            }
+
+            Pair(null, userStatus)
+        } catch (e: Exception) {
+            // Handle any errors that occur during the database operation
+            Pair(null, "Error retrieving team information")
+        }
+    }
+
+
+    // Function to add the current logged-in user to a team and navigate if successful
+// Function to add the current logged-in user to a team and navigate if successful
+    // Function to add the current logged-in user to a team and navigate if successful
+    fun joinTeam(teamId: String) {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            return
+        }
+
+        val userId = currentUser.uid
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val teamRef = db.collection("teams").document(teamId)
+                val teamDocument = teamRef.get().await()
+
+                if (teamDocument.exists()) {
+                    val members = teamDocument.get("members") as? MutableList<String> ?: mutableListOf()
+                    if (!members.contains(userId)) {
+                        members.add(userId)
+                        teamRef.update("members", members).await()
+                    }
+
+                    // Add a new entry in the team_participants collection
+                    val participantData = TeamParticipant(
+                        teamId = teamId,
+                        personId = userId,
+                        frequentlyAccessed = false,
+                        role = "",
+                        completedTasks = 0L,
+                        totalTasks = 0L
+                    )
+                    db.collection("team_participants").add(participantData).await()
+
+                    // Update the user's teams field in the people collection
+                    val userRef = db.collection("people").document(userId)
+                    val userDocument = userRef.get().await()
+
+                    if (userDocument.exists()) {
+                        val userTeams = userDocument.get("teams") as? List<String> ?: emptyList()
+                        val updatedTeams = userTeams.toMutableList()
+                        if (!updatedTeams.contains(teamId)) {
+                            updatedTeams.add(teamId)
+                            userRef.update("teams", updatedTeams).await()
+                        }
+                    } else {
+                        // If user document does not exist, create it
+                        val newUserData = hashMapOf(
+                            "teams" to listOf(teamId),
+                            // Add other required fields with default values as necessary
+                        )
+                        userRef.set(newUserData).await()
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        Actions.getInstance().goToTeamTasks(teamId)
+                    }
+                }
+            } catch (e: Exception) {
+                // Handle any errors that occur during the database operation
+                Log.e("SpecificTeamViewModel", "Error joining team", e)
+            }
+        }
     }
 
     var isNotPriority by mutableIntStateOf(-1)           //look ToDoTasks data class for info on the values
@@ -2565,10 +2699,26 @@ fun AddMemberToTeamScreen(
 
 @Composable
 fun InviteConfirmationScreen(
-
+    hash: String,
+    vm: SpecificTeamViewModel = viewModel()
 ) {
     val palette = MaterialTheme.colorScheme
-    //val typography = TeamTaskTypography
+
+    // State to hold the team information and status
+    var team by remember { mutableStateOf<Team?>(null) }
+    var status by remember { mutableStateOf("") }
+    var teamId by remember { mutableStateOf("") }
+
+    // Fetch the team information when the screen is rendered
+    LaunchedEffect(hash) {
+        val (teamInfo, statusMessage) = vm.retrieveTeamInfoByInviteHash(hash)
+        team = teamInfo
+        status = statusMessage.split("-")[0]
+        if(statusMessage.contains("-")){
+            teamId = statusMessage.split("-")[1]
+        }
+        Log.e("InviteConfirmationScreen", status)
+    }
 
     if(LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE) {
         LazyColumn(
@@ -2582,86 +2732,148 @@ fun InviteConfirmationScreen(
             //Spacer(modifier = Modifier.height(16.dp))
             item {
                 Column {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.group_2),
-                            contentDescription = "Team Image",
+                    if(status == "User not logged in") {
+                        Actions.getInstance().goToFirstScreen()
+                    }
+                    if(status == "Team not found") {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.group_2),
+                                contentDescription = "Team Not Found",
+                                modifier = Modifier
+                                    .border(1.dp, palette.secondary, RoundedCornerShape(5))
+                                    .width(120.dp)
+                                    .height(120.dp),
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "Ops, this team does ",
+                                fontSize = 20.sp,
+                                color = palette.onSurface
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "not exist...",
+                                fontSize = 20.sp,
+                                color = palette.onSurface
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        Button(
+                            onClick = { Actions.getInstance().goToHome() },
                             modifier = Modifier
-                                .border(1.dp, palette.secondary, RoundedCornerShape(5))
-                                .width(120.dp)
-                                .height(120.dp),
-                        )
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = palette.primary,
+                                contentColor = palette.secondary
+                            )
+                        ) {
+                            Text("Go to home")
+                        }
                     }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    val teamName = "Team Name"
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "You have been invited to join ",
-                            fontSize = 20.sp,
-                            color = palette.onSurface
-                        )
+                    if(status == "User already a member of the team") {
+                        Actions.getInstance().goToTeamTasks(teamId)
                     }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = teamName,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 24.sp,
-                            color = palette.onSurface
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "",
-                            fontSize = 24.sp,
-                            color = palette.onSurface
-                        )
-                    }
+                    if(status == "User not a member of the team") {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.group_2),
+                                contentDescription = "Team Image",
+                                modifier = Modifier
+                                    .border(1.dp, palette.secondary, RoundedCornerShape(5))
+                                    .width(120.dp)
+                                    .height(120.dp),
+                            )
+                        }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    Button(
-                        onClick = { },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = palette.primary,
-                            contentColor = palette.secondary
-                        )
-                    ) {
-                        Text("Join team")
-                    }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "You have been invited to join ",
+                                fontSize = 20.sp,
+                                color = palette.onSurface
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            team?.let {
+                                Text(
+                                    text = it.name,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 24.sp,
+                                    color = palette.onSurface
+                                )
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "",
+                                fontSize = 24.sp,
+                                color = palette.onSurface
+                            )
+                        }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    Button(
-                        onClick = { },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = palette.secondary,
-                            contentColor = palette.background
-                        )
-                    ) {
-                        Text("Reject invite")
+                        Button(
+                            onClick = { vm.joinTeam(teamId) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = palette.primary,
+                                contentColor = palette.secondary
+                            )
+                        ) {
+                            Text("Join team")
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            onClick = { Actions.getInstance().goToHome() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = palette.secondary,
+                                contentColor = palette.background
+                            )
+                        ) {
+                            Text("Reject invite")
+                        }
                     }
                 }
             }
