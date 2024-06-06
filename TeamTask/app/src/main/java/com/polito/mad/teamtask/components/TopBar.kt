@@ -49,6 +49,10 @@ fun TopBar(
     setShwDeleteAccountModal: (Boolean) -> Unit,
     deleteAccount: () -> Unit,
     setShwLogoutModal: (Boolean) -> Unit,
+    setShwDeleteTeamModal: (Boolean) -> Unit,
+    deleteTeam: (String) -> Unit,
+    setShwExitFromTeamModal: (Boolean) -> Unit,
+    exitFromTeam: (String) -> Unit,
     showMenu: Boolean,
     setShowMen: (Boolean) -> Unit,
     showBackButtonModal: Boolean,
@@ -510,7 +514,7 @@ fun TopBar(
                                     )
                                 },
                                 onClick = {
-                                    //
+                                    setShwExitFromTeamModal(true)
                                     setShowMen(false)
                                 },
                                 leadingIcon = {
@@ -530,7 +534,7 @@ fun TopBar(
                                     )
                                 },
                                 onClick = {
-                                    //
+                                    setShwDeleteTeamModal(true)
                                     setShowMen(false)
                                 },
                                 leadingIcon = {
@@ -901,7 +905,7 @@ fun TopBar(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary),
-                actions = {
+                /*actions = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.End
@@ -998,10 +1002,9 @@ fun TopBar(
                                     }
                                 )
                             }
-                            //TODO: Add the other dropdown options
                         }
                     }
-                }
+                }*/
             )
         }
 
