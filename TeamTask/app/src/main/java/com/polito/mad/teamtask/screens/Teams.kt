@@ -193,6 +193,16 @@ class TeamsViewModel(private val myModel: AppModel) : ViewModel() {
         }
     }
 
+    fun saveTeamChangesToDB(teamId: String) {
+        val imageUri: Uri? = if (imageUri!=null && (imageUri?.scheme=="content" || imageUri?.scheme=="file")) imageUri else null
+        viewModelScope.launch {
+            isLoading = true
+            myModel.updateTeamStatus(teamId, teamNameValue, teamCategory, imageUri)
+            isLoading = false
+            Actions.getInstance().navigateBack()
+        }
+    }
+
     var imageUri by mutableStateOf<Uri?>(null)
     fun setUri(uri: Uri? = null) {
         imageUri = uri

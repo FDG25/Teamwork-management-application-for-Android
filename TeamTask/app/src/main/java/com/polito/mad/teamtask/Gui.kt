@@ -43,6 +43,7 @@ import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.Filter
 import com.google.firebase.firestore.firestore
+import com.google.firebase.storage.FirebaseStorage
 import com.google.gson.Gson
 import com.polito.mad.teamtask.chat.visualization.ClientMessage
 import com.polito.mad.teamtask.chat.visualization.SingleChatScreen
@@ -87,6 +88,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -1735,6 +1737,30 @@ class AppModel(
     fun updateTeamDescription(teamId: String, description: String) {
         db.collection("teams").document(teamId).update("description", description)
     }
+
+    suspend fun updateTeamStatus(teamId: String, name: String, category: String, teamImage: Uri?) {
+        try {
+            var image: String? = null
+            val oldImage = db.collection("teams").document(teamId).get().await().toObject(Team::class.java)?.image
+            if(teamImage!=null) {
+                image = uploadTeamImage(teamImage, teamId, applicationContext)
+            }
+            db.collection("teams").document(teamId).update(
+                mapOf(
+                    "name" to name,
+                    "category" to category,
+                    "image" to (image ?: oldImage)
+                )
+            ).await()
+            if(!oldImage.isNullOrBlank() && teamImage!=null)
+                FirebaseStorage.getInstance().reference.child("teamImages/${oldImage}").delete().await()
+        }
+        catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(applicationContext, e.toString(), Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 }
 
 
@@ -2122,9 +2148,16 @@ fun AppMainScreen(
                     composable("teams/{teamId}/filterTasks") { FilterTasksScreen() }
                     composable("teams/{teamId}/edit/status") { backStackEntry ->
                         val teamId = backStackEntry.arguments?.getString("teamId")
-                        teamId?.let {
-                            NewTeam(isInCreation = false, teamId = teamId)
-                        }
+                        val team = teams.find { it.first == teamId }
+
+                        if (teamId != null && team != null)
+                            NewTeam(
+                                isInCreation = false,
+                                teamId = teamId,
+                                teamImage = team.second.image,
+                                teamName = team.second.name,
+                                teamCategory = team.second.category
+                            )
                     }
                     composable("teams/{teamId}/edit/description") { backStackEntry ->
                         val teamId = backStackEntry.arguments?.getString("teamId")

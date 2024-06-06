@@ -48,6 +48,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,11 +69,13 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.google.firebase.storage.FirebaseStorage
 import com.polito.mad.teamtask.AppFactory
 import com.polito.mad.teamtask.CameraActivity
 import com.polito.mad.teamtask.R
 import com.polito.mad.teamtask.screens.TeamsViewModel
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
+import kotlinx.coroutines.tasks.await
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -162,7 +165,7 @@ private fun EditTeamPictureSection(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(imageUri)
                         .crossfade(true)
-                        .error(R.drawable.outline_camera_alt_24)
+                        .error(R.drawable.baseline_groups_24)
                         .build(),
                     contentDescription = "Profile",
                     modifier = Modifier
@@ -462,6 +465,9 @@ private fun EditTeamPictureSection(
 fun NewTeam(
     isInCreation: Boolean,
     teamId: String,
+    teamImage: String? = null,
+    teamName: String? = null,
+    teamCategory: String? = null,
     teamsVM: TeamsViewModel = viewModel(factory = AppFactory(LocalContext.current))
 ) {
     val palette = MaterialTheme.colorScheme
@@ -469,6 +475,18 @@ fun NewTeam(
 
     var isExpandedCategoryDropdown by remember {
         mutableStateOf(false)
+    }
+
+    LaunchedEffect(key1 = Unit) {
+        if (!isInCreation) {
+            if (!teamImage.isNullOrBlank()) {
+                val imageRef =
+                    FirebaseStorage.getInstance().reference.child("teamImages/$teamImage").downloadUrl.await()
+                teamsVM.setUri(imageRef)
+            }
+            teamsVM.setTeamName(teamName ?: "")
+            teamsVM.setMyTeamCategory(teamCategory ?: "")
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -633,7 +651,12 @@ fun NewTeam(
 
 
                     Button(
-                        onClick = { teamsVM.validate(isInCreation, teamId) },
+                        onClick = {
+                            if (isInCreation)
+                                teamsVM.validate(true, teamId)
+                            else
+                                teamsVM.saveTeamChangesToDB(teamId)
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp),
@@ -658,7 +681,7 @@ fun NewTeam(
         }
 
         //in charging state
-        if(teamsVM.isLoading) {
+        if (teamsVM.isLoading) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()

@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow.Companion.Ellipsis
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -83,7 +84,9 @@ fun TeamCard (
             }
             Text (
                 text = team.name,
-                style = typography.bodySmall
+                style = typography.bodySmall,
+                maxLines = 1,
+                overflow = Ellipsis
             )
         }
     }

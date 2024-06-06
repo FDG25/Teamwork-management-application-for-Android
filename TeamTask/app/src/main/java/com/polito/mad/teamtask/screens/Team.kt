@@ -289,10 +289,7 @@ class SpecificTeamViewModel: ViewModel() {
 
     // Function to add or remove a team from the favourite section in Home
     fun addOrRemoveTeamToFavourites(teamId: String, frequentlyAccessed: Boolean) {
-        val currentUser = auth.currentUser
-        if (currentUser == null) {
-            return
-        }
+        val currentUser = auth.currentUser ?: return
 
         val userId = currentUser.uid
         viewModelScope.launch(Dispatchers.IO) {
@@ -312,10 +309,6 @@ class SpecificTeamViewModel: ViewModel() {
                 } else {
                     // Handle the case where no participant document is found
                     Log.e("SpecificTeamViewModel", "No participant document found for teamId: $teamId and userId: $userId")
-                }
-
-                withContext(Dispatchers.Main) {
-                    Actions.getInstance().goToTeamTasks(teamId)
                 }
             } catch (e: Exception) {
                 // Handle any errors that occur during the database operation
