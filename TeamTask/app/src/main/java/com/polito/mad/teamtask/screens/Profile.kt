@@ -690,7 +690,7 @@ fun ProfileScreen (
 
                 item { Spacer(Modifier.height(16.dp)) }
 
-                /*
+
                 item {
                     Statistics(
                         numTeams,
@@ -702,7 +702,7 @@ fun ProfileScreen (
                 }
 
                 item { Spacer(Modifier.height(16.dp)) }
-                */
+
             }
         }
     } else {
@@ -739,7 +739,6 @@ fun ProfileScreen (
 
             item { Spacer(Modifier.height(16.dp)) }
 
-            /*
             item {
                 Statistics(
                     numTeams,
@@ -749,7 +748,6 @@ fun ProfileScreen (
                     totalTasksPerTeam.ifEmpty { listOf(Pair("No team", 0)) }
                 )
             }
-            */
         }
     }
     if (vm.isLoading) {

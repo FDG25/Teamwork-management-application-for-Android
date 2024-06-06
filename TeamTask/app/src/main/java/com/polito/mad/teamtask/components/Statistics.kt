@@ -108,10 +108,10 @@ fun Statistics(
 
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
-                "Tasks completed per team: ${data.tasksCompletedPerTeam.size}",
+                "Tasks completed per team: ",
                 style = typography.bodySmall
             )
-            data.tasksCompletedPerTeam.filter { it.totalTasks > 0 }.forEach {
+            data.tasksCompletedPerTeam.forEach {
                 Spacer(modifier = Modifier.height(10.dp))
                 TeamStatistics(
                     teamImage = it.teamImage,

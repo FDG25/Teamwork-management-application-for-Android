@@ -26,7 +26,7 @@ fun ProgressBar(
 ) {
     val typography = TeamTaskTypography
     val palette = MaterialTheme.colorScheme
-    val ratio = completedNumber.toFloat() / totalNumber
+    val ratio = if(totalNumber>0) completedNumber.toFloat() / totalNumber else 0f
 
     Box (
         modifier = Modifier
