@@ -34,25 +34,37 @@ fun FloatingButton (
                 )
             }
         }
-//        "teams/{teamId}/tasks" -> {
-//            val teamId = Actions.getInstance().getStringParameter("teamId")
-//
-//            FloatingActionButton(
-//                onClick = {
-//                    if (teamId != null) {
-//                        Actions.getInstance().goToEditTeamPeople(teamId)
-//                        //Actions.getInstance().goToCreateTaskStatus(teamId)
-//                    }
-//                },
-//                containerColor = palette.secondary
-//            ) {
-//                Image(
-//                    painter = painterResource(id = R.drawable.outline_person_add_24),
-//                    contentDescription = "Add",
-//                    colorFilter = ColorFilter.tint(palette.background)
-//                )
-//            }
-//        }
+        "teams/{teamId}/tasks" -> {
+            val teamId = Actions.getInstance().getStringParameter("teamId")
+
+            FloatingActionButton(
+                onClick = {
+                    if (teamId != null) {
+                        Actions.getInstance().goToEditTeamPeople(teamId)
+                        //Actions.getInstance().goToCreateTaskStatus(teamId)
+                    }
+                },
+                containerColor = palette.secondary
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.outline_person_add_24),
+                    contentDescription = "Add",
+                    colorFilter = ColorFilter.tint(palette.background)
+                )
+            }
+        }
+        "chats" -> {
+            FloatingActionButton(
+                onClick = {},
+                containerColor = palette.secondary
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.outline_add_24),
+                    contentDescription = "New message",
+                    colorFilter = ColorFilter.tint(palette.background)
+                )
+            }
+        }
         else -> {
 
 

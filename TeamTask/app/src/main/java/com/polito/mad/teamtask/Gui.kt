@@ -1890,6 +1890,7 @@ fun AppMainScreen(
                         teamVM::deleteTeam,
                         teamVM::setShwExitFromTeamModal,
                         teamVM::exitFromTeam,
+                        teamVM::addOrRemoveTeamToFavourites,
                         profileVM.showMenu,
                         profileVM::setShowMen,
                         profileVM.showBackButtonModal,
@@ -1900,7 +1901,8 @@ fun AppMainScreen(
                         profileVM::cancelEditProfile,
                         people,
                         teams,
-                        tasks
+                        tasks,
+                        teamParticipants
                     )
                 }
             }

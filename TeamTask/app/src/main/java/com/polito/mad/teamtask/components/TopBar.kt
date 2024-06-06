@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
@@ -39,6 +40,7 @@ import com.polito.mad.teamtask.Person
 import com.polito.mad.teamtask.R
 import com.polito.mad.teamtask.Task
 import com.polito.mad.teamtask.Team
+import com.polito.mad.teamtask.TeamParticipant
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,6 +55,7 @@ fun TopBar(
     deleteTeam: (String) -> Unit,
     setShwExitFromTeamModal: (Boolean) -> Unit,
     exitFromTeam: (String) -> Unit,
+    addOrRemoveTeamToFavourites: (String, Boolean) -> Unit,
     showMenu: Boolean,
     setShowMen: (Boolean) -> Unit,
     showBackButtonModal: Boolean,
@@ -63,7 +66,8 @@ fun TopBar(
     cancelEditProfile: () -> Unit,
     people: List<Pair<String, Person>>,
     teams: List<Pair<String, Team>>,
-    tasks: List<Pair<String, Task>>
+    tasks: List<Pair<String, Task>>,
+    teamParticipants: List<TeamParticipant>
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
@@ -405,10 +409,15 @@ fun TopBar(
         }
 
         "teams/{teamId}/tasks", "teams/{teamId}/description", "teams/{teamId}/people",
-        "teams/{teamId}/tasksCalendar", "teams/{teamId}/statistics" -> {
+        "teams/{teamId}/tasksCalendar" -> {
             val teamId = Actions.getInstance().getStringParameter("teamId")
 
             val team = teams.find { it.first == teamId }
+
+            val frequentlyAccessed = teamParticipants.find {
+                it.teamId == teamId && it.personId == userId
+            }?.frequentlyAccessed ?: false
+
 
             TopAppBar(
                 // Back button
@@ -501,6 +510,41 @@ fun TopBar(
                             DropdownMenuItem(
                                 text = {
                                     Text(
+                                        if (!frequentlyAccessed) "Mark as favourite" else "Remove from favourites",
+                                        style = typography.headlineSmall
+                                    )
+                                },
+                                onClick = {
+                                    setShowMen(false)
+                                    if (teamId != null) {
+                                        // Add/remove team to/from frequentlyAccessed
+                                        addOrRemoveTeamToFavourites(teamId, frequentlyAccessed)
+                                    }
+                                },
+                                leadingIcon = {
+                                    Box {
+                                        Image(
+                                            painter = painterResource(id = R.drawable.outline_star_24),
+                                            contentDescription = "Edit Team Info",
+                                            colorFilter = ColorFilter.tint(palette.secondary)
+                                        )
+                                        if (frequentlyAccessed) {
+                                            Image(
+                                                painter = painterResource(id = R.drawable.outline_remove_24),
+                                                contentDescription = "Remove from favourites",
+                                                colorFilter = ColorFilter.tint(palette.error),
+                                                modifier = Modifier
+                                                    .align(Alignment.Center)
+                                                    .rotate(45f) // Rotate the remove icon to make it diagonal
+                                            )
+                                        }
+                                    }
+                                }
+                            )
+
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
                                         "Show Statistics",
                                         style = typography.headlineSmall
                                     )
@@ -561,6 +605,80 @@ fun TopBar(
                             )
 
                             //TODO: Add the other dropdown options
+                        }
+                    }
+                }
+            )
+        }
+
+        "teams/{teamId}/statistics" -> {
+            val teamId = Actions.getInstance().getStringParameter("teamId")
+
+            val team = teams.find { it.first == teamId }
+
+            TopAppBar(
+                // Back button
+                navigationIcon = {
+                    IconButton(onClick = {
+                        Actions.getInstance().navigateBack()
+                    }) {
+                        Image(
+                            painter = painterResource(id = R.drawable.outline_arrow_back_24),
+                            contentDescription = "Back",
+                            modifier = Modifier.scale(1.2f)
+                        )
+                    }
+                },
+
+                // Title
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.teamtasklogo),  // TODO: Adapt team image
+                            contentDescription = "Team logo",
+                            modifier = Modifier.size(30.dp)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        if (team?.second?.name != null) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    team.second.name,
+                                    style = typography.titleMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    team.second.category,
+                                    style = typography.labelSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(palette.primary),
+                actions = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        // Chat
+                        IconButton(onClick = {
+                            if (teamId != null) {
+                                Actions.getInstance().goToChat(teamId, true)
+                            }
+                        }) {
+                            Image(
+                                painter = painterResource(id = R.drawable.outline_chat_24),
+                                contentDescription = "Chat",
+                                modifier = Modifier.scale(1.2f)
+                            )
                         }
                     }
                 }
