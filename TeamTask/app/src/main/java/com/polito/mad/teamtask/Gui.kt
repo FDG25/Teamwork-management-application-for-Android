@@ -518,6 +518,7 @@ class AppModel(
     }
 
     // Teams
+// Teams
     fun getTeams(): Flow<List<Pair<String, Team>>> = callbackFlow {
         val listener = auth.currentUser?.uid?.let {
             db.collection("teams")
@@ -531,12 +532,12 @@ class AppModel(
                             val name = obj.getString("name") ?: ""
                             val image = obj.getString("image") ?: ""
                             val ownerId = obj.getString("ownerId") ?: "Toy person 1"
-                            val admins = obj.get("admins") as List<String>
+                            val admins = obj.get("admins") as? List<String> ?: emptyList()
                             val inviteLink = obj.getString("inviteLink") ?: ""
                             val creationDate = obj.getString("creationDate") ?: ""
                             val category = obj.getString("category") ?: ""
-                            val members = obj.get("members") as List<String>
-                            val tasks = obj.get("tasks") as List<String>
+                            val members = obj.get("members") as? List<String> ?: emptyList()
+                            val tasks = obj.get("tasks") as? List<String> ?: emptyList()
                             val description = obj.getString("description") ?: ""
 
                             val team = Team(
@@ -547,20 +548,14 @@ class AppModel(
                             l.add(Pair(id, team))
                         }
 
-                        trySend(l)
+                        trySend(l).isSuccess
                     } else {
-                        Log.e("ERROR", e.toString())
-                        trySend(emptyList())
+                        e?.let { close(it) }
                     }
                 }
         }
-        awaitClose {
-            if (listener != null) {
-                listener.remove()
-            }
-        }
+        awaitClose { listener?.remove() }
     }
-
     // Notifications
     fun getNotifications(): Flow<List<Pair<String, Notification>>> = callbackFlow {
         val listener = auth.currentUser?.uid?.let {
@@ -1890,6 +1885,10 @@ fun AppMainScreen(
                         profileVM::setShwDeleteAccountModal,
                         { profileVM.deleteAccount(signOut) },
                         profileVM::setShwLogoutModal,
+                        teamVM::setShwDeleteTeamModal,
+                        teamVM::deleteTeam,
+                        teamVM::setShwExitFromTeamModal,
+                        teamVM::exitFromTeam,
                         profileVM.showMenu,
                         profileVM::setShowMen,
                         profileVM.showBackButtonModal,
@@ -2277,7 +2276,9 @@ fun AppMainScreen(
                         })
                     ) { backStackEntry ->
                         val hash = backStackEntry.arguments?.getString("hash")
-                        InviteConfirmationScreen()
+                        if (hash != null) {
+                            InviteConfirmationScreen(hash)
+                        }
                     }
 
                     composable("notImplemented") { NotImplementedScreen() }
@@ -2321,6 +2322,8 @@ class Actions(
 ) {
     // Home
     val goToHome: () -> Unit = { navCont.navigate("home") }
+
+    val goToFirstScreen: () -> Unit = { navCont.navigate("firstScreen") }
 
     val goToHomeCalendar: () -> Unit = { navCont.navigate("homeCalendar") }
 

@@ -113,6 +113,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
@@ -131,6 +132,7 @@ import com.polito.mad.teamtask.components.TaskEntry
 import com.polito.mad.teamtask.components.tasks.Description
 import com.polito.mad.teamtask.components.tasks.DescriptionViewOnly
 import com.polito.mad.teamtask.components.tasks.TagsDropdownMenu
+import com.polito.mad.teamtask.ui.theme.CaribbeanCurrent
 import com.polito.mad.teamtask.ui.theme.Jet
 import com.polito.mad.teamtask.ui.theme.Mulish
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
@@ -175,12 +177,10 @@ enum class TaskCreationStep {
     People
 }
 
-class SpecificTeamViewModel : ViewModel() {
-    fun init(
-        toDoTasks: List<ToDoTask>,
-        teampeople: List<PersonData>,
-        filteredPeople: List<PersonData>
-    ) {
+class SpecificTeamViewModel: ViewModel() {
+    val auth = FirebaseAuth.getInstance()
+
+    fun init(toDoTasks: List<ToDoTask>, teampeople: List<PersonData>, filteredPeople: List<PersonData>) {
         _toDoTasks.value = toDoTasks
         //_teampeople.value = teampeople
 
@@ -196,6 +196,326 @@ class SpecificTeamViewModel : ViewModel() {
             _teampeople.value = updatedTeamPeople
         }
         // Assuming filteredPeople is used to initialize some other state, if necessary
+    }
+
+    var stringValueForDelete by mutableStateOf("")
+        private set
+    var stringErrorForDelete by mutableStateOf("")
+        private set
+    fun setStrinValueForDelete(a: String) {
+        stringValueForDelete = a.trim()
+        stringErrorForDelete = ""
+    }
+
+    fun validateStringForDeleteTeam(teamId: String) {
+        viewModelScope.launch {
+            if (stringValueForDelete == auth.currentUser?.email) {
+                deleteTeam(teamId)
+                setShwDeleteTeamModal(false)
+                setStrinValueForDelete("")
+                stringErrorForDelete = ""
+                //updateAccountBeenDeletedStatus(true)
+            } else {
+                stringErrorForDelete = "Inserted email is not correct!"
+            }
+        }
+    }
+
+    // Method to retrieve team information by invite hash
+    suspend fun retrieveTeamInfoByInviteHash(hash: String): Pair<Team?, String> {
+        return try {
+            val currentUser = auth.currentUser
+            val userStatus: String
+
+            if (currentUser == null) {
+                return Pair(null, "User not logged in")
+            } else {
+                val userId = currentUser.uid
+
+                val teamQuery = db.collection("teams").whereEqualTo("inviteLink", hash).get().await()
+                if (teamQuery.documents.isNotEmpty()) {
+                    val teamDocument = teamQuery.documents.first()
+                    val teamData = teamDocument.data
+
+                    if (teamData != null) {
+                        // Process the team data
+                        val teamMemberIds = teamData["members"] as? List<String> ?: emptyList()
+                        val teamOwnerId = teamData["ownerId"] as? String ?: ""
+                        val teamAdminIds = teamData["admins"] as? List<String> ?: emptyList()
+                        val teamName = teamData["name"] as? String ?: ""
+                        val teamImage = teamData["image"] as? String ?: ""
+                        val inviteLink = teamData["inviteLink"] as? String ?: ""
+                        val creationDate = teamData["creationDate"] as? String ?: ""
+                        val category = teamData["category"] as? String ?: ""
+                        val tasks = teamData["tasks"] as? List<String> ?: emptyList()
+
+                        val team = Team(
+                            name = teamName,
+                            image = teamImage,
+                            ownerId = teamOwnerId,
+                            admins = teamAdminIds,
+                            inviteLink = inviteLink,
+                            creationDate = creationDate,
+                            category = category,
+                            members = teamMemberIds,
+                            tasks = tasks
+                        )
+
+                        // Check if the current user is already a member of the team
+                        val isUserInTeam = teamMemberIds.contains(userId) || teamOwnerId == userId || teamAdminIds.contains(userId)
+
+                        userStatus = if (isUserInTeam) {
+                            "User already a member of the team"
+                        } else {
+                            "User not a member of the team"
+                        }
+
+                        val statusWithId = "$userStatus-${teamDocument.id}"
+                        return Pair(team, statusWithId)
+                    } else {
+                        userStatus = "Team not found"
+                    }
+                } else {
+                    userStatus = "Team not found"
+                }
+            }
+
+            Pair(null, userStatus)
+        } catch (e: Exception) {
+            // Handle any errors that occur during the database operation
+            Pair(null, "Error retrieving team information")
+        }
+    }
+
+
+    // Function to add the current logged-in user to a team and navigate if successful
+    // Function to add the current logged-in user to a team and navigate if successful
+    // Function to add the current logged-in user to a team and navigate if successful
+    fun joinTeam(teamId: String) {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            return
+        }
+
+        val userId = currentUser.uid
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val teamRef = db.collection("teams").document(teamId)
+                val teamDocument = teamRef.get().await()
+
+                if (teamDocument.exists()) {
+                    val members = teamDocument.get("members") as? MutableList<String> ?: mutableListOf()
+                    if (!members.contains(userId)) {
+                        members.add(userId)
+                        teamRef.update("members", members).await()
+                    }
+
+                    // Add a new entry in the team_participants collection
+                    val participantData = TeamParticipant(
+                        teamId = teamId,
+                        personId = userId,
+                        frequentlyAccessed = false,
+                        role = "",
+                        completedTasks = 0L,
+                        totalTasks = 0L
+                    )
+                    db.collection("team_participants").add(participantData).await()
+
+                    // Update the user's teams field in the people collection
+                    val userRef = db.collection("people").document(userId)
+                    val userDocument = userRef.get().await()
+
+                    if (userDocument.exists()) {
+                        val userTeams = userDocument.get("teams") as? List<String> ?: emptyList()
+                        val updatedTeams = userTeams.toMutableList()
+                        if (!updatedTeams.contains(teamId)) {
+                            updatedTeams.add(teamId)
+                            userRef.update("teams", updatedTeams).await()
+                        }
+                    } else {
+                        // If user document does not exist, create it
+                        val newUserData = hashMapOf(
+                            "teams" to listOf(teamId),
+                            // Add other required fields with default values as necessary
+                        )
+                        userRef.set(newUserData).await()
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        Actions.getInstance().goToTeamTasks(teamId)
+                    }
+                }
+            } catch (e: Exception) {
+                // Handle any errors that occur during the database operation
+                Log.e("SpecificTeamViewModel", "Error joining team", e)
+            }
+        }
+    }
+
+    var showExitFromTeamModal by mutableStateOf(false)
+    fun setShwExitFromTeamModal(bool: Boolean) {
+        showExitFromTeamModal = bool
+    }
+
+    // Function to remove the current logged-in user from a team and navigate if successful
+    fun exitFromTeam(teamId: String) {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            return
+        }
+
+        val userId = currentUser.uid
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Remove the user from the team's members
+                val teamRef = db.collection("teams").document(teamId)
+                val teamDocument = teamRef.get().await()
+
+                if (teamDocument.exists()) {
+                    val members = teamDocument.get("members") as? MutableList<String> ?: mutableListOf()
+                    if (members.contains(userId)) {
+                        members.remove(userId)
+                        teamRef.update("members", members).await()
+                    }
+
+                    // Remove the entry in the team_participants collection
+                    val participantQuery = db.collection("team_participants")
+                        .whereEqualTo("teamId", teamId)
+                        .whereEqualTo("personId", userId)
+                        .get()
+                        .await()
+
+                    for (participantDoc in participantQuery.documents) {
+                        db.collection("team_participants").document(participantDoc.id).delete().await()
+                    }
+
+                    // Update the user's teams field in the people collection
+                    val userRef = db.collection("people").document(userId)
+                    val userDocument = userRef.get().await()
+
+                    if (userDocument.exists()) {
+                        val userTeams = userDocument.get("teams") as? List<String> ?: emptyList()
+                        val updatedTeams = userTeams.toMutableList()
+                        if (updatedTeams.contains(teamId)) {
+                            updatedTeams.remove(teamId)
+                            userRef.update("teams", updatedTeams).await()
+                        }
+
+                        // Remove tasks related to the team from the user's tasks field
+                        val userTasks = userDocument.get("tasks") as? List<String> ?: emptyList()
+                        val tasksToRemove = userTasks.filter { taskId ->
+                            val taskRef = db.collection("tasks").document(taskId)
+                            val taskDocument = taskRef.get().await()
+                            taskDocument.exists() && taskDocument.getString("teamId") == teamId
+                        }
+                        val updatedTasks = userTasks.toMutableList()
+                        updatedTasks.removeAll(tasksToRemove)
+                        userRef.update("tasks", updatedTasks).await()
+                    }
+
+                    // Remove the user from the tasks associated with the team
+                    val tasksQuery = db.collection("tasks")
+                        .whereEqualTo("teamId", teamId)
+                        .get()
+                        .await()
+
+                    for (taskDoc in tasksQuery.documents) {
+                        val taskPeople = taskDoc.get("people") as? MutableList<String> ?: mutableListOf()
+                        if (taskPeople.contains(userId)) {
+                            taskPeople.remove(userId)
+                            db.collection("tasks").document(taskDoc.id).update("people", taskPeople).await()
+                        }
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        Actions.getInstance().goToHome()
+                    }
+                }
+            } catch (e: Exception) {
+                // Handle any errors that occur during the database operation
+                Log.e("SpecificTeamViewModel", "Error exiting team", e)
+            }
+        }
+    }
+
+
+    var showDeleteTeamModal by mutableStateOf(false)
+    fun setShwDeleteTeamModal(bool: Boolean) {
+        showDeleteTeamModal = bool
+    }
+
+    // Function to delete a team and navigate to the home screen if successful
+    fun deleteTeam(teamId: String) {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Fetch the team document
+                val teamRef = db.collection("teams").document(teamId)
+                val teamDocument = teamRef.get().await()
+
+                if (teamDocument.exists()) {
+                    // Remove all team members from the `people` collection
+                    val members = teamDocument.get("members") as? List<String> ?: emptyList()
+                    for (memberId in members) {
+                        val userRef = db.collection("people").document(memberId)
+                        val userDocument = userRef.get().await()
+                        if (userDocument.exists()) {
+                            val userTeams = userDocument.get("teams") as? List<String> ?: emptyList()
+                            val updatedTeams = userTeams.toMutableList()
+                            if (updatedTeams.contains(teamId)) {
+                                updatedTeams.remove(teamId)
+                                userRef.update("teams", updatedTeams).await()
+                            }
+
+                            // Remove tasks related to the team from the user's tasks field
+                            val userTasks = userDocument.get("tasks") as? List<String> ?: emptyList()
+                            val tasksToRemove = userTasks.filter { taskId ->
+                                val taskRef = db.collection("tasks").document(taskId)
+                                val taskDocument = taskRef.get().await()
+                                taskDocument.exists() && taskDocument.getString("teamId") == teamId
+                            }
+                            val updatedTasks = userTasks.toMutableList()
+                            updatedTasks.removeAll(tasksToRemove)
+                            userRef.update("tasks", updatedTasks).await()
+                        }
+                    }
+
+                    // Delete all entries in the `team_participants` collection
+                    val participantQuery = db.collection("team_participants")
+                        .whereEqualTo("teamId", teamId)
+                        .get()
+                        .await()
+
+                    for (participantDoc in participantQuery.documents) {
+                        db.collection("team_participants").document(participantDoc.id).delete().await()
+                    }
+
+                    // Delete all tasks associated with the team
+                    val tasksQuery = db.collection("tasks")
+                        .whereEqualTo("teamId", teamId)
+                        .get()
+                        .await()
+
+                    for (taskDoc in tasksQuery.documents) {
+                        db.collection("tasks").document(taskDoc.id).delete().await()
+                    }
+
+                    // Delete the team document
+                    teamRef.delete().await()
+
+                    withContext(Dispatchers.Main) {
+                        Actions.getInstance().goToHome()
+                    }
+                }
+            } catch (e: Exception) {
+                // Handle any errors that occur during the database operation
+                Log.e("SpecificTeamViewModel", "Error deleting team", e)
+            }
+        }
     }
 
     var isNotPriority by mutableIntStateOf(-1)           //look ToDoTasks data class for info on the values
@@ -2904,12 +3224,28 @@ fun AddMemberToTeamScreen(
 
 @Composable
 fun InviteConfirmationScreen(
-
+    hash: String,
+    vm: SpecificTeamViewModel = viewModel()
 ) {
     val palette = MaterialTheme.colorScheme
-    //val typography = TeamTaskTypography
 
-    if (LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE) {
+    // State to hold the team information and status
+    var team by remember { mutableStateOf<Team?>(null) }
+    var status by remember { mutableStateOf("") }
+    var teamId by remember { mutableStateOf("") }
+
+    // Fetch the team information when the screen is rendered
+    LaunchedEffect(hash) {
+        val (teamInfo, statusMessage) = vm.retrieveTeamInfoByInviteHash(hash)
+        team = teamInfo
+        status = statusMessage.split("-")[0]
+        if(statusMessage.contains("-")){
+            teamId = statusMessage.split("-")[1]
+        }
+        Log.e("InviteConfirmationScreen", status)
+    }
+
+    if(LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -2921,86 +3257,148 @@ fun InviteConfirmationScreen(
             //Spacer(modifier = Modifier.height(16.dp))
             item {
                 Column {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.group_2),
-                            contentDescription = "Team Image",
+                    if(status == "User not logged in") {
+                        Actions.getInstance().goToFirstScreen()
+                    }
+                    if(status == "Team not found") {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.group_2),
+                                contentDescription = "Team Not Found",
+                                modifier = Modifier
+                                    .border(1.dp, palette.secondary, RoundedCornerShape(5))
+                                    .width(120.dp)
+                                    .height(120.dp),
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "Ops, this team does ",
+                                fontSize = 20.sp,
+                                color = palette.onSurface
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "not exist...",
+                                fontSize = 20.sp,
+                                color = palette.onSurface
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        Button(
+                            onClick = { Actions.getInstance().goToHome() },
                             modifier = Modifier
-                                .border(1.dp, palette.secondary, RoundedCornerShape(5))
-                                .width(120.dp)
-                                .height(120.dp),
-                        )
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = palette.primary,
+                                contentColor = palette.secondary
+                            )
+                        ) {
+                            Text("Go to home")
+                        }
                     }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    val teamName = "Team Name"
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "You have been invited to join ",
-                            fontSize = 20.sp,
-                            color = palette.onSurface
-                        )
+                    if(status == "User already a member of the team") {
+                        Actions.getInstance().goToTeamTasks(teamId)
                     }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = teamName,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 24.sp,
-                            color = palette.onSurface
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "",
-                            fontSize = 24.sp,
-                            color = palette.onSurface
-                        )
-                    }
+                    if(status == "User not a member of the team") {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.group_2),
+                                contentDescription = "Team Image",
+                                modifier = Modifier
+                                    .border(1.dp, palette.secondary, RoundedCornerShape(5))
+                                    .width(120.dp)
+                                    .height(120.dp),
+                            )
+                        }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    Button(
-                        onClick = { },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = palette.primary,
-                            contentColor = palette.secondary
-                        )
-                    ) {
-                        Text("Join team")
-                    }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "You have been invited to join ",
+                                fontSize = 20.sp,
+                                color = palette.onSurface
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            team?.let {
+                                Text(
+                                    text = it.name,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 24.sp,
+                                    color = palette.onSurface
+                                )
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "",
+                                fontSize = 24.sp,
+                                color = palette.onSurface
+                            )
+                        }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    Button(
-                        onClick = { },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = palette.secondary,
-                            contentColor = palette.background
-                        )
-                    ) {
-                        Text("Reject invite")
+                        Button(
+                            onClick = { vm.joinTeam(teamId) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = palette.primary,
+                                contentColor = palette.secondary
+                            )
+                        ) {
+                            Text("Join team")
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            onClick = { Actions.getInstance().goToHome() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = palette.secondary,
+                                contentColor = palette.background
+                            )
+                        ) {
+                            Text("Reject invite")
+                        }
                     }
                 }
             }
@@ -4161,6 +4559,11 @@ fun SpecificTeamScreen(
     // Log rawToDoTasks for debugging
     Log.d("SpecificTeamScreen", "rawToDoTasks: $rawToDoTasks")
 
+    val typography = TeamTaskTypography
+    val palette = MaterialTheme.colorScheme
+    val auth = FirebaseAuth.getInstance()
+
+
     // Convert raw data to required types
     val toDoTasks = rawToDoTasks.map { (id, task) ->
         ToDoTask(
@@ -4225,6 +4628,109 @@ fun SpecificTeamScreen(
 
     val tabs = listOf("Tasks", "Description", "People")
     val pagerState = rememberPagerState { tabs.size }
+
+    if (vm.showExitFromTeamModal) {
+        AlertDialog(
+            onDismissRequest = {
+                vm.setShwExitFromTeamModal(false)
+            },
+            title = { Text(text = "Exit From Team") },
+            text = { Text(text = "Are you sure that you want to exit from this team?") },
+            confirmButton = {
+                Button(onClick = {
+                    vm.exitFromTeam(teamId)
+                    vm.setShwExitFromTeamModal(false)
+                }) {
+                    Text(
+                        text = "Yes",
+                        style = typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CaribbeanCurrent
+                    )
+                }
+            },
+            dismissButton = {
+                Button(onClick = {
+                    vm.setShwExitFromTeamModal(false)
+                }) {
+                    Text(
+                        text = "Cancel",
+                        style = typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CaribbeanCurrent
+                    )
+                }
+            }
+        )
+    }
+    if (vm.showDeleteTeamModal) {
+        AlertDialog(
+            onDismissRequest = {
+                vm.setShwDeleteTeamModal(false)
+            },
+            title = { Text(text = "Delete Team", color = palette.error) },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "Write \"" + (auth.currentUser?.email
+                            ?: "your email") + "\" and press \"Delete\" to permanently delete this team:"
+                    )
+                    Spacer(modifier = Modifier.height(15.dp))
+                    TextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = vm.stringValueForDelete,
+                        onValueChange = vm::setStrinValueForDelete,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            imeAction = ImeAction.Done
+                        ),
+                        colors = TextFieldDefaults.colors(
+                            // your colors
+                        ),
+                        isError = vm.stringErrorForDelete.isNotBlank()
+                    )
+                    if (vm.stringErrorForDelete.isNotBlank()) {
+                        Text(
+                            text = vm.stringErrorForDelete,
+                            color = palette.error,
+                            style = typography.bodySmall,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            maxLines = 3
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    vm.validateStringForDeleteTeam(teamId)
+                }) {
+                    Text(
+                        text = "Delete",
+                        style = typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CaribbeanCurrent
+                    )
+                }
+            },
+            dismissButton = {
+                Button(onClick = {
+                    vm.setStrinValueForDelete("")
+                    vm.setShwDeleteTeamModal(false)
+                }) {
+                    Text(
+                        text = "Cancel",
+                        style = typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CaribbeanCurrent
+                    )
+                }
+            }
+        )
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Tab3Screen(
