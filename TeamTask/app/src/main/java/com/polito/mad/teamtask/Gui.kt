@@ -1739,20 +1739,23 @@ class AppModel(
     }
 
     suspend fun updateTeamStatus(teamId: String, name: String, category: String, teamImage: Uri?) {
+        //if Uri == EMPTY (no image changed), ==null (remove image), ==Uri (new image)
         try {
             var image: String? = null
             val oldImage = db.collection("teams").document(teamId).get().await().toObject(Team::class.java)?.image
-            if(teamImage!=null) {
+            if(teamImage!=null && teamImage!=Uri.EMPTY) {
                 image = uploadTeamImage(teamImage, teamId, applicationContext)
             }
+            val newImage = image ?: if(teamImage==null) "" else oldImage
+
             db.collection("teams").document(teamId).update(
                 mapOf(
                     "name" to name,
                     "category" to category,
-                    "image" to (image ?: oldImage)
+                    "image" to newImage
                 )
             ).await()
-            if(!oldImage.isNullOrBlank() && teamImage!=null)
+            if(!oldImage.isNullOrBlank() && teamImage!=Uri.EMPTY)
                 FirebaseStorage.getInstance().reference.child("teamImages/${oldImage}").delete().await()
         }
         catch (e: Exception) {
