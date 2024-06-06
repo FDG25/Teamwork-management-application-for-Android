@@ -1,17 +1,15 @@
-package com.polito.mad.teamtask
+package com.polito.mad.teamtask.components
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.polito.mad.teamtask.Actions
+import com.polito.mad.teamtask.R
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
-import java.lang.reflect.Modifier
 
 @Composable
 fun FloatingButton (
@@ -36,25 +34,25 @@ fun FloatingButton (
                 )
             }
         }
-        "teams/{teamId}/tasks" -> {
-            val teamId = Actions.getInstance().getStringParameter("teamId")
-
-            FloatingActionButton(
-                onClick = {
-                    if (teamId != null) {
-                        Actions.getInstance().goToEditTeamPeople(teamId)
-                        //Actions.getInstance().goToCreateTaskStatus(teamId)
-                    }
-                },
-                containerColor = palette.secondary
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.outline_person_add_24),
-                    contentDescription = "Add",
-                    colorFilter = ColorFilter.tint(palette.background)
-                )
-            }
-        }
+//        "teams/{teamId}/tasks" -> {
+//            val teamId = Actions.getInstance().getStringParameter("teamId")
+//
+//            FloatingActionButton(
+//                onClick = {
+//                    if (teamId != null) {
+//                        Actions.getInstance().goToEditTeamPeople(teamId)
+//                        //Actions.getInstance().goToCreateTaskStatus(teamId)
+//                    }
+//                },
+//                containerColor = palette.secondary
+//            ) {
+//                Image(
+//                    painter = painterResource(id = R.drawable.outline_person_add_24),
+//                    contentDescription = "Add",
+//                    colorFilter = ColorFilter.tint(palette.background)
+//                )
+//            }
+//        }
         else -> {
 
 

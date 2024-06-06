@@ -20,9 +20,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -32,16 +29,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navDeepLink
-import androidx.navigation.navigation
 import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
@@ -55,13 +49,15 @@ import com.polito.mad.teamtask.chat.visualization.SingleChatScreen
 import com.polito.mad.teamtask.chat.visualization.SingleChatViewModel
 import com.polito.mad.teamtask.components.BottomBar
 import com.polito.mad.teamtask.components.CategoryFilterScreen
+import com.polito.mad.teamtask.components.FloatingButton
 import com.polito.mad.teamtask.components.NewTeam
 import com.polito.mad.teamtask.components.TopBar
+import com.polito.mad.teamtask.components.tasks.DescriptionViewModel
+import com.polito.mad.teamtask.components.tasks.EditTeamDescription
 import com.polito.mad.teamtask.screens.AddMemberToTeamScreen
 import com.polito.mad.teamtask.screens.CalendarWithEvents
 import com.polito.mad.teamtask.screens.ChatScreen
 import com.polito.mad.teamtask.screens.HomeScreen
-import com.polito.mad.teamtask.screens.LoadingScreen
 import com.polito.mad.teamtask.screens.NotificationsScreen
 import com.polito.mad.teamtask.screens.ProfileFormViewModel
 import com.polito.mad.teamtask.screens.ProfileScreen
@@ -83,6 +79,7 @@ import com.polito.mad.teamtask.utils.uploadFilesToFirebaseStorage
 import com.polito.mad.teamtask.utils.uploadTeamImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -90,7 +87,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -196,7 +192,8 @@ data class Team(
     val creationDate: String,
     val category: String,
     val members: List<String>,
-    val tasks: List<String>
+    val tasks: List<String>,
+    val description: String = "",
 ) {
     constructor() : this(
         "",
@@ -207,7 +204,8 @@ data class Team(
         "1970-01-01T00:00:00+00:00",
         "",
         emptyList(),
-        emptyList()
+        emptyList(),
+        ""
     )
 }
 
@@ -539,10 +537,11 @@ class AppModel(
                             val category = obj.getString("category") ?: ""
                             val members = obj.get("members") as List<String>
                             val tasks = obj.get("tasks") as List<String>
+                            val description = obj.getString("description") ?: ""
 
                             val team = Team(
                                 name, image, ownerId, admins, inviteLink,
-                                creationDate, category, members, tasks
+                                creationDate, category, members, tasks, description
                             )
 
                             l.add(Pair(id, team))
@@ -1593,7 +1592,8 @@ class AppModel(
                             null,
                         )
                     }
-                    newDocument = messageToSend?.let { db.collection("team_messages").add(it).await() }
+                    newDocument =
+                        messageToSend?.let { db.collection("team_messages").add(it).await() }
                 } else {
                     val messageToSend = auth.currentUser?.uid?.let {
                         PrivateMessage(
@@ -1605,7 +1605,8 @@ class AppModel(
                             false
                         )
                     }
-                    newDocument = messageToSend?.let { db.collection("private_messages").add(it).await() }
+                    newDocument =
+                        messageToSend?.let { db.collection("private_messages").add(it).await() }
                 }
 
                 //upload files to firebase storage and eventually update the message with the media if they correctly been uploaded
@@ -1661,7 +1662,7 @@ class AppModel(
         return true
     }
 
-    fun createTeam(teamName: String, teamCategory: String, imageUri: Uri?): Boolean {
+    suspend fun createTeam(teamName: String, teamCategory: String, imageUri: Uri?): String {
         val newTeam = auth.currentUser?.let {
             Team(
                 name = teamName,
@@ -1672,11 +1673,15 @@ class AppModel(
                 creationDate = LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME),
                 category = teamCategory,
                 members = listOf(auth.currentUser!!.uid),
-                tasks = emptyList()
+                tasks = emptyList(),
+                description = ""
             )
         }
+
+        val result: String
+
         try {
-            CoroutineScope(Dispatchers.IO).launch {
+            result = CoroutineScope(Dispatchers.IO).async {
                 //create team
                 val team = newTeam?.let { db.collection("teams").add(it).await() }
                 //add team partecipant logged user id as owner
@@ -1704,22 +1709,35 @@ class AppModel(
 
                 //add team to userId
                 if (team != null) {
-                    auth.currentUser?.uid?.let { db.collection("people").document(it).update("teams", FieldValue.arrayUnion(team.id)) }
+                    auth.currentUser?.uid?.let {
+                        db.collection("people").document(it).update(
+                            "teams", FieldValue.arrayUnion(
+                                team.id
+                            )
+                        )
+                    }
                 }
 
                 //upload image if present
                 if (imageUri != null) {
-                    val imageRef = team?.let { uploadTeamImage(imageUri, it.id, applicationContext) }
+                    val imageRef =
+                        team?.let { uploadTeamImage(imageUri, it.id, applicationContext) }
                     if (team != null) {
                         db.collection("teams").document(team.id).update("image", imageRef)
                     }
                 }
-            }
-            return true
+
+                return@async team?.id ?: ""
+            }.await()
         } catch (e: Exception) {
             Toast.makeText(applicationContext, e.toString(), Toast.LENGTH_SHORT).show()
-            return false
+            return ""
         }
+        return result
+    }
+
+    fun updateTeamDescription(teamId: String, description: String) {
+        db.collection("teams").document(teamId).update("description", description)
     }
 }
 
@@ -1743,7 +1761,11 @@ class AppFactory(
             // model.generateData()
             @Suppress("UNCHECKED_CAST")
             return TeamsViewModel(model) as T
-        } else throw IllegalArgumentException("Unexpected ViewModel class")
+        } else if (modelClass.isAssignableFrom(DescriptionViewModel::class.java)) {
+            // model.generateData()
+            @Suppress("UNCHECKED_CAST")
+            return DescriptionViewModel(model) as T
+        }else throw IllegalArgumentException("Unexpected ViewModel class")
     }
 }
 
@@ -1766,10 +1788,12 @@ class AppViewModel(
     fun updateLoginStatus(isLoggedIn: Boolean) {
         _isLoggedIn.value = isLoggedIn
     }
+
     // Function to update login status
     fun updateIsSignUpFlow(isSignUpFlow: Boolean) {
         _isSignUpFlow.value = isSignUpFlow
     }
+
     fun updateAccountBeenDeletedStatus(isAccountBeenDeleted: Boolean) {
         _isAccountBeenDeleted.value = isAccountBeenDeleted
     }
@@ -1848,8 +1872,7 @@ fun AppMainScreen(
     val notifications by appVM.getNotifications().collectAsState(initial = listOf())
     val teamMessages by appVM.getTeamMessages().collectAsState(initial = listOf())
     val teamParticipants by appVM.getTeamParticipants().collectAsState(initial = listOf())
-    val realTeamParticipants by appVM.getRealTeamParticipants()
-        .collectAsState(initial = listOf())
+    val realTeamParticipants by appVM.getRealTeamParticipants().collectAsState(initial = listOf())
     val userNotifications by appVM.getUserNotifications().collectAsState(initial = listOf())
 
     // Get the list of team IDs the user is part of
@@ -1859,13 +1882,13 @@ fun AppMainScreen(
 
     Scaffold(
         topBar = {
-            if(isLoggedIn) {
+            if (isLoggedIn) {
                 auth.currentUser?.let {
                     TopBar(
                         navController,
                         it.uid,
                         profileVM::setShwDeleteAccountModal,
-                        {profileVM.deleteAccount(signOut)},
+                        { profileVM.deleteAccount(signOut) },
                         profileVM::setShwLogoutModal,
                         profileVM.showMenu,
                         profileVM::setShowMen,
@@ -1900,11 +1923,15 @@ fun AppMainScreen(
 
             NavHost(
                 navController = navController,
-                startDestination = if (!isLoggedIn) { "firstScreen" } else {"home"}
+                startDestination = if (!isLoggedIn) {
+                    "firstScreen"
+                } else {
+                    "home"
+                }
             ) {
-                if (!isLoggedIn ) {
+                if (!isLoggedIn) {
                     composable("firstScreen") {
-                        if(isAccountBeenDeleted){
+                        if (isAccountBeenDeleted) {
                             AlertDialog(
                                 onDismissRequest = {
                                     appVM.updateAccountBeenDeletedStatus(false)
@@ -2017,11 +2044,14 @@ fun AppMainScreen(
                             "0123"
                         )
                     } //TODO: HARDCODED TEAMID
-                    composable("teams/newTeam/share") {
+                    composable("teams/newTeam/share/{teamId}/{teamName}") { backStackEntry ->
+                        val teamId = backStackEntry.arguments?.getString("teamId")
+                        val teamName = backStackEntry.arguments?.getString("teamName")
+
                         AddMemberToTeamScreen(
                             showSnackbar = true,
-                            teamId = "0123",
-                            teamName = "Team Prova"
+                            teamId = teamId ?: "",
+                            teamName = teamName ?: ""
                         )
                     } //TODO: HARDCODED TEAMID and teamName
 
@@ -2071,6 +2101,7 @@ fun AppMainScreen(
                         if (teamId != null) {
                             SpecificTeamScreen(
                                 teamId = teamId,
+                                teamDescription = teamDocument?.second?.description ?: "",
                                 rawToDoTasks = filteredTasks,
                                 rawTeamParticipants = filteredTeamMembers,
                                 rawPeople = people,
@@ -2093,7 +2124,14 @@ fun AppMainScreen(
                             NewTeam(isInCreation = false, teamId = teamId)
                         }
                     }
-                    composable("teams/{teamId}/edit/description") { NotImplementedScreen() } // TODO: Implement
+                    composable("teams/{teamId}/edit/description") { backStackEntry ->
+                        val teamId = backStackEntry.arguments?.getString("teamId")
+                        teams.find { it.first == teamId }?.second?.let {
+                            if (teamId != null) {
+                                EditTeamDescription(it.description, teamId)
+                            }
+                        }
+                    }
                     composable("teams/{teamId}/edit/people") { backStackEntry ->
                         val teamId = backStackEntry.arguments?.getString("teamId")
                         val teamName = teams.find { it.first == teamId }?.second?.name
@@ -2171,7 +2209,14 @@ fun AppMainScreen(
                         }
 
                         // Render the chat screen
-                        auth.currentUser?.let { it1 -> ChatScreen(combinedMessages, people, teams, it1.uid) }
+                        auth.currentUser?.let { it1 ->
+                            ChatScreen(
+                                combinedMessages,
+                                people,
+                                teams,
+                                it1.uid
+                            )
+                        }
                     }
 
                     composable("chats/{isGroupChat}/{chatId}") { navBackStackEntry ->
@@ -2205,13 +2250,24 @@ fun AppMainScreen(
                     composable("profile") {
                         auth.currentUser?.let { it1 ->
                             ProfileScreen(
-                                personal, it1.uid, teams, teamParticipants,
-                                profileVM, onLogout = signOut, updateAccountBeenDeletedStatus = appVM::updateAccountBeenDeletedStatus
+                                personal,
+                                it1.uid,
+                                teams,
+                                teamParticipants,
+                                profileVM,
+                                onLogout = signOut,
+                                updateAccountBeenDeletedStatus = appVM::updateAccountBeenDeletedStatus
                             )
                         }
                     }
                     composable("profile/edit") {
-                        auth.currentUser?.let { it1 -> EditProfilePane(personal, it1.uid, profileVM) }
+                        auth.currentUser?.let { it1 ->
+                            EditProfilePane(
+                                personal,
+                                it1.uid,
+                                profileVM
+                            )
+                        }
                     }
 
                     composable(
@@ -2230,7 +2286,6 @@ fun AppMainScreen(
         }
     }
 }
-
 
 
 @Composable
@@ -2277,7 +2332,8 @@ class Actions(
 
     // Creation of a new team
     val goToCreateTeamInfo: () -> Unit = { navCont.navigate("teams/newTeam/info") }
-    val goToCreateTeamPeople: () -> Unit = { navCont.navigate("teams/newTeam/share") }
+    val goToCreateTeamPeople: (String, String) -> Unit =
+        { teamId, teamName -> navCont.navigate("teams/newTeam/share/$teamId/$teamName") }
 
     // Watch team elements
     val goToTeamTasks: (String) -> Unit = { teamId -> navCont.navigate("teams/$teamId/tasks") }

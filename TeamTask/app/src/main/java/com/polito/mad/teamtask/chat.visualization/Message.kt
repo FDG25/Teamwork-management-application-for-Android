@@ -2,6 +2,7 @@ package com.polito.mad.teamtask.chat.visualization
 
 import android.content.res.Configuration
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -146,10 +147,12 @@ fun <T : Message> Message(
     ) {
 
         if (message is GroupMessage) {
+            Log.d("ProfilePic", "ProfilePic: ${message.profilePic}")
             //Profile Pic
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(message.profilePic)
+                    .data(if(message.profilePic.toString().isNotBlank()) message.profilePic else null)
+                    .error(R.drawable.avatar)
                     .crossfade(true)
                     .build(),
                 placeholder = painterResource(R.drawable.avatar),
@@ -192,9 +195,9 @@ fun <T : Message> Message(
                         modifier = Modifier
                             .wrapContentWidth(Alignment.Start, unbounded = false)
                             .widthIn(max = 100.dp, min = 0.dp),
-                        text = message.username,
+                        text = message.username.ifEmpty { "Deleted user" },
                         style = typography.labelSmall.copy(
-                            color = message.usernameColor,
+                            color = if(message.username.isNotEmpty()) message.usernameColor else palette.error,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Normal
                         ),

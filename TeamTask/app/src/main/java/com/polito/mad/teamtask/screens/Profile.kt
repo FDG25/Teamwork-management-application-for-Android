@@ -510,7 +510,7 @@ class ProfileFormViewModel : ViewModel() {
         setUsername(person.username)
         setLocation(person.location)
         setDescription(person.bio)
-        imageUri = person.image?.let { Uri.parse(it) }
+        imageUri = person.image.let { Uri.parse(it) }
         // Set original values for comparison during cancel
         originalName = person.name
         originalSurname = person.surname
@@ -518,7 +518,7 @@ class ProfileFormViewModel : ViewModel() {
         originalUsername = person.username
         originalLocation = person.location
         originalDescription = person.bio
-        originalImageUri = person.image?.let { Uri.parse(it) }
+        originalImageUri = person.image.let { Uri.parse(it) }
     }
 }
 
@@ -536,8 +536,10 @@ fun ProfileScreen (
 
 
     LaunchedEffect(userId) {
-        vm.fetchProfileImage(userId)
-        vm.initialize(user)
+        if(vm.nameValue.isEmpty()) {
+            vm.fetchProfileImage(userId)
+            vm.initialize(user)
+        }
     }
 
     if (vm.showLogoutModal) {
@@ -642,7 +644,7 @@ fun ProfileScreen (
             }
         )
     }
-    if(LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE){
+    if(LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) {
         Row (
             modifier = Modifier.padding(start = 16.dp, end = 16.dp )
         ){

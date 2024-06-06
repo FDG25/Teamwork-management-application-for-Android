@@ -892,7 +892,7 @@ fun TopBar(
                             )
                             if (isGroupChat)
                                 Text(
-                                    teamCategory!!,
+                                    teamCategory?:"",
                                     style = typography.labelSmall,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis

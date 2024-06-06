@@ -113,6 +113,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.google.zxing.WriterException
@@ -128,6 +129,7 @@ import com.polito.mad.teamtask.components.ProfilePictureSection
 import com.polito.mad.teamtask.components.ProgressBar
 import com.polito.mad.teamtask.components.TaskEntry
 import com.polito.mad.teamtask.components.tasks.Description
+import com.polito.mad.teamtask.components.tasks.DescriptionViewOnly
 import com.polito.mad.teamtask.components.tasks.TagsDropdownMenu
 import com.polito.mad.teamtask.ui.theme.Jet
 import com.polito.mad.teamtask.ui.theme.Mulish
@@ -145,7 +147,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Locale
 
-data class ToDoTask (
+data class ToDoTask(
     val taskId: String,
     val taskName: String,
     val status: String,                     // 0 = scheduled, 1 = completed, 2 = expired
@@ -157,7 +159,7 @@ data class ToDoTask (
     val tags: List<String>
 )
 
-data class PersonData (
+data class PersonData(
     val personId: String,
     val name: String,
     val surname: String,
@@ -173,8 +175,12 @@ enum class TaskCreationStep {
     People
 }
 
-class SpecificTeamViewModel: ViewModel() {
-    fun init(toDoTasks: List<ToDoTask>, teampeople: List<PersonData>, filteredPeople: List<PersonData>) {
+class SpecificTeamViewModel : ViewModel() {
+    fun init(
+        toDoTasks: List<ToDoTask>,
+        teampeople: List<PersonData>,
+        filteredPeople: List<PersonData>
+    ) {
         _toDoTasks.value = toDoTasks
         //_teampeople.value = teampeople
 
@@ -239,31 +245,34 @@ class SpecificTeamViewModel: ViewModel() {
             }
         }
     }
+
     var showQrCodeDialog by mutableStateOf(false)
-    fun setShowQrDialog(value: Boolean){
+    fun setShowQrDialog(value: Boolean) {
         showQrCodeDialog = value
     }
 
     var showCalendarView by mutableStateOf(false)
-    fun setShowCalendView(value: Boolean){
+    fun setShowCalendView(value: Boolean) {
         showCalendarView = value
     }
+
     var showCalendarEventsDialog by mutableStateOf(false)
-    fun setShowCalendEventsDialog(value: Boolean){
+    fun setShowCalendEventsDialog(value: Boolean) {
         showCalendarEventsDialog = value
     }
 
 
-
     var showingTeamLinkOrQrCode by mutableStateOf(false)
-    fun setShowTeamLinkOrQrCode(value: Boolean){
+    fun setShowTeamLinkOrQrCode(value: Boolean) {
         showingTeamLinkOrQrCode = value
     }
 
-    var taskTagsList by mutableStateOf(listOf(
-        "#test1", "#test2", "#test3", "#test4", "#test5", "#test6",
-        "#test7", "#test8", "#test9"
-    ).sorted())
+    var taskTagsList by mutableStateOf(
+        listOf(
+            "#test1", "#test2", "#test3", "#test4", "#test5", "#test6",
+            "#test7", "#test8", "#test9"
+        ).sorted()
+    )
         private set
 
     var selectedTags by mutableStateOf(emptyList<String>())
@@ -284,6 +293,7 @@ class SpecificTeamViewModel: ViewModel() {
     private fun clearSelectedTags() {
         selectedTags = emptyList()
     }
+
     fun setSelectedTags() {
         selectedTags = tempSelectedTags.toList()
     }
@@ -336,7 +346,7 @@ class SpecificTeamViewModel: ViewModel() {
         currentStep = TaskCreationStep.Status
     }
 
-    fun goToPreviousStep(teamId: String, currentRoute: String?){
+    fun goToPreviousStep(teamId: String, currentRoute: String?) {
         when (currentRoute) {
             "teams/{teamId}/newTask/status" -> {
 
@@ -344,6 +354,7 @@ class SpecificTeamViewModel: ViewModel() {
             "teams/{teamId}/newTask/description" -> {
                 Actions.getInstance().goToCreateTaskStatus(teamId)
             }
+
             "teams/{teamId}/newTask/people" -> {
                 Actions.getInstance().goToCreateTaskDescription(teamId)
             }
@@ -354,7 +365,9 @@ class SpecificTeamViewModel: ViewModel() {
     var showBackButtonModalCreateTask by mutableStateOf(false)
 
     var showingCreateTask by mutableStateOf(false)
-    private fun setShowCreateTask (value: Boolean) { showingCreateTask = value }
+    private fun setShowCreateTask(value: Boolean) {
+        showingCreateTask = value
+    }
 
     fun setBackButtModalCreateTask(bool: Boolean) {
         showBackButtonModalCreateTask = bool
@@ -376,6 +389,7 @@ class SpecificTeamViewModel: ViewModel() {
         taskDescriptionError = ""
         selectedDateTimeError = ""
     }
+
     fun cancelCreateTask() {
         setShowCreateTask(false)
         setTaskName("")
@@ -393,9 +407,11 @@ class SpecificTeamViewModel: ViewModel() {
         private set
     var taskNameError by mutableStateOf("")
         private set
+
     fun setTaskName(n: String) {
         taskNameValue = n
     }
+
     private fun checkTaskName() {
         // Remove leading and trailing spaces
         val trimmedTaskName = taskNameValue.trim()
@@ -404,7 +420,12 @@ class SpecificTeamViewModel: ViewModel() {
             "Task name cannot be blank!"
         } else if (!trimmedTaskName.matches(Regex("^(?=.*[a-zA-Z0-9])[a-zA-Z0-9 ]{1,50}\$"))) {
             "Max 50 characters. Only letters, numbers and spaces are allowed!"
-        } else if (_toDoTasks.value.any { it.taskName.equals(trimmedTaskName, ignoreCase = true) }) {
+        } else if (_toDoTasks.value.any {
+                it.taskName.equals(
+                    trimmedTaskName,
+                    ignoreCase = true
+                )
+            }) {
             "A task with this name already exists!"
         } else {
             ""
@@ -420,8 +441,10 @@ class SpecificTeamViewModel: ViewModel() {
     fun setDueDateDateTime(value: String) {
         selectedDateTime = value
     }
+
     var selectedDateTimeError by mutableStateOf("")
         private set
+
     private fun checkSelectedDateTimeError() {
         val iso8601Format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.getDefault())
         selectedDateTimeError = if (selectedDateTime.isBlank()) {
@@ -442,6 +465,7 @@ class SpecificTeamViewModel: ViewModel() {
             }
         }
     }
+
     var showDatePicker by mutableStateOf(false)
     fun setShowingDatePicker(value: Boolean) {
         showDatePicker = value
@@ -457,23 +481,29 @@ class SpecificTeamViewModel: ViewModel() {
     fun setTempDueDateStartDateTime(value: String) {
         selectedTempStartDateTime = value
     }
+
     var selectedTempEndDateTime by mutableStateOf("")
     fun setTempDueDateEndDateTime(value: String) {
         selectedTempEndDateTime = value
     }
+
     var showStartDatePicker by mutableStateOf(false)
     fun setIsShowingStartDatePicker(value: Boolean) {
         showStartDatePicker = value
     }
+
     var showEndDatePicker by mutableStateOf(false)
     fun setIsShowingEndDatePicker(value: Boolean) {
         showEndDatePicker = value
     }
+
     var selectedDateRangeError by mutableStateOf("")
         private set
+
     fun clearSelectedDateRangeError() {
         selectedDateRangeError = ""
     }
+
     fun checkTempSelectedDateRangeError() {
         val iso8601Format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.getDefault())
 
@@ -490,9 +520,12 @@ class SpecificTeamViewModel: ViewModel() {
         }
 
         selectedDateRangeError = when {
-            selectedEndDate != null && selectedStartDate != null && selectedEndDate.before(selectedStartDate) -> {
+            selectedEndDate != null && selectedStartDate != null && selectedEndDate.before(
+                selectedStartDate
+            ) -> {
                 "The end date must be after the start date."
             }
+
             else -> ""
         }
     }
@@ -501,11 +534,11 @@ class SpecificTeamViewModel: ViewModel() {
     fun setDueDateStartDateTime(value: String) {
         selectedStartDateTime = value
     }
+
     var selectedEndDateTime by mutableStateOf("")
     fun setDueDateEndDateTime(value: String) {
         selectedEndDateTime = value
     }
-
 
 
     var recurrencyOptions by mutableStateOf(listOf("Never", "Weekly", "Monthly", "Yearly"))
@@ -528,6 +561,7 @@ class SpecificTeamViewModel: ViewModel() {
 
     var teamDescriptionValue by mutableStateOf("")
         private set
+
     /*
     var teamDescriptionError by mutableStateOf("")
         private set
@@ -555,6 +589,7 @@ class SpecificTeamViewModel: ViewModel() {
     private fun clearMembersInFilterPage() {
         listOfMembersForFilter = emptyList()
     }
+
     fun setMembersInFilterPage() {
         listOfMembersForFilter = tempListOfMembersForFilter.toList()
     }
@@ -585,6 +620,7 @@ class SpecificTeamViewModel: ViewModel() {
     fun setTaskDescription(desc: String) {
         taskDescriptionValue = desc
     }
+
     private fun checkTaskDescription() {
         taskDescriptionError = if (taskDescriptionValue.length > 200) {
             "Description must be at most 200 characters!"
@@ -601,16 +637,18 @@ class SpecificTeamViewModel: ViewModel() {
                 //check all the fields contained in "Status" step
                 checkTaskName()
                 checkSelectedDateTimeError()
-                if(taskNameError.isBlank() && selectedDateTimeError.isBlank()) {
+                if (taskNameError.isBlank() && selectedDateTimeError.isBlank()) {
                     Actions.getInstance().goToCreateTaskDescription(teamId)
                 }
             }
+
             "description" -> {
                 checkTaskDescription()
-                if(taskDescriptionError.isBlank()) {
+                if (taskDescriptionError.isBlank()) {
                     Actions.getInstance().goToCreateTaskPeople(teamId)
                 }
             }
+
             "people" -> {
                 addTask(
                     ToDoTask(
@@ -631,9 +669,11 @@ class SpecificTeamViewModel: ViewModel() {
     fun setPrior(value: Int) {
         isNotPriority = value
     }
+
     fun setRec(value: Int) {
         isNotRecurrent = value
     }
+
     fun setStat(value: Int) {
         status = value
     }
@@ -645,25 +685,39 @@ class SpecificTeamViewModel: ViewModel() {
     fun setTempPrior(value: Int) {
         tempIsNotPriority = value
     }
+
     fun setTempRec(value: Int) {
         tempIsNotRecurrent = value
     }
+
     fun setTempStat(value: Int) {
         tempStatus = value
     }
+
     fun setTempSortByCreation(value: Int) {
         tempIsSortByCreationDate = value
     }
+
     fun handleBackFilter() {
         tempIsSortByCreationDate = if (sortByCreationDate != -1) sortByCreationDate else -1
         tempIsNotPriority = if (isNotPriority != -1) isNotPriority else -1
         tempIsNotRecurrent = if (isNotRecurrent != -1) isNotRecurrent else -1
         tempStatus = if (status != -1) status else -1
-        tempListOfMembersForFilter = listOfMembersForFilter.ifEmpty { emptyList() } //IS THE SAME OF if (listOfMembersForFilter.isNotEmpty()) listOfMembersForFilter else emptyList(), BUT THIS GIVES A WARNING!
+        tempListOfMembersForFilter =
+            listOfMembersForFilter.ifEmpty { emptyList() } //IS THE SAME OF if (listOfMembersForFilter.isNotEmpty()) listOfMembersForFilter else emptyList(), BUT THIS GIVES A WARNING!
         tempSelectedTags = selectedTags.ifEmpty { emptyList() }
-        selectedTempStartDateTime = if (selectedStartDateTime != "") {selectedStartDateTime} else {""}
-        selectedTempEndDateTime = if (selectedEndDateTime != "") {selectedEndDateTime} else {""}
+        selectedTempStartDateTime = if (selectedStartDateTime != "") {
+            selectedStartDateTime
+        } else {
+            ""
+        }
+        selectedTempEndDateTime = if (selectedEndDateTime != "") {
+            selectedEndDateTime
+        } else {
+            ""
+        }
     }
+
     fun clearTempState() {
         setTempSortByCreation(-1)
         setTempPrior(-1)
@@ -682,6 +736,7 @@ class SpecificTeamViewModel: ViewModel() {
         setDueDateStartDateTime("")
         setDueDateEndDateTime("")
     }
+
     fun applyTempState() {
         setSortModality(tempIsSortByCreationDate)
         setPrior(tempIsNotPriority)
@@ -696,7 +751,15 @@ class SpecificTeamViewModel: ViewModel() {
     // Task people
     private val _taskpeople = mutableStateOf(listOf(
         PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-        PersonData("1", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin", ""),
+        PersonData(
+            "1",
+            "Name1ejwnewjneees",
+            "Surname1fskfsmkfnsk",
+            "username1",
+            "CTO",
+            "Admin",
+            ""
+        ),
         PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
         PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
     ).sortedBy { it.name })
@@ -718,18 +781,22 @@ class SpecificTeamViewModel: ViewModel() {
                 _toDoTasks.value = updatedTasks
 
                 // Update Firestore tasks collection
-                val tasksSnapshot = db.collection("tasks").whereEqualTo("teamId", teamId).get().await()
+                val tasksSnapshot =
+                    db.collection("tasks").whereEqualTo("teamId", teamId).get().await()
                 tasksSnapshot.documents.forEach { taskDoc ->
-                    val taskPeople = taskDoc.get("people") as? MutableList<String> ?: mutableListOf()
+                    val taskPeople =
+                        taskDoc.get("people") as? MutableList<String> ?: mutableListOf()
                     if (taskPeople.contains(personId)) {
                         taskPeople.remove(personId)
-                        db.collection("tasks").document(taskDoc.id).update("people", taskPeople).await()
+                        db.collection("tasks").document(taskDoc.id).update("people", taskPeople)
+                            .await()
                     }
                 }
 
                 // Update the filters
                 listOfMembersForFilter = listOfMembersForFilter.filter { it.personId != personId }
-                tempListOfMembersForFilter = tempListOfMembersForFilter.filter { it.personId != personId }
+                tempListOfMembersForFilter =
+                    tempListOfMembersForFilter.filter { it.personId != personId }
             } catch (e: Exception) {
                 // Handle any errors that occur during the database operation
                 e.printStackTrace()
@@ -771,12 +838,15 @@ class SpecificTeamViewModel: ViewModel() {
                     _toDoTasks.value = updatedTasks
 
                     // Update Firestore tasks collection
-                    val tasksSnapshot = db.collection("tasks").whereEqualTo("teamId", teamId).get().await()
+                    val tasksSnapshot =
+                        db.collection("tasks").whereEqualTo("teamId", teamId).get().await()
                     tasksSnapshot.documents.forEach { taskDoc ->
-                        val taskPeople = taskDoc.get("people") as? MutableList<String> ?: mutableListOf()
+                        val taskPeople =
+                            taskDoc.get("people") as? MutableList<String> ?: mutableListOf()
                         if (taskPeople.contains(personId)) {
                             taskPeople.remove(personId)
-                            db.collection("tasks").document(taskDoc.id).update("people", taskPeople).await()
+                            db.collection("tasks").document(taskDoc.id).update("people", taskPeople)
+                                .await()
                         }
                     }
 
@@ -786,12 +856,27 @@ class SpecificTeamViewModel: ViewModel() {
                         .whereEqualTo("personId", personId)
                         .get().await()
                     participantsSnapshot.documents.forEach { participantDoc ->
-                        db.collection("team_participants").document(participantDoc.id).delete().await()
+                        db.collection("team_participants").document(participantDoc.id).delete()
+                            .await()
+                    }
+
+                    //Remove the team from people
+                    db.collection("people").document(personId)
+                        .update("teams", FieldValue.arrayRemove(teamId))
+                        .await()
+
+                    //Remove team tasks from person
+                    document.get("tasks") as? List<String> ?: emptyList<String>().forEach {
+                        db.collection("people").document(personId)
+                            .update("tasks", FieldValue.arrayRemove(it))
+                            .await()
                     }
 
                     // Update the filters
-                    listOfMembersForFilter = listOfMembersForFilter.filter { it.personId != personId }
-                    tempListOfMembersForFilter = tempListOfMembersForFilter.filter { it.personId != personId }
+                    listOfMembersForFilter =
+                        listOfMembersForFilter.filter { it.personId != personId }
+                    tempListOfMembersForFilter =
+                        tempListOfMembersForFilter.filter { it.personId != personId }
                 }
             } catch (e: Exception) {
                 // Handle any errors that occur during the database operation
@@ -801,24 +886,7 @@ class SpecificTeamViewModel: ViewModel() {
     }
 
     // Team people
-    private val _teampeople = mutableStateOf(listOf(
-        PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-        PersonData("1", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin", ""),
-        PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
-        PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-        PersonData("4", "Alessandro", "Romano", "alessandro_romano", "Lead Developer", "Admin", ""),
-        PersonData("5", "Francesca", "Ferrari", "francesca_ferrari", "Recruiter", "", ""),
-        PersonData("6", "Matteo", "Galli", "matteo_galli", "Product Manager", "", ""),
-        PersonData("7", "Laura", "Conti", "laura_conti", "Support Specialist", "", ""),
-        PersonData("8", "Giulio", "Lisci", "g_straights", "Head Hunter", "", ""),
-        PersonData("9", "Giacomo", "Fiorentini", "g_fio", "Junior Developer", "", ""),
-        PersonData("10", "Pietro", "Lamborghini", "lambostone", "Recruiter", "", ""),
-        PersonData("11", "Matteo", "Innocenzi", "m_guilty", "Product Manager", "", ""),
-        PersonData("12", "Marco", "Pagani", "marpag", "Junior Developer", "", ""),
-        PersonData("13", "Adriano", "Novizi", "newey", "Senior Developer", "", ""),
-        PersonData("14", "Pietro", "Pascoli", "pipa", "Recruiter", "", ""),
-        PersonData("15", "Matteo", "Boldi", "boolds", "Product Designer", "", ""),
-    ).sortedBy { it.name })
+    private val _teampeople = mutableStateOf(emptyList<PersonData>())
 
     // Provide an immutable view of the teampeople to the UI
     val teampeople: List<PersonData> get() = _teampeople.value
@@ -826,14 +894,15 @@ class SpecificTeamViewModel: ViewModel() {
     var searchQuery = mutableStateOf("")
 
     // Computed list that filters people based on search query
-    val filteredPeople: List<PersonData> get() = if (searchQuery.value.isEmpty()) {
-        teampeople
-    } else {
-        teampeople.filter {
-            it.name.contains(searchQuery.value, ignoreCase = true) ||
-                    it.surname.contains(searchQuery.value, ignoreCase = true)
+    val filteredPeople: List<PersonData>
+        get() = if (searchQuery.value.isEmpty()) {
+            teampeople
+        } else {
+            teampeople.filter {
+                it.name.contains(searchQuery.value, ignoreCase = true) ||
+                        it.surname.contains(searchQuery.value, ignoreCase = true)
+            }
         }
-    }
 
     fun onSearchQueryChanged(query: String) {
         searchQuery.value = query
@@ -849,9 +918,11 @@ class SpecificTeamViewModel: ViewModel() {
             1 -> {
                 _toDoTasks.value.sortedBy { it.creationTimestamp }
             }
+
             0 -> {
                 _toDoTasks.value.sortedBy { it.expirationTimestamp }
             }
+
             else -> {
                 _toDoTasks.value.sortedBy { it.expirationTimestamp }
             }
@@ -859,64 +930,210 @@ class SpecificTeamViewModel: ViewModel() {
     }
 
     // Hardcoded list of scheduled tasks
-    private val _toDoTasks = mutableStateOf(listOf(
-        ToDoTask("0", "Task 1", "Completed", 1, "Weekly", "2024-04-30T12:53:00+02:00", "2024-04-01T09:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin", ""),
-                PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
-                PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("1", "Task 2", "Expired", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("2", "Task 2.5", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("3", "Task 2.6", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("4", "Task 2.7", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("5", "Task 2.8", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("6", "Task 3", "Scheduled", 1, "Never", "2024-05-07T13:36:00+02:00", "2024-04-02T11:00:00+02:00",
-            listOf(
-                PersonData("0", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin", ""),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test4", "#test5")),
-        ToDoTask("7", "Task 4", "Scheduled", 0, "Monthly", "2024-05-30T12:12:00+02:00", "2024-04-02T12:00:00+02:00",
-            listOf(
-                PersonData("0", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("8", "Task 5", "Scheduled", 1, "Yearly", "2024-05-07T22:21:00+02:00", "2024-04-03T08:00:00+02:00",
-            listOf(
-                PersonData("0", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test4", "#test5"))
-    ))
+    private val _toDoTasks = mutableStateOf(
+        listOf(
+            ToDoTask(
+                "0",
+                "Task 1",
+                "Completed",
+                1,
+                "Weekly",
+                "2024-04-30T12:53:00+02:00",
+                "2024-04-01T09:00:00+02:00",
+                listOf(
+                    PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                    PersonData(
+                        "1",
+                        "Name1ejwnewjneees",
+                        "Surname1fskfsmkfnsk",
+                        "username1",
+                        "CTO",
+                        "Admin",
+                        ""
+                    ),
+                    PersonData(
+                        "2",
+                        "Sofia",
+                        "Esposito",
+                        "sofia_esposito",
+                        "Marketing Director",
+                        "",
+                        ""
+                    ),
+                    PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
+                ).sortedBy { it.name },
+                listOf("#test1", "#test2")
+            ),
+            ToDoTask(
+                "1",
+                "Task 2",
+                "Expired",
+                0,
+                "Never",
+                "2024-04-20T16:42:00+02:00",
+                "2024-04-01T10:00:00+02:00",
+                listOf(
+                    PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                    PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
+                ).sortedBy { it.name },
+                listOf("#test1", "#test2")
+            ),
+            ToDoTask(
+                "2",
+                "Task 2.5",
+                "Completed",
+                0,
+                "Never",
+                "2024-04-20T16:42:00+02:00",
+                "2024-04-01T10:00:00+02:00",
+                listOf(
+                    PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                    PersonData(
+                        "1",
+                        "Sofia",
+                        "Esposito",
+                        "sofia_esposito",
+                        "Marketing Director",
+                        "",
+                        ""
+                    ),
+                ).sortedBy { it.name },
+                listOf("#test1", "#test2")
+            ),
+            ToDoTask(
+                "3",
+                "Task 2.6",
+                "Completed",
+                0,
+                "Never",
+                "2024-04-20T16:42:00+02:00",
+                "2024-04-01T10:00:00+02:00",
+                listOf(
+                    PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                    PersonData(
+                        "1",
+                        "Sofia",
+                        "Esposito",
+                        "sofia_esposito",
+                        "Marketing Director",
+                        "",
+                        ""
+                    ),
+                ).sortedBy { it.name },
+                listOf("#test1", "#test2")
+            ),
+            ToDoTask(
+                "4",
+                "Task 2.7",
+                "Completed",
+                0,
+                "Never",
+                "2024-04-20T16:42:00+02:00",
+                "2024-04-01T10:00:00+02:00",
+                listOf(
+                    PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                    PersonData(
+                        "1",
+                        "Sofia",
+                        "Esposito",
+                        "sofia_esposito",
+                        "Marketing Director",
+                        "",
+                        ""
+                    ),
+                ).sortedBy { it.name },
+                listOf("#test1", "#test2")
+            ),
+            ToDoTask(
+                "5",
+                "Task 2.8",
+                "Completed",
+                0,
+                "Never",
+                "2024-04-20T16:42:00+02:00",
+                "2024-04-01T10:00:00+02:00",
+                listOf(
+                    PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                    PersonData(
+                        "1",
+                        "Sofia",
+                        "Esposito",
+                        "sofia_esposito",
+                        "Marketing Director",
+                        "",
+                        ""
+                    ),
+                ).sortedBy { it.name },
+                listOf("#test1", "#test2")
+            ),
+            ToDoTask(
+                "6",
+                "Task 3",
+                "Scheduled",
+                1,
+                "Never",
+                "2024-05-07T13:36:00+02:00",
+                "2024-04-02T11:00:00+02:00",
+                listOf(
+                    PersonData(
+                        "0",
+                        "Name1ejwnewjneees",
+                        "Surname1fskfsmkfnsk",
+                        "username1",
+                        "CTO",
+                        "Admin",
+                        ""
+                    ),
+                    PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
+                ).sortedBy { it.name },
+                listOf("#test4", "#test5")
+            ),
+            ToDoTask(
+                "7",
+                "Task 4",
+                "Scheduled",
+                0,
+                "Monthly",
+                "2024-05-30T12:12:00+02:00",
+                "2024-04-02T12:00:00+02:00",
+                listOf(
+                    PersonData(
+                        "0",
+                        "Sofia",
+                        "Esposito",
+                        "sofia_esposito",
+                        "Marketing Director",
+                        "",
+                        ""
+                    ),
+                    PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
+                ).sortedBy { it.name },
+                listOf("#test1", "#test2")
+            ),
+            ToDoTask(
+                "8",
+                "Task 5",
+                "Scheduled",
+                1,
+                "Yearly",
+                "2024-05-07T22:21:00+02:00",
+                "2024-04-03T08:00:00+02:00",
+                listOf(
+                    PersonData(
+                        "0",
+                        "Sofia",
+                        "Esposito",
+                        "sofia_esposito",
+                        "Marketing Director",
+                        "",
+                        ""
+                    ),
+                    PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
+                ).sortedBy { it.name },
+                listOf("#test4", "#test5")
+            )
+        )
+    )
     //TO INITIALIZE AS AN EMPTY LIST:
     //private val _toDoTasks = mutableStateOf(emptyList<toDoTask>())
 
@@ -961,6 +1178,7 @@ class SpecificTeamViewModel: ViewModel() {
                             task.copy(status = "Expired")
                         }
                     }
+
                     "Completed" -> {
                         // For completed recurring tasks, reset to "Scheduled" and update the expiration timestamp
                         if (task.recurrence != "Never") {
@@ -971,11 +1189,15 @@ class SpecificTeamViewModel: ViewModel() {
                                     "Yearly" -> add(Calendar.YEAR, 1)
                                 }
                             }
-                            task.copy(status = "Scheduled", expirationTimestamp = iso8601Format.format(calendar.time))
+                            task.copy(
+                                status = "Scheduled",
+                                expirationTimestamp = iso8601Format.format(calendar.time)
+                            )
                         } else {
                             task
                         }
                     }
+
                     else -> task
                 }
             } else {
@@ -999,7 +1221,8 @@ class SpecificTeamViewModel: ViewModel() {
             tags = toDoTask.tags.toList()
         )
         val updatedTasks = _toDoTasks.value + newTask
-        _toDoTasks.value = updatedTasks.sortedBy { if (sortByCreationDate == 1) it.creationTimestamp else it.expirationTimestamp }
+        _toDoTasks.value =
+            updatedTasks.sortedBy { if (sortByCreationDate == 1) it.creationTimestamp else it.expirationTimestamp }
     }
 
     var searchQueryForTasks = mutableStateOf("")
@@ -1012,60 +1235,74 @@ class SpecificTeamViewModel: ViewModel() {
     )
 
     // Computed list that filters tasks based on search query and other conditions
-    val filteredTasks: List<ToDoTask> get() {
-        // Start with all tasks or only those matching the search query
-        val initialFilter = if (searchQueryForTasks.value.isEmpty()) {
-            toDoTasks
-        } else {
-            toDoTasks.filter { it.taskName.contains(searchQueryForTasks.value, ignoreCase = true) }
+    val filteredTasks: List<ToDoTask>
+        get() {
+            // Start with all tasks or only those matching the search query
+            val initialFilter = if (searchQueryForTasks.value.isEmpty()) {
+                toDoTasks
+            } else {
+                toDoTasks.filter {
+                    it.taskName.contains(
+                        searchQueryForTasks.value,
+                        ignoreCase = true
+                    )
+                }
+            }
+
+            // Sort tasks based on some criteria (not defined in the provided code, assuming it exists)
+            sortTasks()
+
+            // Further filter based on set conditions for priority, recurrence, status, members, tags, and date range
+            return initialFilter.filter { task ->
+                val meetsPriorityCondition =
+                    if (isNotPriority != -1) task.isNotPriority == isNotPriority else true
+                val meetsRecurrentCondition = if (isNotRecurrent != -1) {
+                    if (isNotRecurrent == 0) task.recurrence != "Never"
+                    else task.recurrence == "Never" // isNotRecurrent == 1
+                } else true
+                val meetsStatusCondition =
+                    if (status != -1) statusMapping[task.status] == status else true
+
+                // Check if all members in listOfMembersForFilter are in the task's taskpeople list
+                val membersCondition = listOfMembersForFilter.all { filterMember ->
+                    task.taskpeople.any { taskMember ->
+                        taskMember.username == filterMember.username
+                    }
+                }
+
+                // Check if all tags in selectedTags are in the task's tags list
+                val tagsCondition = selectedTags.all { filterTag ->
+                    task.tags.contains(filterTag)
+                }
+
+                // Check if the task's date falls within the selected date range if either date is provided
+                val datePart =
+                    if (sortByCreationDate == 1) task.creationTimestamp.split("T")[0] else task.expirationTimestamp.split(
+                        "T"
+                    )[0]
+                val dateCondition = when {
+                    selectedTempStartDateTime.isNotEmpty() && selectedTempEndDateTime.isNotEmpty() -> {
+                        val startDate = selectedTempStartDateTime.split("T")[0]
+                        val endDate = selectedTempEndDateTime.split("T")[0]
+                        datePart in startDate..endDate
+                    }
+
+                    selectedTempStartDateTime.isNotEmpty() -> {
+                        val startDate = selectedTempStartDateTime.split("T")[0]
+                        datePart >= startDate
+                    }
+
+                    selectedTempEndDateTime.isNotEmpty() -> {
+                        val endDate = selectedTempEndDateTime.split("T")[0]
+                        datePart <= endDate
+                    }
+
+                    else -> true // No date range filtering if both dates are empty
+                }
+
+                meetsPriorityCondition && meetsRecurrentCondition && meetsStatusCondition && membersCondition && tagsCondition && dateCondition
+            }
         }
-
-        // Sort tasks based on some criteria (not defined in the provided code, assuming it exists)
-        sortTasks()
-
-        // Further filter based on set conditions for priority, recurrence, status, members, tags, and date range
-        return initialFilter.filter { task ->
-            val meetsPriorityCondition = if (isNotPriority != -1) task.isNotPriority == isNotPriority else true
-            val meetsRecurrentCondition = if (isNotRecurrent != -1) {
-                if (isNotRecurrent == 0) task.recurrence != "Never"
-                else task.recurrence == "Never" // isNotRecurrent == 1
-            } else true
-            val meetsStatusCondition = if (status != -1) statusMapping[task.status] == status else true
-
-            // Check if all members in listOfMembersForFilter are in the task's taskpeople list
-            val membersCondition = listOfMembersForFilter.all { filterMember ->
-                task.taskpeople.any { taskMember ->
-                    taskMember.username == filterMember.username
-                }
-            }
-
-            // Check if all tags in selectedTags are in the task's tags list
-            val tagsCondition = selectedTags.all { filterTag ->
-                task.tags.contains(filterTag)
-            }
-
-            // Check if the task's date falls within the selected date range if either date is provided
-            val datePart = if (sortByCreationDate == 1) task.creationTimestamp.split("T")[0] else task.expirationTimestamp.split("T")[0]
-            val dateCondition = when {
-                selectedTempStartDateTime.isNotEmpty() && selectedTempEndDateTime.isNotEmpty() -> {
-                    val startDate = selectedTempStartDateTime.split("T")[0]
-                    val endDate = selectedTempEndDateTime.split("T")[0]
-                    datePart in startDate..endDate
-                }
-                selectedTempStartDateTime.isNotEmpty() -> {
-                    val startDate = selectedTempStartDateTime.split("T")[0]
-                    datePart >= startDate
-                }
-                selectedTempEndDateTime.isNotEmpty() -> {
-                    val endDate = selectedTempEndDateTime.split("T")[0]
-                    datePart <= endDate
-                }
-                else -> true // No date range filtering if both dates are empty
-            }
-
-            meetsPriorityCondition && meetsRecurrentCondition && meetsStatusCondition && membersCondition && tagsCondition && dateCondition
-        }
-    }
 
     fun onSearchQueryForTasksChanged(query: String) {
         searchQueryForTasks.value = query
@@ -1160,16 +1397,19 @@ fun CustomFloatingButton(
                         createTask()
                         clearSelectedPeople()
                     }
+
                     "Add Members" -> {
                         clearSelectedPeople()
                         setAddMembersModality(true)
                     }
+
                     "Confirm Add Members" -> {
                         onSearchQueryChanged("")
                         addSelectedTeamPeopleToTask()
                         setAddMembersModality(false)
                         clearSelectedPeople()
                     }
+
                     else -> {}
                 }
             },
@@ -1199,7 +1439,7 @@ fun FilterBadge(
             .background(color = palette.surfaceVariant, shape = CircleShape)
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
-        Image (
+        Image(
             painter = painterResource(id = R.drawable.outline_close_24),
             contentDescription = "Remove",
             modifier = Modifier
@@ -1230,18 +1470,34 @@ fun NewTask(
     Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
         when (currentRoute) {
             "teams/{teamId}/newTask/status" -> StatusStep(
-                vm.taskNameValue, vm.taskNameError, vm::setTaskName,
-                vm.selectedDateTime, vm.selectedDateTimeError, vm::setDueDateDateTime,
-                vm.showDatePicker, vm::setShowingDatePicker,
-                vm.showTimePicker, vm::setShowingTimePicker,
-                vm.recurrencyOptions, vm.expandedRecurrenceDropdown, vm::setExpandedRecurrencDropdown,
-                vm.selectedTextForRecurrence, vm::setTaskRecurrency,
-                vm.notPriorityValue, vm::setTaskPriority,
-                vm.taskTagsList, vm.selectedTags,
+                vm.taskNameValue,
+                vm.taskNameError,
+                vm::setTaskName,
+                vm.selectedDateTime,
+                vm.selectedDateTimeError,
+                vm::setDueDateDateTime,
+                vm.showDatePicker,
+                vm::setShowingDatePicker,
+                vm.showTimePicker,
+                vm::setShowingTimePicker,
+                vm.recurrencyOptions,
+                vm.expandedRecurrenceDropdown,
+                vm::setExpandedRecurrencDropdown,
+                vm.selectedTextForRecurrence,
+                vm::setTaskRecurrency,
+                vm.notPriorityValue,
+                vm::setTaskPriority,
+                vm.taskTagsList,
+                vm.selectedTags,
                 vm::addTagForNewTask,
                 vm::removeTagForNewTask,
             )
-            "teams/{teamId}/newTask/description" -> DescriptionStep(vm.taskDescriptionValue, vm::setTaskDescription)
+
+            "teams/{teamId}/newTask/description" -> DescriptionStep(
+                vm.taskDescriptionValue,
+                vm::setTaskDescription
+            )
+
             "teams/{teamId}/newTask/people" -> PeopleStep(
                 teamId,
                 vm.taskpeople, vm.teampeople, vm.selectedPeople, vm::clearSelectedPeople,
@@ -1255,7 +1511,6 @@ fun NewTask(
         Spacer(modifier = Modifier.height(20.dp))
     }
 }
-
 
 
 @Composable
@@ -1281,7 +1536,8 @@ fun DateRangePicker(
             if (selectedTempStartDateTime.isNotEmpty()) {
                 Calendar.getInstance().apply {
                     try {
-                        time = iso8601Format.parse(selectedTempStartDateTime) ?: Calendar.getInstance().time
+                        time = iso8601Format.parse(selectedTempStartDateTime)
+                            ?: Calendar.getInstance().time
                     } catch (e: Exception) {
                         Calendar.getInstance().time // Fallback to current time on parsing failure
                     }
@@ -1297,7 +1553,8 @@ fun DateRangePicker(
             if (selectedTempEndDateTime.isNotEmpty()) {
                 Calendar.getInstance().apply {
                     try {
-                        time = iso8601Format.parse(selectedTempEndDateTime) ?: Calendar.getInstance().time
+                        time = iso8601Format.parse(selectedTempEndDateTime)
+                            ?: Calendar.getInstance().time
                     } catch (e: Exception) {
                         Calendar.getInstance().time // Fallback to current time on parsing failure
                     }
@@ -1312,21 +1569,29 @@ fun DateRangePicker(
     val typography = TeamTaskTypography
 
     Column {
-        Text(text = "Date Range", style = typography.labelMedium, modifier = Modifier.padding(start = 10.dp, top = 8.dp))
+        Text(
+            text = "Date Range",
+            style = typography.labelMedium,
+            modifier = Modifier.padding(start = 10.dp, top = 8.dp)
+        )
 
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Start Date TextField
-            Box(modifier = Modifier
-                .weight(0.25f)
-                .padding(8.dp)) {
+            Box(
+                modifier = Modifier
+                    .weight(0.25f)
+                    .padding(8.dp)
+            ) {
                 TextField(
                     modifier = Modifier
                         .clickable { setIsShowingStartDatePicker(true) }
                         .fillMaxWidth(),
                     enabled = false,
-                    value = if (selectedTempStartDateTime.isEmpty()) "" else selectedTempStartDateTime.split('T')[0],
+                    value = if (selectedTempStartDateTime.isEmpty()) "" else selectedTempStartDateTime.split(
+                        'T'
+                    )[0],
                     onValueChange = {},
                     label = { Text("Start Date") },
                     singleLine = true,
@@ -1368,15 +1633,19 @@ fun DateRangePicker(
             Text(" - ")
 
             // End Date TextField
-            Box(modifier = Modifier
-                .weight(0.25f)
-                .padding(8.dp)) {
+            Box(
+                modifier = Modifier
+                    .weight(0.25f)
+                    .padding(8.dp)
+            ) {
                 TextField(
                     modifier = Modifier
                         .clickable { setIsShowingEndDatePicker(true) }
                         .fillMaxWidth(),
                     enabled = false,
-                    value = if (selectedTempEndDateTime.isEmpty()) "" else selectedTempEndDateTime.split('T')[0],
+                    value = if (selectedTempEndDateTime.isEmpty()) "" else selectedTempEndDateTime.split(
+                        'T'
+                    )[0],
                     onValueChange = {},
                     label = { Text("End Date") },
                     singleLine = true,
@@ -1469,8 +1738,9 @@ fun DateRangePicker(
                             Calendar.getInstance()
                         }
                     }
-                    if(selectedTempStartDateTime.isNotEmpty()) {
-                        datePicker.minDate = tempStartCalendar.timeInMillis // Ensure end date is after start date
+                    if (selectedTempStartDateTime.isNotEmpty()) {
+                        datePicker.minDate =
+                            tempStartCalendar.timeInMillis // Ensure end date is after start date
                     }
                     show()
                 }
@@ -1489,9 +1759,6 @@ fun DateRangePicker(
         }
     }
 }
-
-
-
 
 
 @Composable
@@ -1654,8 +1921,11 @@ fun DateTimePicker(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecurrencyDropdownMenu(
-    recurrencyOptions: List<String>, expandedRecurrenceDropdown: Boolean, setExpandedRecurrencDropdown: (Boolean) -> Unit,
-    selectedTextForRecurrence: String, setTaskRecurrency: (String) -> Unit,
+    recurrencyOptions: List<String>,
+    expandedRecurrenceDropdown: Boolean,
+    setExpandedRecurrencDropdown: (Boolean) -> Unit,
+    selectedTextForRecurrence: String,
+    setTaskRecurrency: (String) -> Unit,
 ) {
     val palette = MaterialTheme.colorScheme
 
@@ -1672,7 +1942,12 @@ fun RecurrencyDropdownMenu(
         ) {
             TextField(
                 value = selectedTextForRecurrence,
-                label = { Text("Recurrence", color = if(expandedRecurrenceDropdown) palette.secondary else palette.onSurface) },
+                label = {
+                    Text(
+                        "Recurrence",
+                        color = if (expandedRecurrenceDropdown) palette.secondary else palette.onSurface
+                    )
+                },
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedRecurrenceDropdown) },
@@ -1718,17 +1993,27 @@ fun RecurrencyDropdownMenu(
 }
 
 
-
 @Composable
 fun StatusStep(
-    taskNameValue: String, taskNameError: String, setTaskName: (String) -> Unit,
-    selectedDateTime: String, selectedDateTimeError: String, setDueDateDateTime: (String) -> Unit,
-    showDatePicker: Boolean, setShowingDatePicker: (Boolean) -> Unit,
-    showTimePicker: Boolean, setShowingTimePicker: (Boolean) -> Unit,
-    recurrencyOptions: List<String>, expandedRecurrenceDropdown: Boolean, setExpandedRecurrencDropdown: (Boolean) -> Unit,
-    selectedTextForRecurrence: String, setTaskRecurrency: (String) -> Unit,
-    notPriorityValue: Int, setTaskPriority: (Int) -> Unit,
-    taskTagsList: List<String>, selectedTags: List<String>,
+    taskNameValue: String,
+    taskNameError: String,
+    setTaskName: (String) -> Unit,
+    selectedDateTime: String,
+    selectedDateTimeError: String,
+    setDueDateDateTime: (String) -> Unit,
+    showDatePicker: Boolean,
+    setShowingDatePicker: (Boolean) -> Unit,
+    showTimePicker: Boolean,
+    setShowingTimePicker: (Boolean) -> Unit,
+    recurrencyOptions: List<String>,
+    expandedRecurrenceDropdown: Boolean,
+    setExpandedRecurrencDropdown: (Boolean) -> Unit,
+    selectedTextForRecurrence: String,
+    setTaskRecurrency: (String) -> Unit,
+    notPriorityValue: Int,
+    setTaskPriority: (Int) -> Unit,
+    taskTagsList: List<String>,
+    selectedTags: List<String>,
     addTag: (String) -> Unit,
     removeTag: (String) -> Unit
 ) {
@@ -1740,12 +2025,12 @@ fun StatusStep(
             .fillMaxWidth()
             .padding(vertical = 5.dp, horizontal = 16.dp)
     ) {
-        ProgressBar(1,3)
+        ProgressBar(1, 3)
     }
 
     Text("Status", style = typography.titleMedium)
 
-    LazyColumn{
+    LazyColumn {
         item {
             Column(
                 modifier = Modifier
@@ -1807,14 +2092,21 @@ fun StatusStep(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                TagsDropdownMenu(taskTagsList, selectedTags,
+                TagsDropdownMenu(
+                    taskTagsList, selectedTags,
                     addTag, removeTag
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
 
-                CustomToggle("Priority", listOf("Priority", "Non priority"), notPriorityValue, setTaskPriority, true)
+                CustomToggle(
+                    "Priority",
+                    listOf("Priority", "Non priority"),
+                    notPriorityValue,
+                    setTaskPriority,
+                    true
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -1834,7 +2126,7 @@ fun DescriptionStep(
             .fillMaxWidth()
             .padding(vertical = 5.dp, horizontal = 16.dp)
     ) {
-        ProgressBar(2,3)
+        ProgressBar(2, 3)
     }
 
     Text("Description", style = typography.titleMedium)
@@ -1906,12 +2198,17 @@ fun DescriptionStep(
 fun PeopleStep(
     teamId: String,
     taskpeople: List<PersonData>,
-    teampeople: List<PersonData>, selectedPeople: List<PersonData>, clearSelectedPeople: () -> Unit,
-    addPerson: (PersonData) -> Unit, removePerson: (PersonData) -> Unit, addSelectedTeamPeopleToTask: () -> Unit,
+    teampeople: List<PersonData>,
+    selectedPeople: List<PersonData>,
+    clearSelectedPeople: () -> Unit,
+    addPerson: (PersonData) -> Unit,
+    removePerson: (PersonData) -> Unit,
+    addSelectedTeamPeopleToTask: () -> Unit,
     removePersonFromTask: (String, String) -> Unit,
     filteredPeople: List<PersonData>,
     //isInAddMode: Boolean, setAddMode: (Boolean) -> Unit,
-    searchQueryForNewTask: String, onSearchQueryChangedForNewTask: (String) -> Unit
+    searchQueryForNewTask: String,
+    onSearchQueryChangedForNewTask: (String) -> Unit
 ) {
     val typography = TeamTaskTypography
 
@@ -1920,7 +2217,7 @@ fun PeopleStep(
             .fillMaxWidth()
             .padding(vertical = 5.dp, horizontal = 16.dp)
     ) {
-        ProgressBar(3,3)
+        ProgressBar(3, 3)
     }
 
     Text("People", style = typography.titleMedium)
@@ -1937,17 +2234,22 @@ fun PeopleStep(
 
 // ----- Section for tasks -----
 @Composable
-private fun TaskList (
+private fun TaskList(
     teamId: String,
     toDoTasks: List<ToDoTask>,
-    showingCreateTask: Boolean, createTask: () -> Unit,
+    showingCreateTask: Boolean,
+    createTask: () -> Unit,
     //currentStep: TaskCreationStep,
-    sortByCreationDate: Int, setSortModality: (Int) -> Unit,
+    sortByCreationDate: Int,
+    setSortModality: (Int) -> Unit,
     //tempIsSortByCreationDate: Int,
     setTempSortByCreation: (Int) -> Unit,
-    isNotPriority: Int, setPrior: (Int) -> Unit,
-    isNotRecurrent: Int, setRec: (Int) -> Unit,
-    status: Int, setStat: (Int) -> Unit,
+    isNotPriority: Int,
+    setPrior: (Int) -> Unit,
+    isNotRecurrent: Int,
+    setRec: (Int) -> Unit,
+    status: Int,
+    setStat: (Int) -> Unit,
     //tempIsNotPriority: Int,
     setTempPrior: (Int) -> Unit,
     //tempIsNotRecurrent: Int,
@@ -1955,13 +2257,18 @@ private fun TaskList (
     //tempStatus: Int,
     setTempStat: (Int) -> Unit,
     setTaskDescription: (String) -> Unit,
-    filteredTasks: List<ToDoTask>, searchQueryForTask: String, onSearchQueryForTask: (String) -> Unit,
-    listOfMembersForFilter: List<PersonData>, setMembersInFilterPage: () -> Unit,
+    filteredTasks: List<ToDoTask>,
+    searchQueryForTask: String,
+    onSearchQueryForTask: (String) -> Unit,
+    listOfMembersForFilter: List<PersonData>,
+    setMembersInFilterPage: () -> Unit,
     //selectedPeople: List<PersonData>, removePerson: (PersonData) -> Unit,
     clearSelectedPeople: () -> Unit,
     //tempListOfMembersForFilter: List<PersonData>, addTempMemberToFilter: (PersonData) -> Unit,
     removeTempMemberToFilter: (PersonData) -> Unit, //clearTempMembersInFilterPage: () -> Unit,
-    selectedTags: List<String>, setSelectedTags: () -> Unit, removeTempSelectedTags: (String) -> Unit,
+    selectedTags: List<String>,
+    setSelectedTags: () -> Unit,
+    removeTempSelectedTags: (String) -> Unit,
     clearSelectedDateRangeError: () -> Unit,
     //selectedTempStartDateTime: String,
     //selectedTempEndDateTime: String,
@@ -1971,19 +2278,21 @@ private fun TaskList (
     selectedEndDateTime: String,
     setDueDateStartDateTime: (String) -> Unit,
     setDueDateEndDateTime: (String) -> Unit,
-    showCalendarView: Boolean, setShowCalendView: (Boolean) -> Unit,
-    showCalendarEventsDialog: Boolean, setShowCalendEventsDialog: (Boolean) -> Unit
+    showCalendarView: Boolean,
+    setShowCalendView: (Boolean) -> Unit,
+    showCalendarEventsDialog: Boolean,
+    setShowCalendEventsDialog: (Boolean) -> Unit
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
 
     val groupedtoDoTasks = if (sortByCreationDate == 1) {
         filteredTasks.groupBy { it.creationTimestamp.split("T")[0] }
-    } else{
+    } else {
         filteredTasks.groupBy { it.expirationTimestamp.split("T")[0] }
     } //IT IS A MAP
 
-    if(showCalendarView == false){
+    if (showCalendarView == false) {
         Box {
             // List of tasks
             Column {
@@ -1991,7 +2300,7 @@ private fun TaskList (
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(horizontal = 15.dp)
                 ) {
-                    if(toDoTasks.isNotEmpty()){
+                    if (toDoTasks.isNotEmpty()) {
                         // Search bar}
                         Column(
                             modifier = Modifier
@@ -2007,7 +2316,7 @@ private fun TaskList (
                         }
                     }
 
-                    if(toDoTasks.isNotEmpty()) {
+                    if (toDoTasks.isNotEmpty()) {
                         // Filtering button
                         Column(
                             modifier = Modifier.padding(horizontal = 5.dp)
@@ -2048,8 +2357,9 @@ private fun TaskList (
                 }
                 if (sortByCreationDate != -1 || isNotPriority != -1 || isNotRecurrent != -1 || status != -1 ||
                     listOfMembersForFilter.isNotEmpty() || selectedStartDateTime != "" || selectedEndDateTime != "" ||
-                    selectedTags.isNotEmpty()) {
-                    if(toDoTasks.isNotEmpty()) {
+                    selectedTags.isNotEmpty()
+                ) {
+                    if (toDoTasks.isNotEmpty()) {
                         LazyVerticalGrid(
                             columns = GridCells.FixedSize(160.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -2058,7 +2368,7 @@ private fun TaskList (
                                 .heightIn(max = 80.dp)
                                 .padding(start = 10.dp, bottom = 15.dp)
                         ) {
-                            if (sortByCreationDate != -1){
+                            if (sortByCreationDate != -1) {
                                 item {
                                     FilterBadge(
                                         label = if (sortByCreationDate == 1) "Sorted by Creation" else if (sortByCreationDate == 0) "Sorted by Expiration" else "",
@@ -2069,7 +2379,7 @@ private fun TaskList (
                                     )
                                 }
                             }
-                            if (isNotPriority != -1){
+                            if (isNotPriority != -1) {
                                 item {
                                     FilterBadge(
                                         label = if (isNotPriority == 1) "Non Priority" else if (isNotPriority == 0) "Priority" else "",
@@ -2080,7 +2390,7 @@ private fun TaskList (
                                     )
                                 }
                             }
-                            if (isNotRecurrent != -1){
+                            if (isNotRecurrent != -1) {
                                 item {
                                     FilterBadge(
                                         label = if (isNotRecurrent == 1) "Non Recurrent" else if (isNotRecurrent == 0) "Recurrent" else "",
@@ -2091,10 +2401,10 @@ private fun TaskList (
                                     )
                                 }
                             }
-                            if (status != -1){
+                            if (status != -1) {
                                 item {
                                     FilterBadge(
-                                        label = if (status == 1) "Completed" else if (status == 2) "Expired" else if(status == 0) "Scheduled" else "",
+                                        label = if (status == 1) "Completed" else if (status == 2) "Expired" else if (status == 0) "Scheduled" else "",
                                         onRemove = {
                                             setStat(-1)
                                             setTempStat(-1)
@@ -2112,10 +2422,22 @@ private fun TaskList (
                                     }
                                 )
                             }
-                            if (selectedStartDateTime != "" || selectedEndDateTime != ""){
+                            if (selectedStartDateTime != "" || selectedEndDateTime != "") {
                                 item {
                                     FilterBadge(
-                                        label = if (selectedStartDateTime.isNotEmpty() && selectedEndDateTime.isNotEmpty()) "${selectedStartDateTime.split("T")[0]} - ${selectedEndDateTime.split("T")[0]}" else if (selectedStartDateTime.isNotEmpty()) "Start date: ${selectedStartDateTime.split("T")[0]}" else if(selectedEndDateTime.isNotEmpty()) "End date: ${selectedEndDateTime.split("T")[0]}" else "",
+                                        label = if (selectedStartDateTime.isNotEmpty() && selectedEndDateTime.isNotEmpty()) "${
+                                            selectedStartDateTime.split(
+                                                "T"
+                                            )[0]
+                                        } - ${selectedEndDateTime.split("T")[0]}" else if (selectedStartDateTime.isNotEmpty()) "Start date: ${
+                                            selectedStartDateTime.split(
+                                                "T"
+                                            )[0]
+                                        }" else if (selectedEndDateTime.isNotEmpty()) "End date: ${
+                                            selectedEndDateTime.split(
+                                                "T"
+                                            )[0]
+                                        }" else "",
                                         onRemove = {
                                             if (selectedStartDateTime.isNotEmpty() && selectedEndDateTime.isNotEmpty()) {
                                                 setDueDateStartDateTime("")
@@ -2164,10 +2486,10 @@ private fun TaskList (
                             )
                             for (task in schedtasks) {
                                 ToDoTaskEntry(
-                                        scheduledtask = task,
-                                        viewOnlyMode = false,
-                                        teamId = teamId,
-                                        taskId = task.taskId
+                                    scheduledtask = task,
+                                    viewOnlyMode = false,
+                                    teamId = teamId,
+                                    taskId = task.taskId
                                 )
                                 Spacer(modifier = Modifier.height(5.dp))
                             }
@@ -2188,7 +2510,7 @@ private fun TaskList (
                                     .padding(16.dp)
                             ) {
                                 Text(
-                                    text = if(toDoTasks.isEmpty()) "Currently you don't have any task" else "No results found",
+                                    text = if (toDoTasks.isEmpty()) "Currently you don't have any task" else "No results found",
                                     style = typography.labelMedium,
                                     color = palette.onSurfaceVariant
                                 )
@@ -2207,8 +2529,7 @@ private fun TaskList (
             )
 
         }
-    }
-    else{
+    } else {
         /*CalendarWithEvents(
             toDoTasks
         )*/
@@ -2278,7 +2599,11 @@ fun generateQRCode(text: String): Bitmap? {
         val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
         for (x in 0 until width) {
             for (y in 0 until height) {
-                bmp.setPixel(x, y, if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                bmp.setPixel(
+                    x,
+                    y,
+                    if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+                )
             }
         }
         bmp
@@ -2312,8 +2637,10 @@ fun AddMemberTeamPresentationScreen(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth().padding(10.dp)
-                    ){
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp)
+                    ) {
                         Text("Team created successfully", color = palette.onPrimary)
                         IconButton(
                             onClick = { showBanner = false }
@@ -2379,7 +2706,7 @@ fun AddMemberTeamPresentationScreen(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Center
-                    )  {
+                    ) {
                         Text(
                             text = "to expand!",
                             fontSize = 24.sp,
@@ -2413,12 +2740,19 @@ fun AddMemberTeamPresentationScreen(
                                 .fillMaxWidth()
                                 .height(48.dp),
                             shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = palette.primary, contentColor = palette.secondary)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = palette.primary,
+                                contentColor = palette.secondary
+                            )
                         ) {
                             Text("Share Link")
                         }
                     } else {
-                        Toast.makeText(context, "No suitable apps found to share the link.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            "No suitable apps found to share the link.",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -2429,7 +2763,10 @@ fun AddMemberTeamPresentationScreen(
                             .fillMaxWidth()
                             .height(48.dp),
                         shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = palette.secondary, contentColor = palette.background)
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = palette.secondary,
+                            contentColor = palette.background
+                        )
                     ) {
                         Text("Show QR Code")
                     }
@@ -2463,7 +2800,7 @@ fun ShowQRCodeDialog(
                     modifier = Modifier.padding(16.dp)
                 ) {
                     // Close button
-                    item{
+                    item {
                         Box(
                             contentAlignment = Alignment.TopEnd,
                             modifier = Modifier.fillMaxWidth()
@@ -2543,7 +2880,7 @@ fun AddMemberToTeamScreen(
     teamId: String,
     teamName: String,
     vm: SpecificTeamViewModel = viewModel(),
-    ) {
+) {
     val urlPrefix = "https://teamtask.com/invite/"
     val hashedString = generateHash(teamId)
     val inviteLink = urlPrefix + hashedString
@@ -2554,12 +2891,14 @@ fun AddMemberToTeamScreen(
     AddMemberTeamPresentationScreen(
         showSnackbar,
         //showQrCodeDialog,
-        vm::setShowQrDialog, textState.value, teamName)
+        vm::setShowQrDialog, textState.value, teamName
+    )
     if (vm.showQrCodeDialog) {
         ShowQRCodeDialog(
             showQrCodeDialog = true,
             //"TeamName",
-            vm::setShowQrDialog, bitmap)
+            vm::setShowQrDialog, bitmap
+        )
     }
 }
 
@@ -2570,7 +2909,7 @@ fun InviteConfirmationScreen(
     val palette = MaterialTheme.colorScheme
     //val typography = TeamTaskTypography
 
-    if(LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE) {
+    if (LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -2667,7 +3006,7 @@ fun InviteConfirmationScreen(
             }
         }
     } else {
-        Row (
+        Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
@@ -2768,57 +3107,92 @@ fun InviteConfirmationScreen(
 // ----- Bar to select section -----
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun Tab3Screen (
+fun Tab3Screen(
     teamId: String,
-    showFilterMemberInFilters: Boolean, setShowingFilterMemberInFilters: (Boolean) -> Unit,
-    toDoTasks: List<ToDoTask>, updateTaskStatuses: () -> Unit, listOfMembersForFilter: List<PersonData>,
+    showFilterMemberInFilters: Boolean,
+    setShowingFilterMemberInFilters: (Boolean) -> Unit,
+    toDoTasks: List<ToDoTask>,
+    updateTaskStatuses: () -> Unit,
+    listOfMembersForFilter: List<PersonData>,
     setMembersInFilterPage: () -> Unit,
     taskpeople: List<PersonData>,
     teampeople: List<PersonData>,
-    selectedPeople: List<PersonData>, clearSelectedPeople: () -> Unit,
+    selectedPeople: List<PersonData>,
+    clearSelectedPeople: () -> Unit,
     addPerson: (PersonData) -> Unit,
     removePerson: (PersonData) -> Unit,
-    tempListOfMembersForFilter: List<PersonData>, addTempMemberToFilter: (PersonData) -> Unit,
+    tempListOfMembersForFilter: List<PersonData>,
+    addTempMemberToFilter: (PersonData) -> Unit,
     removeTempMemberToFilter: (PersonData) -> Unit,
     //clearTempMembersInFilterPage: () -> Unit,
     addSelectedTeamPeopleToTask: () -> Unit,
     removePersonFromTask: (String, String) -> Unit,
     removePersonFromTeam: (String, String) -> Unit,
     filteredPeople: List<PersonData>,
-    tabs: List<String>, pagerState: PagerState,
-    showingCreateTask: Boolean, createTask: () -> Unit,
+    tabs: List<String>,
+    pagerState: PagerState,
+    showingCreateTask: Boolean,
+    createTask: () -> Unit,
     currentStep: TaskCreationStep,
-    sortByCreationDate: Int, setSortModality: (Int) -> Unit,
-    tempIsSortByCreationDate: Int, setTempSortByCreation: (Int) -> Unit,
-    isNotPriority: Int, setPrior: (Int) -> Unit,
-    isNotRecurrent: Int, setRec: (Int) -> Unit,
-    status: Int, setStat: (Int) -> Unit,
-    tempIsNotPriority: Int, setTempPrior: (Int) -> Unit,
-    tempIsNotRecurrent: Int, setTempRec: (Int) -> Unit,
-    tempStatus: Int, setTempStat: (Int) -> Unit,
+    sortByCreationDate: Int,
+    setSortModality: (Int) -> Unit,
+    tempIsSortByCreationDate: Int,
+    setTempSortByCreation: (Int) -> Unit,
+    isNotPriority: Int,
+    setPrior: (Int) -> Unit,
+    isNotRecurrent: Int,
+    setRec: (Int) -> Unit,
+    status: Int,
+    setStat: (Int) -> Unit,
+    tempIsNotPriority: Int,
+    setTempPrior: (Int) -> Unit,
+    tempIsNotRecurrent: Int,
+    setTempRec: (Int) -> Unit,
+    tempStatus: Int,
+    setTempStat: (Int) -> Unit,
     //showingTeamLinkOrQrCode: Boolean,
     setShowTeamLinkOrQrCode: (Boolean) -> Unit,
-    searchQuery: String, onSearchQueryChanged: (String) -> Unit,
-    searchQueryForNewTask: String, onSearchQueryChangedForNewTask: (String) -> Unit,
-    filteredTasks: List<ToDoTask>, searchQueryForTask: String, onSearchQueryForTask: (String) -> Unit,
-    taskNameValue: String, taskNameError: String, setTaskName: (String) -> Unit,
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit,
+    searchQueryForNewTask: String,
+    onSearchQueryChangedForNewTask: (String) -> Unit,
+    filteredTasks: List<ToDoTask>,
+    searchQueryForTask: String,
+    onSearchQueryForTask: (String) -> Unit,
+    taskNameValue: String,
+    taskNameError: String,
+    setTaskName: (String) -> Unit,
     taskDescriptionValue: String,
     //taskDescriptionError: String,
     setTaskDescription: (String) -> Unit,
-    selectedDateTime: String, selectedDateTimeError: String, setDueDateDateTime: (String) -> Unit,
-    showDatePicker: Boolean, setShowingDatePicker: (Boolean) -> Unit,
-    showTimePicker: Boolean, setShowingTimePicker: (Boolean) -> Unit,
-    recurrencyOptions: List<String>, expandedRecurrenceDropdown: Boolean, setExpandedRecurrencDropdown: (Boolean) -> Unit,
-    selectedTextForRecurrence: String, setTaskRecurrency: (String) -> Unit,
-    notPriorityValue: Int, setTaskPriority: (Int) -> Unit,
+    selectedDateTime: String,
+    selectedDateTimeError: String,
+    setDueDateDateTime: (String) -> Unit,
+    showDatePicker: Boolean,
+    setShowingDatePicker: (Boolean) -> Unit,
+    showTimePicker: Boolean,
+    setShowingTimePicker: (Boolean) -> Unit,
+    recurrencyOptions: List<String>,
+    expandedRecurrenceDropdown: Boolean,
+    setExpandedRecurrencDropdown: (Boolean) -> Unit,
+    selectedTextForRecurrence: String,
+    setTaskRecurrency: (String) -> Unit,
+    notPriorityValue: Int,
+    setTaskPriority: (Int) -> Unit,
     teamDescriptionValue: String,
     //teamDescriptionError: String,
     setTeamDescription: (String) -> Unit,
-    taskTagsList: List<String>, selectedTags: List<String>, setSelectedTags: () -> Unit,
+    taskTagsList: List<String>,
+    selectedTags: List<String>,
+    setSelectedTags: () -> Unit,
     //addTag: (String) -> Unit,
     //removeTag: (String) -> Unit,
-    tempSelectedTags: List<String>, addTempSelectedTags: (String) -> Unit, removeTempSelectedTags: (String) -> Unit,
-    selectedTagsForNewTask: List<String>, addTagForNewTask: (String) -> Unit,  removeTagForNewTask: (String) -> Unit,
+    tempSelectedTags: List<String>,
+    addTempSelectedTags: (String) -> Unit,
+    removeTempSelectedTags: (String) -> Unit,
+    selectedTagsForNewTask: List<String>,
+    addTagForNewTask: (String) -> Unit,
+    removeTagForNewTask: (String) -> Unit,
     selectedTempStartDateTime: String,
     selectedTempEndDateTime: String,
     setTempDueDateStartDateTime: (String) -> Unit,
@@ -2831,10 +3205,14 @@ fun Tab3Screen (
     setIsShowingStartDatePicker: (Boolean) -> Unit,
     showEndDatePicker: Boolean,
     setIsShowingEndDatePicker: (Boolean) -> Unit,
-    selectedDateRangeError: String, clearSelectedDateRangeError: () -> Unit,
+    selectedDateRangeError: String,
+    clearSelectedDateRangeError: () -> Unit,
     checkTempSelectedDateRangeError: () -> Unit,
-    showCalendarView: Boolean, setShowCalendView: (Boolean) -> Unit,
-    showCalendarEventsDialog: Boolean, setShowCalendEventsDialog: (Boolean) -> Unit
+    showCalendarView: Boolean,
+    setShowCalendView: (Boolean) -> Unit,
+    showCalendarEventsDialog: Boolean,
+    setShowCalendEventsDialog: (Boolean) -> Unit,
+    teamDescription: String
 ) {
     val palette = MaterialTheme.colorScheme
 
@@ -2899,9 +3277,9 @@ fun Tab3Screen (
                 showCalendarView, setShowCalendView,
                 showCalendarEventsDialog, setShowCalendEventsDialog
             )
-            1 -> Description(
-                teamDescriptionValue, setTeamDescription
-            )
+
+            1 -> DescriptionViewOnly(descriptionValue = teamDescription, teamId = teamId)
+
             2 -> PeopleSection(
                 teamId,
                 teampeople, teampeople, selectedPeople, clearSelectedPeople,
@@ -2913,7 +3291,6 @@ fun Tab3Screen (
         }
     }
 }
-
 
 
 @Composable
@@ -2936,7 +3313,7 @@ fun MembersSelectorForFilter(
     val typography = TeamTaskTypography
 
 
-    if(selectedPeople.isNotEmpty()) {
+    if (selectedPeople.isNotEmpty()) {
         Column {
             Row {
                 Text(
@@ -2984,7 +3361,11 @@ fun MembersSelectorForFilter(
     } else {
         Column {
             Row {
-                Text(text = "Members", style = typography.labelMedium, modifier = Modifier.padding(start = 10.dp, top = 8.dp))
+                Text(
+                    text = "Members",
+                    style = typography.labelMedium,
+                    modifier = Modifier.padding(start = 10.dp, top = 8.dp)
+                )
             }
             Row(
                 modifier = Modifier
@@ -3023,7 +3404,7 @@ fun MembersSelectorForFilter(
             }
         }
     }
-    if(showFilterMemberInFilters){
+    if (showFilterMemberInFilters) {
         PeopleSectionForFilters(
             //listOfMembersForFilter, setMembersInFilterPage,
             //teampeople,
@@ -3040,40 +3421,64 @@ fun MembersSelectorForFilter(
 
 // ----- Section to filter tasks -----
 @Composable
-fun FilterTasksScreen (
+fun FilterTasksScreen(
     vm: SpecificTeamViewModel = viewModel(),
-    ) {
+) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
 
     Box {
-        LazyColumn (
+        LazyColumn(
             modifier = Modifier.fillMaxWidth()
         ) {
-            item{
+            item {
                 Spacer(modifier = Modifier.height(12.dp))
             }
-            item{
-                CustomToggle("Sort by", listOf("Expiration Date", "Creation Date"), vm.tempIsSortByCreationDate, vm::setTempSortByCreation, false)
+            item {
+                CustomToggle(
+                    "Sort by",
+                    listOf("Expiration Date", "Creation Date"),
+                    vm.tempIsSortByCreationDate,
+                    vm::setTempSortByCreation,
+                    false
+                )
             }
-            item{
-                Column{
+            item {
+                Column {
                     Spacer(modifier = Modifier.height(20.dp))
                     Divider(color = palette.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(12.dp))
                 }
             }
-            item{
-                CustomToggle("Priority", listOf("Priority", "Non priority"), vm.tempIsNotPriority, vm::setTempPrior, false)
+            item {
+                CustomToggle(
+                    "Priority",
+                    listOf("Priority", "Non priority"),
+                    vm.tempIsNotPriority,
+                    vm::setTempPrior,
+                    false
+                )
             }
             item {
-                CustomToggle("Recurrence", listOf("Recurrent", "Non Recurrent"), vm.tempIsNotRecurrent, vm::setTempRec, false)
+                CustomToggle(
+                    "Recurrence",
+                    listOf("Recurrent", "Non Recurrent"),
+                    vm.tempIsNotRecurrent,
+                    vm::setTempRec,
+                    false
+                )
             }
             item {
-                CustomToggle("Task Status", listOf("Scheduled", "Completed", "Expired"), vm.tempStatus, vm::setTempStat, false)
+                CustomToggle(
+                    "Task Status",
+                    listOf("Scheduled", "Completed", "Expired"),
+                    vm.tempStatus,
+                    vm::setTempStat,
+                    false
+                )
             }
             item {
-                if(vm.teampeople.isNotEmpty()) {
+                if (vm.teampeople.isNotEmpty()) {
                     MembersSelectorForFilter(
                         vm.showFilterMemberInFilters, vm::setShowingFilterMemberInFilters,
                         //listOfMembersForFilter,
@@ -3087,7 +3492,7 @@ fun FilterTasksScreen (
                     )
                 }
             }
-            item{
+            item {
                 DateRangePicker(
                     vm.selectedTempStartDateTime,
                     vm.selectedTempEndDateTime,
@@ -3102,7 +3507,12 @@ fun FilterTasksScreen (
             }
             item {
                 Column(
-                    modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 8.dp, bottom = 8.dp)
+                    modifier = Modifier.padding(
+                        start = 10.dp,
+                        end = 10.dp,
+                        top = 8.dp,
+                        bottom = 8.dp
+                    )
                 ) {
                     Row {
                         Text(
@@ -3164,7 +3574,7 @@ fun CalendarWithEvents(
         }
         */
         .sortedBy { it.second.deadline }
-        //.take(10)
+    //.take(10)
 
     //Log.d("localTasks", localTasks.toString())
 
@@ -3256,7 +3666,7 @@ fun CalendarWithEvents(
                     EventList(selectedDateEvents.value, groupedTasks, teams)
                 }
             } else {
-                if(showCalendarEventsDialog) {
+                if (showCalendarEventsDialog) {
                     Dialog(onDismissRequest = { showCalendarEventsDialog = false }) {
                         Column(
                             modifier = Modifier
@@ -3310,7 +3720,13 @@ fun CalendarControls(currentMonth: Calendar, onMonthChange: (Calendar) -> Unit) 
         }
         // Display month and year
         Text(
-            text = "${currentMonth.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.getDefault())} ${currentMonth.get(Calendar.YEAR)}",
+            text = "${
+                currentMonth.getDisplayName(
+                    Calendar.MONTH,
+                    Calendar.LONG,
+                    Locale.getDefault()
+                )
+            } ${currentMonth.get(Calendar.YEAR)}",
             style = MaterialTheme.typography.bodyLarge
         )
 
@@ -3363,7 +3779,8 @@ fun CalendarGrid(
     val daysInMonth = currentMonth.getActualMaximum(Calendar.DAY_OF_MONTH)
     val firstDayOfMonth = currentMonth.clone() as Calendar
     firstDayOfMonth.set(Calendar.DAY_OF_MONTH, 1)
-    val startingDayOfWeek = (firstDayOfMonth.get(Calendar.DAY_OF_WEEK) + 5) % 7 // EACH ROW starts from Monday
+    val startingDayOfWeek =
+        (firstDayOfMonth.get(Calendar.DAY_OF_WEEK) + 5) % 7 // EACH ROW starts from Monday
     val days = (1..daysInMonth).toList()
     val paddingDaysBefore = List(startingDayOfWeek) { -1 }
     val paddingDaysAfter = List((7 - (startingDayOfWeek + daysInMonth) % 7) % 7) { -1 }
@@ -3390,8 +3807,13 @@ fun CalendarGrid(
             val eventsForDay = if (day > 0) {
                 events.filter { event ->
                     val eventDate = Calendar.getInstance()
-                    eventDate.time = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.getDefault()).parse(event.expirationTimestamp)!!
-                    eventDate.get(Calendar.DAY_OF_MONTH) == day && eventDate.get(Calendar.MONTH) == currentMonth.get(Calendar.MONTH) && eventDate.get(Calendar.YEAR) == currentMonth.get(Calendar.YEAR)
+                    eventDate.time =
+                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.getDefault()).parse(
+                            event.expirationTimestamp
+                        )!!
+                    eventDate.get(Calendar.DAY_OF_MONTH) == day && eventDate.get(Calendar.MONTH) == currentMonth.get(
+                        Calendar.MONTH
+                    ) && eventDate.get(Calendar.YEAR) == currentMonth.get(Calendar.YEAR)
                 }
             } else {
                 emptyList()
@@ -3470,7 +3892,10 @@ fun EventList(
                                     val team = teams.firstOrNull { it.first == pair.second.teamId }
 
                                     Button(
-                                        onClick = { Actions.getInstance().goToTaskComments(pair.second.teamId, pair.first) },
+                                        onClick = {
+                                            Actions.getInstance()
+                                                .goToTaskComments(pair.second.teamId, pair.first)
+                                        },
                                         shape = RoundedCornerShape(5.dp),
                                         colors = ButtonDefaults.buttonColors(
                                             contentColor = Color.Transparent,
@@ -3479,7 +3904,8 @@ fun EventList(
                                         contentPadding = PaddingValues(0.dp),
                                         modifier = Modifier.padding(horizontal = 15.dp)
                                     ) {
-                                        val imageUri = homeViewModel.teamImages.collectAsState().value[team?.first]
+                                        val imageUri =
+                                            homeViewModel.teamImages.collectAsState().value[team?.first]
 
                                         //Log.e("imageuriCalendar", imageUri.toString()) --> TODO: IMAGEURI IS EMPTY HERE
                                         homeViewModel.fetchTeamImage(pair.first)
@@ -3493,17 +3919,24 @@ fun EventList(
                         }
                         Spacer(modifier = Modifier.height(5.dp))
                     }
+
                     "teams/{teamId}/tasksCalendar" -> {
                         groupedTasks.forEach { (date, tasks) ->
                             tasks.forEach { pair ->
                                 val team = teams.firstOrNull { it.first == pair.second.teamId }
 
-                                ToDoTaskEntry(scheduledtask = it, viewOnlyMode = false, teamId = pair.second.teamId, taskId = pair.first)
+                                ToDoTaskEntry(
+                                    scheduledtask = it,
+                                    viewOnlyMode = false,
+                                    teamId = pair.second.teamId,
+                                    taskId = pair.first
+                                )
 
                                 Spacer(Modifier.height(5.dp))
                             }
                         }
                     }
+
                     else -> {
 
                     }
@@ -3514,7 +3947,7 @@ fun EventList(
 }
 
 @Composable
-fun ToDoTaskEntry (
+fun ToDoTaskEntry(
     scheduledtask: ToDoTask,
     viewOnlyMode: Boolean,
     teamId: String,
@@ -3524,7 +3957,7 @@ fun ToDoTaskEntry (
     val palette = MaterialTheme.colorScheme
 
     Box(
-        modifier = if(!viewOnlyMode) {
+        modifier = if (!viewOnlyMode) {
             Modifier.clickable(
                 onClick = { Actions.getInstance().goToTaskComments(teamId, taskId) },
             )
@@ -3554,9 +3987,14 @@ fun ToDoTaskEntry (
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(scheduledtask.taskName, style = typography.bodyMedium, color = palette.onSurface, fontWeight = FontWeight.Bold)
+                    Text(
+                        scheduledtask.taskName,
+                        style = typography.bodyMedium,
+                        color = palette.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
 
-                    Row (
+                    Row(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         // Priority
@@ -3589,7 +4027,7 @@ fun ToDoTaskEntry (
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row (
+                    Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Start
                     ) {
@@ -3606,6 +4044,7 @@ fun ToDoTaskEntry (
                                     colorFilter = ColorFilter.tint(palette.background)
                                 )
                             }
+
                             "Expired" -> {
                                 Image(
                                     painter = painterResource(id = R.drawable.outline_calendar_month_24),
@@ -3617,6 +4056,7 @@ fun ToDoTaskEntry (
                                     colorFilter = ColorFilter.tint(palette.background)
                                 )
                             }
+
                             else -> {
                                 Image(
                                     painter = painterResource(id = R.drawable.outline_access_time_24),
@@ -3635,7 +4075,7 @@ fun ToDoTaskEntry (
                         // Label
                         Text(text = scheduledtask.status, style = typography.bodySmall)
 
-                        when(scheduledtask.recurrence) {
+                        when (scheduledtask.recurrence) {
                             "Weekly" -> {
                                 Text(
                                     text = " (Weekly) ",
@@ -3645,6 +4085,7 @@ fun ToDoTaskEntry (
                                     style = typography.bodySmall
                                 )
                             }
+
                             "Monthly" -> {
                                 Text(
                                     text = " (Monthly) ",
@@ -3654,6 +4095,7 @@ fun ToDoTaskEntry (
                                     style = typography.bodySmall
                                 )
                             }
+
                             "Yearly" -> {
                                 Text(
                                     text = " (Yearly) ",
@@ -3672,22 +4114,31 @@ fun ToDoTaskEntry (
                             "Completed" -> {
                                 ""
                             }
+
                             "Expired" -> {
                                 "at " + scheduledtask.expirationTimestamp.split('T')[1].split('+')[0].slice(
-                                    IntRange(0,4)
+                                    IntRange(0, 4)
                                 )
                             }
+
                             "Scheduled" -> {
-                                "Expires at ${scheduledtask.expirationTimestamp.split('T')[1].split('+')[0].slice(
-                                    IntRange(0,4)
-                                )}"
+                                "Expires at ${
+                                    scheduledtask.expirationTimestamp.split('T')[1].split('+')[0].slice(
+                                        IntRange(0, 4)
+                                    )
+                                }"
                             }
+
                             else -> {
                                 ""
                             }
                         },
                         style = typography.bodySmall,
-                        fontSize = if(LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT){ 13.sp } else {10.sp},
+                        fontSize = if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
+                            13.sp
+                        } else {
+                            10.sp
+                        },
                         modifier = Modifier.padding(start = 8.dp)
                     )
                 }
@@ -3701,6 +4152,7 @@ fun ToDoTaskEntry (
 @Composable
 fun SpecificTeamScreen(
     teamId: String,
+    teamDescription: String,
     rawToDoTasks: List<Pair<String, Task>>,
     rawTeamParticipants: List<Pair<String, PersonData>>,
     rawPeople: List<Pair<String, Person>>,
@@ -3765,8 +4217,10 @@ fun SpecificTeamScreen(
     Log.d("SpecificTeamScreen", "filteredPeople: $filteredPeople")
 
     // Initialize ViewModel state with the converted data using LaunchedEffect
-    LaunchedEffect(key1 = teamId) {
-        vm.init(toDoTasks, teampeople, filteredPeople)
+    LaunchedEffect(key1 = teamId, key2 = teampeople) {
+        if (vm.teampeople.isEmpty()) {
+            vm.init(toDoTasks, teampeople, filteredPeople)
+        }
     }
 
     val tabs = listOf("Tasks", "Description", "People")
@@ -3775,45 +4229,104 @@ fun SpecificTeamScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         Tab3Screen(
             teamId,
-            vm.showFilterMemberInFilters, vm::setShowingFilterMemberInFilters,
-            vm.toDoTasks, vm::updateTaskStatuses, vm.listOfMembersForFilter, vm::setMembersInFilterPage,
-            vm.taskpeople, vm.teampeople, vm.selectedPeople, vm::clearSelectedPeople, vm::addPerson, vm::removePerson,
-            vm.tempListOfMembersForFilter, vm::addTempMemberToFilter, vm::removeTempMemberToFilter,
-            vm::addSelectedTeamPeopleToTask, vm::removePersonFromTask, vm::removePersonFromTeam,
+            vm.showFilterMemberInFilters,
+            vm::setShowingFilterMemberInFilters,
+            vm.toDoTasks,
+            vm::updateTaskStatuses,
+            vm.listOfMembersForFilter,
+            vm::setMembersInFilterPage,
+            vm.taskpeople,
+            vm.teampeople,
+            vm.selectedPeople,
+            vm::clearSelectedPeople,
+            vm::addPerson,
+            vm::removePerson,
+            vm.tempListOfMembersForFilter,
+            vm::addTempMemberToFilter,
+            vm::removeTempMemberToFilter,
+            vm::addSelectedTeamPeopleToTask,
+            vm::removePersonFromTask,
+            vm::removePersonFromTeam,
             vm.filteredPeople,
-            tabs, pagerState,
-            vm.showingCreateTask, vm::createTask,
+            tabs,
+            pagerState,
+            vm.showingCreateTask,
+            vm::createTask,
             vm.currentStep,
-            vm.sortByCreationDate, vm::setSortModality,
-            vm.tempIsSortByCreationDate, vm::setTempSortByCreation,
-            vm.isNotPriority, vm::setPrior,
-            vm.isNotRecurrent, vm::setRec,
-            vm.status, vm::setStat,
-            vm.tempIsNotPriority, vm::setTempPrior,
-            vm.tempIsNotRecurrent, vm::setTempRec,
-            vm.tempStatus, vm::setTempStat,
+            vm.sortByCreationDate,
+            vm::setSortModality,
+            vm.tempIsSortByCreationDate,
+            vm::setTempSortByCreation,
+            vm.isNotPriority,
+            vm::setPrior,
+            vm.isNotRecurrent,
+            vm::setRec,
+            vm.status,
+            vm::setStat,
+            vm.tempIsNotPriority,
+            vm::setTempPrior,
+            vm.tempIsNotRecurrent,
+            vm::setTempRec,
+            vm.tempStatus,
+            vm::setTempStat,
             vm::setShowTeamLinkOrQrCode,
-            vm.searchQuery.value, vm::onSearchQueryChanged,
-            vm.searchQueryForNewTask.value, vm::onSearchQueryForNewTaskChanged,
-            vm.filteredTasks, vm.searchQueryForTasks.value, vm::onSearchQueryForTasksChanged,
-            vm.taskNameValue, vm.taskNameError, vm::setTaskName,
-            vm.taskDescriptionValue, vm::setTaskDescription,
-            vm.selectedDateTime, vm.selectedDateTimeError, vm::setDueDateDateTime,
-            vm.showDatePicker, vm::setShowingDatePicker,
-            vm.showTimePicker, vm::setShowingTimePicker,
-            vm.recurrencyOptions, vm.expandedRecurrenceDropdown, vm::setExpandedRecurrencDropdown,
-            vm.selectedTextForRecurrence, vm::setTaskRecurrency,
-            vm.notPriorityValue, vm::setTaskPriority,
-            vm.teamDescriptionValue, vm::setTeamDescription,
-            vm.taskTagsList, vm.selectedTags, vm::setSelectedTags,
-            vm.tempSelectedTags, vm::addTempSelectedTags, vm::removeTempSelectedTags,
-            vm.selectedTagsForNewTask, vm::addTagForNewTask, vm::removeTagForNewTask,
-            vm.selectedTempStartDateTime, vm.selectedTempEndDateTime, vm::setTempDueDateStartDateTime,
-            vm::setTempDueDateEndDateTime, vm.selectedStartDateTime, vm.selectedEndDateTime,
-            vm::setDueDateStartDateTime, vm::setDueDateEndDateTime, vm.showStartDatePicker, vm::setIsShowingStartDatePicker,
-            vm.showEndDatePicker, vm::setIsShowingEndDatePicker, vm.selectedDateRangeError, vm::clearSelectedDateRangeError,
-            vm::checkTempSelectedDateRangeError, vm.showCalendarView, vm::setShowCalendView, vm.showCalendarEventsDialog,
-            vm::setShowCalendEventsDialog
+            vm.searchQuery.value,
+            vm::onSearchQueryChanged,
+            vm.searchQueryForNewTask.value,
+            vm::onSearchQueryForNewTaskChanged,
+            vm.filteredTasks,
+            vm.searchQueryForTasks.value,
+            vm::onSearchQueryForTasksChanged,
+            vm.taskNameValue,
+            vm.taskNameError,
+            vm::setTaskName,
+            vm.taskDescriptionValue,
+            vm::setTaskDescription,
+            vm.selectedDateTime,
+            vm.selectedDateTimeError,
+            vm::setDueDateDateTime,
+            vm.showDatePicker,
+            vm::setShowingDatePicker,
+            vm.showTimePicker,
+            vm::setShowingTimePicker,
+            vm.recurrencyOptions,
+            vm.expandedRecurrenceDropdown,
+            vm::setExpandedRecurrencDropdown,
+            vm.selectedTextForRecurrence,
+            vm::setTaskRecurrency,
+            vm.notPriorityValue,
+            vm::setTaskPriority,
+            vm.teamDescriptionValue,
+            vm::setTeamDescription,
+            vm.taskTagsList,
+            vm.selectedTags,
+            vm::setSelectedTags,
+            vm.tempSelectedTags,
+            vm::addTempSelectedTags,
+            vm::removeTempSelectedTags,
+            vm.selectedTagsForNewTask,
+            vm::addTagForNewTask,
+            vm::removeTagForNewTask,
+            vm.selectedTempStartDateTime,
+            vm.selectedTempEndDateTime,
+            vm::setTempDueDateStartDateTime,
+            vm::setTempDueDateEndDateTime,
+            vm.selectedStartDateTime,
+            vm.selectedEndDateTime,
+            vm::setDueDateStartDateTime,
+            vm::setDueDateEndDateTime,
+            vm.showStartDatePicker,
+            vm::setIsShowingStartDatePicker,
+            vm.showEndDatePicker,
+            vm::setIsShowingEndDatePicker,
+            vm.selectedDateRangeError,
+            vm::clearSelectedDateRangeError,
+            vm::checkTempSelectedDateRangeError,
+            vm.showCalendarView,
+            vm::setShowCalendView,
+            vm.showCalendarEventsDialog,
+            vm::setShowCalendEventsDialog,
+            teamDescription
         )
     }
 }
@@ -3869,7 +4382,7 @@ fun CustomToggle(
                         .padding(15.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Row (
+                    Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Tick
@@ -3894,7 +4407,7 @@ fun CustomToggle(
                         )
                     }
                 }
-                if(index != opt.size-1){
+                if (index != opt.size - 1) {
                     Spacer(
                         modifier = Modifier
                             .fillMaxHeight()
@@ -3910,11 +4423,16 @@ fun CustomToggle(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun PeopleEntry (
+private fun PeopleEntry(
     teamId: String,
-    person: PersonData, selectedPeople: List<PersonData>,
-    addPerson: (PersonData) -> Unit, removePerson: (PersonData) -> Unit, removePersonFromTask: (String, String) -> Unit,
-    taskpeople: List<PersonData>, showingCreateTask: Boolean, isInTeamPeople: Boolean,
+    person: PersonData,
+    selectedPeople: List<PersonData>,
+    addPerson: (PersonData) -> Unit,
+    removePerson: (PersonData) -> Unit,
+    removePersonFromTask: (String, String) -> Unit,
+    taskpeople: List<PersonData>,
+    showingCreateTask: Boolean,
+    isInTeamPeople: Boolean,
     vm: SpecificTeamViewModel = viewModel()
 ) {
     val palette = MaterialTheme.colorScheme
@@ -3922,12 +4440,13 @@ private fun PeopleEntry (
     val currentRoute = Actions.getInstance().getCurrentRoute()
 
     var isSelected = selectedPeople.any { it.username == person.username }
-    val isAlreadyInTask = remember(taskpeople) { taskpeople.any { it.username == person.username } && !showingCreateTask }
+    val isAlreadyInTask =
+        remember(taskpeople) { taskpeople.any { it.username == person.username } && !showingCreateTask }
     var showMenu by remember { mutableStateOf(false) }
 
     val backgroundColor = if (isSelected &&
         (currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people")
-        ) palette.primaryContainer else palette.surfaceVariant
+    ) palette.primaryContainer else palette.surfaceVariant
     val textColor = palette.onSurface
 
     val userImages = listOf(
@@ -3957,7 +4476,11 @@ private fun PeopleEntry (
                     // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
                     Button(
                         onClick = {
-                            vm.promoteOrDeclassPersonInTeam(teamId, person.personId, person.permission)
+                            vm.promoteOrDeclassPersonInTeam(
+                                teamId,
+                                person.personId,
+                                person.permission
+                            )
                             showMenu = false  // Close the dialog after action
                         },
                         colors = ButtonDefaults.buttonColors(
@@ -3969,13 +4492,13 @@ private fun PeopleEntry (
                             .padding(8.dp)
                     ) {
                         Text(
-                            text = if(person.permission == "Admin") "Declass to Member" else "Set as Admin",
+                            text = if (person.permission == "Admin") "Declass to Member" else "Set as Admin",
                             style = typography.bodySmall
                         )
                     }
                     Button(
                         onClick = {
-                            if(isInTeamPeople){
+                            if (isInTeamPeople) {
                                 vm.removePersonFromTeam(teamId, person.personId)
                             } else {
                                 removePersonFromTask(teamId, person.personId)
@@ -3992,7 +4515,7 @@ private fun PeopleEntry (
                             .padding(8.dp)
                     ) {
                         Text(
-                            text = if(isInTeamPeople) "Remove from Team" else "Remove from Task",
+                            text = if (isInTeamPeople) "Remove from Team" else "Remove from Task",
                             style = typography.bodySmall
                         )
                     }
@@ -4030,14 +4553,19 @@ private fun PeopleEntry (
                     }
                 } else if ((currentRoute != "teams/{teamId}/edit/people" && currentRoute != "teams/{teamId}/filterTasks" && currentRoute != "teams/{teamId}/newTask/people")) Modifier.combinedClickable(
                     onLongClick = { if (person.permission != "Owner") showMenu = true },
-                    onClick = { Actions.getInstance().goToAccount(person.personId) }
+                    onClick = {
+                        Actions
+                            .getInstance()
+                            .goToAccount(person.personId)
+                    }
                 ) else Modifier
             ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Selected icon
         if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people")
-            && isSelected && !isAlreadyInTask) {
+            && isSelected && !isAlreadyInTask
+        ) {
             Image(
                 painter = painterResource(id = R.drawable.outline_done_24),
                 contentDescription = "Selected",
@@ -4047,8 +4575,9 @@ private fun PeopleEntry (
                 colorFilter = ColorFilter.tint(palette.onSurface)
             )
         }
-        if((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people")
-            && isAlreadyInTask) {
+        if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people")
+            && isAlreadyInTask
+        ) {
             Image(
                 painter = painterResource(id = R.drawable.outline_done_24),
                 contentDescription = "Selected",
@@ -4074,18 +4603,36 @@ private fun PeopleEntry (
 //                .clip(CircleShape)
 //        )
 
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(person.image)
-                .crossfade(true)
-                //.error()
-                .build(),
-            contentDescription = "Member Pic",
-            Modifier
-                .size(48.dp)
-                .clip(CircleShape),
-            contentScale = ContentScale.Crop
-        )
+        if (person.image.isNotEmpty()) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(person.image)
+                    .error(R.drawable.avatar)
+                    .crossfade(true)
+                    .placeholder(R.drawable.avatar)
+                    //.error()
+                    .build(),
+                contentDescription = "Member Pic",
+                Modifier
+                    .size(48.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(palette.surface),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "${person.name[0]}${person.surname[0]}",
+                    style = typography.bodyLarge,
+                    color = palette.onSurface
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.width(8.dp))
 
@@ -4101,7 +4648,7 @@ private fun PeopleEntry (
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column (
+                Column(
                     modifier = Modifier.width(220.dp)
                 ) {
                     // Account name
@@ -4115,7 +4662,7 @@ private fun PeopleEntry (
                     )
                 }
 
-                Column (
+                Column(
                     modifier = Modifier.width(80.dp),
                     horizontalAlignment = Alignment.End
                 ) {
@@ -4177,7 +4724,7 @@ fun PersonBadge(
             .background(color = palette.surfaceVariant, shape = CircleShape)
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
-        Image (
+        Image(
             painter = painterResource(id = R.drawable.outline_close_24),
             contentDescription = "Remove",
             modifier = Modifier
@@ -4200,14 +4747,19 @@ fun PersonBadge(
 
 // ----- Section for team members -----
 @Composable
-fun PeopleSection (
+fun PeopleSection(
     teamId: String,
     taskpeople: List<PersonData>,
-    teampeople: List<PersonData>, selectedPeople: List<PersonData>, clearSelectedPeople: () -> Unit,
-    addPerson: (PersonData) -> Unit, removePerson: (PersonData) -> Unit, addSelectedTeamPeopleToTask: () -> Unit,
+    teampeople: List<PersonData>,
+    selectedPeople: List<PersonData>,
+    clearSelectedPeople: () -> Unit,
+    addPerson: (PersonData) -> Unit,
+    removePerson: (PersonData) -> Unit,
+    addSelectedTeamPeopleToTask: () -> Unit,
     removePersonFromTask: (String, String) -> Unit,
     filteredPeople: List<PersonData>,
-    searchQuery: String, onSearchQueryChanged: (String) -> Unit,
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit,
     setShowTeamLinkOrQrCode: (Boolean) -> Unit,
     isInTeamPeople: Boolean
 ) {
@@ -4222,7 +4774,7 @@ fun PeopleSection (
 
         Column {
             if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people")) {
-                if(teampeople.isNotEmpty() || !isInTeamPeople && taskpeople.isNotEmpty()) {
+                if (teampeople.isNotEmpty() || !isInTeamPeople && taskpeople.isNotEmpty()) {
                     // Search bar
                     CustomSearchBar(
                         modifier = Modifier.padding(horizontal = 15.dp, vertical = 10.dp),
@@ -4253,7 +4805,7 @@ fun PeopleSection (
             }
 
             // List of members of the task
-            LazyColumn (
+            LazyColumn(
                 modifier = Modifier.fillMaxHeight()
             ) {
                 if ((currentRoute != "teams/{teamId}/edit/people" && currentRoute != "teams/{teamId}/filterTasks" && currentRoute != "teams/{teamId}/newTask/people")) {
@@ -4264,14 +4816,15 @@ fun PeopleSection (
                                 .fillMaxWidth()
                                 .padding(horizontal = 15.dp, vertical = 15.dp)
                         ) {
-                            if(taskpeople.isNotEmpty()){
+                            if (taskpeople.isNotEmpty()) {
                                 Text(
                                     "${taskpeople.size} members",
                                     style = typography.bodySmall
                                 )
                             }
-                            if((isInTeamPeople && teampeople.isEmpty() && taskpeople.isEmpty())
-                                || (teampeople.isNotEmpty() && taskpeople.isEmpty())) {
+                            if ((isInTeamPeople && teampeople.isEmpty() && taskpeople.isEmpty())
+                                || (teampeople.isNotEmpty() && taskpeople.isEmpty())
+                            ) {
                                 Text(
                                     "Press on the button below to add members!",
                                     style = typography.bodyMedium,
@@ -4282,14 +4835,24 @@ fun PeopleSection (
                     }
                 }
 
-                if((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people")){
-                    if(currentRoute == "teams/{teamId}/newTask/people") {
+                if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people")) {
+                    if (currentRoute == "teams/{teamId}/newTask/people") {
                         items(filteredPeople) {
-                            PeopleEntry(teamId, person = it, selectedPeople,  addPerson, removePerson, removePersonFromTask, taskpeople, showingCreateTask = true, isInTeamPeople)
+                            PeopleEntry(
+                                teamId,
+                                person = it,
+                                selectedPeople,
+                                addPerson,
+                                removePerson,
+                                removePersonFromTask,
+                                taskpeople,
+                                showingCreateTask = true,
+                                isInTeamPeople
+                            )
                         }
                     } else {
                         items(filteredPeople) {
-                            if(it.permission!="Owner"){
+                            if (it.permission != "Owner") {
                                 PeopleEntry(
                                     teamId,
                                     person = it,
@@ -4306,11 +4869,21 @@ fun PeopleSection (
                     }
                 } else {
                     items(taskpeople) {
-                        PeopleEntry(teamId, person = it, selectedPeople,  addPerson, removePerson, removePersonFromTask, listOf(), false, isInTeamPeople)
+                        PeopleEntry(
+                            teamId,
+                            person = it,
+                            selectedPeople,
+                            addPerson,
+                            removePerson,
+                            removePersonFromTask,
+                            listOf(),
+                            false,
+                            isInTeamPeople
+                        )
                     }
                 }
-                if(!isInTeamPeople && teampeople.isEmpty()){
-                    item{
+                if (!isInTeamPeople && teampeople.isEmpty()) {
+                    item {
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
@@ -4344,14 +4917,20 @@ fun PeopleSection (
         }
 
         if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people") && currentRoute != "teams/{teamId}/newTask/people") {
-            CustomFloatingButton(modifier = Modifier.align(Alignment.BottomEnd), "Confirm Add Members",
-                {}, {}, addSelectedTeamPeopleToTask, clearSelectedPeople, onSearchQueryChanged, {}
+            CustomFloatingButton(modifier = Modifier.align(Alignment.BottomEnd),
+                "Confirm Add Members",
+                {},
+                {},
+                addSelectedTeamPeopleToTask,
+                clearSelectedPeople,
+                onSearchQueryChanged,
+                {}
             )
         }
         if ((currentRoute != "teams/{teamId}/edit/people" && currentRoute != "teams/{teamId}/filterTasks" && currentRoute != "teams/{teamId}/newTask/people")) {
-            if(isInTeamPeople){
+            if (isInTeamPeople) {
             } else {
-                if(teampeople.isNotEmpty()){
+                if (teampeople.isNotEmpty()) {
                     CustomFloatingButton(modifier = Modifier.align(Alignment.BottomEnd),
                         "Add Members",
                         {},
@@ -4363,11 +4942,29 @@ fun PeopleSection (
                 }
             }
         }
+
+        //invite people to team
+        FloatingActionButton(
+            onClick = {
+                Actions.getInstance().goToEditTeamPeople(teamId)
+                //Actions.getInstance().goToCreateTaskStatus(teamId)
+            },
+            containerColor = palette.secondary,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(25.dp)
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.outline_person_add_24),
+                contentDescription = "Add",
+                colorFilter = ColorFilter.tint(palette.background)
+            )
+        }
     }
 }
 
 @Composable
-private fun PeopleEntryForFilters (
+private fun PeopleEntryForFilters(
     person: PersonData, selectedPeople: List<PersonData>,
     addPerson: (PersonData) -> Unit, removePerson: (PersonData) -> Unit,
 ) {
@@ -4405,7 +5002,7 @@ private fun PeopleEntryForFilters (
             },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if(isSelected) {
+        if (isSelected) {
             // Selected icon
             Image(
                 painter = painterResource(id = R.drawable.outline_done_24),
@@ -4419,13 +5016,15 @@ private fun PeopleEntryForFilters (
 
         // Account image
         Image(
-            painter = painterResource(id = when (person.name.length%5) {
-                1 -> userImages[0]
-                2 -> userImages[1]
-                3 -> userImages[2]
-                4 -> userImages[3]
-                else -> userImages[2]
-            }),
+            painter = painterResource(
+                id = when (person.name.length % 5) {
+                    1 -> userImages[0]
+                    2 -> userImages[1]
+                    3 -> userImages[2]
+                    4 -> userImages[3]
+                    else -> userImages[2]
+                }
+            ),
             contentDescription = "Task Image",
             modifier = Modifier
                 .size(48.dp)
@@ -4446,7 +5045,7 @@ private fun PeopleEntryForFilters (
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column (
+                Column(
                     modifier = Modifier.width(220.dp)
                 ) {
                     // Account name
@@ -4460,7 +5059,7 @@ private fun PeopleEntryForFilters (
                     )
                 }
 
-                Column (
+                Column(
                     modifier = Modifier.width(80.dp),
                     horizontalAlignment = Alignment.End
                 ) {
@@ -4509,7 +5108,7 @@ private fun PeopleEntryForFilters (
 }
 
 @Composable
-fun PeopleSectionForFilters (
+fun PeopleSectionForFilters(
     //listOfMembersForFilter: List<PersonData>, setMembersInFilterPage: () -> Unit,
     //teampeople: List<PersonData>,
     selectedPeople: List<PersonData>,
@@ -4657,7 +5256,12 @@ fun ExpandableContainer(
                             .padding(top = 12.dp, bottom = 8.dp)
                     )
                     for (task in schedtasks) {
-                        ToDoTaskEntry(scheduledtask = task, viewOnlyMode=true, teamId= "", taskId = "")
+                        ToDoTaskEntry(
+                            scheduledtask = task,
+                            viewOnlyMode = true,
+                            teamId = "",
+                            taskId = ""
+                        )
                         Spacer(modifier = Modifier.height(5.dp))
                     }
                 }
@@ -4674,62 +5278,206 @@ fun ShowProfile(
 ) {
     // Hardcoded list of scheduled tasks
     var toDoTasks = listOf(
-        ToDoTask("0", "Task 1", "Completed", 1, "Weekly", "2024-04-30T12:53:00+02:00", "2024-04-01T09:00:00+02:00",
+        ToDoTask(
+            "0",
+            "Task 1",
+            "Completed",
+            1,
+            "Weekly",
+            "2024-04-30T12:53:00+02:00",
+            "2024-04-01T09:00:00+02:00",
             listOf(
                 PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin", ""),
-                PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
+                PersonData(
+                    "1",
+                    "Name1ejwnewjneees",
+                    "Surname1fskfsmkfnsk",
+                    "username1",
+                    "CTO",
+                    "Admin",
+                    ""
+                ),
+                PersonData(
+                    "2",
+                    "Sofia",
+                    "Esposito",
+                    "sofia_esposito",
+                    "Marketing Director",
+                    "",
+                    ""
+                ),
                 PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
             ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("1", "Task 2", "Expired", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
+            listOf("#test1", "#test2")
+        ),
+        ToDoTask(
+            "1",
+            "Task 2",
+            "Expired",
+            0,
+            "Never",
+            "2024-04-20T16:42:00+02:00",
+            "2024-04-01T10:00:00+02:00",
             listOf(
                 PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
                 PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
             ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("2", "Task 2.5", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
+            listOf("#test1", "#test2")
+        ),
+        ToDoTask(
+            "2",
+            "Task 2.5",
+            "Completed",
+            0,
+            "Never",
+            "2024-04-20T16:42:00+02:00",
+            "2024-04-01T10:00:00+02:00",
             listOf(
                 PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
+                PersonData(
+                    "1",
+                    "Sofia",
+                    "Esposito",
+                    "sofia_esposito",
+                    "Marketing Director",
+                    "",
+                    ""
+                ),
             ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("3", "Task 2.6", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
+            listOf("#test1", "#test2")
+        ),
+        ToDoTask(
+            "3",
+            "Task 2.6",
+            "Completed",
+            0,
+            "Never",
+            "2024-04-20T16:42:00+02:00",
+            "2024-04-01T10:00:00+02:00",
             listOf(
                 PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
+                PersonData(
+                    "1",
+                    "Sofia",
+                    "Esposito",
+                    "sofia_esposito",
+                    "Marketing Director",
+                    "",
+                    ""
+                ),
             ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("4", "Task 2.7", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
+            listOf("#test1", "#test2")
+        ),
+        ToDoTask(
+            "4",
+            "Task 2.7",
+            "Completed",
+            0,
+            "Never",
+            "2024-04-20T16:42:00+02:00",
+            "2024-04-01T10:00:00+02:00",
             listOf(
                 PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
+                PersonData(
+                    "1",
+                    "Sofia",
+                    "Esposito",
+                    "sofia_esposito",
+                    "Marketing Director",
+                    "",
+                    ""
+                ),
             ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("5", "Task 2.8", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
+            listOf("#test1", "#test2")
+        ),
+        ToDoTask(
+            "5",
+            "Task 2.8",
+            "Completed",
+            0,
+            "Never",
+            "2024-04-20T16:42:00+02:00",
+            "2024-04-01T10:00:00+02:00",
             listOf(
                 PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
+                PersonData(
+                    "1",
+                    "Sofia",
+                    "Esposito",
+                    "sofia_esposito",
+                    "Marketing Director",
+                    "",
+                    ""
+                ),
             ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("6", "Task 3", "Scheduled", 1, "Never", "2024-05-07T13:36:00+02:00", "2024-04-02T11:00:00+02:00",
+            listOf("#test1", "#test2")
+        ),
+        ToDoTask(
+            "6",
+            "Task 3",
+            "Scheduled",
+            1,
+            "Never",
+            "2024-05-07T13:36:00+02:00",
+            "2024-04-02T11:00:00+02:00",
             listOf(
-                PersonData("0", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin", ""),
+                PersonData(
+                    "0",
+                    "Name1ejwnewjneees",
+                    "Surname1fskfsmkfnsk",
+                    "username1",
+                    "CTO",
+                    "Admin",
+                    ""
+                ),
                 PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
             ).sortedBy { it.name },
-            listOf("#test4", "#test5")),
-        ToDoTask("7", "Task 4", "Scheduled", 0, "Monthly", "2024-05-30T12:12:00+02:00", "2024-04-02T12:00:00+02:00",
+            listOf("#test4", "#test5")
+        ),
+        ToDoTask(
+            "7",
+            "Task 4",
+            "Scheduled",
+            0,
+            "Monthly",
+            "2024-05-30T12:12:00+02:00",
+            "2024-04-02T12:00:00+02:00",
             listOf(
-                PersonData("0", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
+                PersonData(
+                    "0",
+                    "Sofia",
+                    "Esposito",
+                    "sofia_esposito",
+                    "Marketing Director",
+                    "",
+                    ""
+                ),
                 PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
             ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("8", "Task 5", "Scheduled", 1, "Yearly", "2024-05-07T22:21:00+02:00", "2024-04-03T08:00:00+02:00",
+            listOf("#test1", "#test2")
+        ),
+        ToDoTask(
+            "8",
+            "Task 5",
+            "Scheduled",
+            1,
+            "Yearly",
+            "2024-05-07T22:21:00+02:00",
+            "2024-04-03T08:00:00+02:00",
             listOf(
-                PersonData("0", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
+                PersonData(
+                    "0",
+                    "Sofia",
+                    "Esposito",
+                    "sofia_esposito",
+                    "Marketing Director",
+                    "",
+                    ""
+                ),
                 PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
             ).sortedBy { it.name },
-            listOf("#test4", "#test5"))
+            listOf("#test4", "#test5")
+        )
     )
 
     val groupedtoDoTasks = toDoTasks.groupBy { it.expirationTimestamp.split("T")[0] }
@@ -4753,12 +5501,18 @@ fun ShowProfile(
 
                 // Image and username
                 item {
-                    ProfilePictureSection(person.name, person.surname, person.username, false, imageUri)
+                    ProfilePictureSection(
+                        person.name,
+                        person.surname,
+                        person.username,
+                        false,
+                        imageUri
+                    )
                 }
 
                 item { Spacer(modifier = Modifier.height(40.dp)) }
 
-                item{
+                item {
                     ProfileInfoSection(
                         person.name, "", {},
                         person.surname, "", {},
@@ -4794,7 +5548,7 @@ fun ShowProfile(
             }
         } else {
             Row(
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp )
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp)
             ) {
                 // Image and username
                 Column(
@@ -4805,7 +5559,13 @@ fun ShowProfile(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    ProfilePictureSection(person.name, person.surname, person.username, false, imageUri)
+                    ProfilePictureSection(
+                        person.name,
+                        person.surname,
+                        person.username,
+                        false,
+                        imageUri
+                    )
                 }
 
                 LazyColumn(
@@ -4816,7 +5576,7 @@ fun ShowProfile(
                 ) {
                     item { Spacer(modifier = Modifier.height(20.dp)) }
 
-                    item{
+                    item {
                         ProfileInfoSection(
                             person.name, "", {},
                             person.surname, "", {},
@@ -4841,11 +5601,5 @@ fun ShowProfile(
         }
     }
 
-}
-
-suspend fun downloadMemberPic(image: String): Uri? {
-    val storage = FirebaseStorage.getInstance()
-    val uri = storage.reference.child("profileImages/$image").downloadUrl.await()
-    return uri
 }
 

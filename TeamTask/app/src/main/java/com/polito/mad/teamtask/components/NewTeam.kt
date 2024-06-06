@@ -34,6 +34,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,6 +55,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -469,210 +471,228 @@ fun NewTeam(
         mutableStateOf(false)
     }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(palette.background)
-            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        //Spacer(modifier = Modifier.height(16.dp))
-        item {
-            Column {
-                if (isInCreation) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "Your team is the place where you",
-                            fontSize = 18.sp,
-                            color = palette.onSurface
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "collaborate with others.",
-                            fontSize = 18.sp,
-                            color = palette.onSurface
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "Create one and start!",
-                            fontSize = 18.sp,
-                            color = palette.onSurface
-                        )
-                    }
-                }
+    Box(modifier = Modifier.fillMaxSize()) {
 
-                Spacer(modifier = Modifier.height(32.dp))
-
-
-                EditTeamPictureSection(
-                    teamsVM.imageUri, teamsVM::setUri,
-                    teamsVM::setStoragePermission,
-                    teamsVM.showBottomSheet, teamsVM::setShowBottomMenu
-                )
-
-
-                Spacer(modifier = Modifier.height(50.dp))
-
-                //Team Name
-                TextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    value = teamsVM.teamNameValue,
-                    onValueChange = teamsVM::setTeamName,
-                    label = { Text("Team Name") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        imeAction = ImeAction.Done
-                    ),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = palette.surfaceVariant,
-                        unfocusedContainerColor = palette.surfaceVariant,
-                        disabledContainerColor = palette.surfaceVariant,
-                        cursorColor = palette.secondary,
-                        focusedIndicatorColor = palette.secondary,
-                        unfocusedIndicatorColor = palette.onSurfaceVariant,
-                        errorIndicatorColor = palette.error,
-                        focusedLabelColor = palette.secondary,
-                        unfocusedLabelColor = palette.onSurfaceVariant,
-                        errorLabelColor = palette.error,
-                        selectionColors = TextSelectionColors(palette.primary, palette.surface)
-                    ),
-                    isError = teamsVM.teamNameError.isNotBlank()
-                )
-                if (teamsVM.teamNameError.isNotBlank()) {
-                    Text(
-                        text = teamsVM.teamNameError,
-                        color = palette.error,
-                        style = typography.bodySmall,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        maxLines = 3
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                //Team Category
-                ExposedDropdownMenuBox(
-                    modifier = Modifier
-                        .background(palette.background)
-                        .heightIn(max = 235.dp)
-                        .fillMaxWidth(),
-                    expanded = isExpandedCategoryDropdown,
-                    onExpandedChange = { isExpandedCategoryDropdown = it }) {
-                    TextField(
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth()
-                            .background(palette.background),
-                        value = teamsVM.teamCategory,
-                        onValueChange = {},
-                        readOnly = true,
-                        singleLine = true,
-                        label = { Text("Category") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpandedCategoryDropdown) },
-                        colors = ExposedDropdownMenuDefaults.textFieldColors(
-                            focusedLabelColor = palette.secondary, // Change this to your desired color when the TextField is focused
-                            errorLabelColor = palette.error,
-                            focusedIndicatorColor = palette.secondary,
-                        ),
-                        isError = teamsVM.teamCategoryError.isNotBlank()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = isExpandedCategoryDropdown,
-                        onDismissRequest = { isExpandedCategoryDropdown = false },
-                        modifier = Modifier.background(palette.background)
-                    ) {
-                        categories.forEach { category ->
-                            DropdownMenuItem(
-                                modifier = Modifier.background(palette.background),
-                                onClick = {
-                                    teamsVM.setMyTeamCategory(category)
-                                    isExpandedCategoryDropdown = false
-                                },
-                                text = {
-                                    Text(
-                                        text = category,
-                                        style = typography.bodyMedium,
-                                        color = palette.onSurface
-                                    )
-                                }
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(palette.background)
+                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            //Spacer(modifier = Modifier.height(16.dp))
+            item {
+                Column {
+                    if (isInCreation) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "Your team is the place where you",
+                                fontSize = 18.sp,
+                                color = palette.onSurface
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "collaborate with others.",
+                                fontSize = 18.sp,
+                                color = palette.onSurface
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "Create one and start!",
+                                fontSize = 18.sp,
+                                color = palette.onSurface
                             )
                         }
                     }
-                }
-                if (teamsVM.teamCategoryError.isNotEmpty()) {
-                    Text(
-                        text = "Category can't be empty",
-                        color = palette.error,
-                        style = typography.bodySmall,
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+
+                    EditTeamPictureSection(
+                        teamsVM.imageUri, teamsVM::setUri,
+                        teamsVM::setStoragePermission,
+                        teamsVM.showBottomSheet, teamsVM::setShowBottomMenu
+                    )
+
+
+                    Spacer(modifier = Modifier.height(50.dp))
+
+                    //Team Name
+                    TextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = teamsVM.teamNameValue,
+                        onValueChange = teamsVM::setTeamName,
+                        label = { Text("Team Name") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            imeAction = ImeAction.Done
+                        ),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = palette.surfaceVariant,
+                            unfocusedContainerColor = palette.surfaceVariant,
+                            disabledContainerColor = palette.surfaceVariant,
+                            cursorColor = palette.secondary,
+                            focusedIndicatorColor = palette.secondary,
+                            unfocusedIndicatorColor = palette.onSurfaceVariant,
+                            errorIndicatorColor = palette.error,
+                            focusedLabelColor = palette.secondary,
+                            unfocusedLabelColor = palette.onSurfaceVariant,
+                            errorLabelColor = palette.error,
+                            selectionColors = TextSelectionColors(palette.primary, palette.surface)
+                        ),
+                        isError = teamsVM.teamNameError.isNotBlank()
+                    )
+                    if (teamsVM.teamNameError.isNotBlank()) {
+                        Text(
+                            text = teamsVM.teamNameError,
+                            color = palette.error,
+                            style = typography.bodySmall,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            maxLines = 3
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    //Team Category
+                    ExposedDropdownMenuBox(
+                        modifier = Modifier
+                            .background(palette.background)
+                            .heightIn(max = 235.dp)
+                            .fillMaxWidth(),
+                        expanded = isExpandedCategoryDropdown,
+                        onExpandedChange = { isExpandedCategoryDropdown = it }) {
+                        TextField(
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
+                                .background(palette.background),
+                            value = teamsVM.teamCategory,
+                            onValueChange = {},
+                            readOnly = true,
+                            singleLine = true,
+                            label = { Text("Category") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpandedCategoryDropdown) },
+                            colors = ExposedDropdownMenuDefaults.textFieldColors(
+                                focusedLabelColor = palette.secondary, // Change this to your desired color when the TextField is focused
+                                errorLabelColor = palette.error,
+                                focusedIndicatorColor = palette.secondary,
+                            ),
+                            isError = teamsVM.teamCategoryError.isNotBlank()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = isExpandedCategoryDropdown,
+                            onDismissRequest = { isExpandedCategoryDropdown = false },
+                            modifier = Modifier.background(palette.background)
+                        ) {
+                            categories.forEach { category ->
+                                DropdownMenuItem(
+                                    modifier = Modifier.background(palette.background),
+                                    onClick = {
+                                        teamsVM.setMyTeamCategory(category)
+                                        isExpandedCategoryDropdown = false
+                                    },
+                                    text = {
+                                        Text(
+                                            text = category,
+                                            style = typography.bodyMedium,
+                                            color = palette.onSurface
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    if (teamsVM.teamCategoryError.isNotEmpty()) {
+                        Text(
+                            text = "Category can't be empty",
+                            color = palette.error,
+                            style = typography.bodySmall,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            maxLines = 3
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+
+                    Button(
+                        onClick = { teamsVM.validate(isInCreation, teamId) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        maxLines = 3
-                    )
+                            .height(48.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = palette.primary,
+                            contentColor = palette.secondary
+                        )
+                    ) {
+                        Text(
+                            if (isInCreation) {
+                                "Create Team"
+                            } else {
+                                "Save Changes"
+                            }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-
-                Button(
-                    onClick = { teamsVM.validate(isInCreation, teamId) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = palette.primary,
-                        contentColor = palette.secondary
-                    )
-                ) {
-                    Text(
-                        if (isInCreation) {
-                            "Create Team"
-                        } else {
-                            "Save Changes"
-                        }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
+
+        //in charging state
+        if(teamsVM.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f))
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = palette.primary
+                )
+            }
+        }
+
     }
 }
 
 val categories = listOf(
-    "💼 Work",
-    "📚 Study",
-    "🏠 Home",
-    "🩺 Health",
-    "💰 Finance",
-    "📁 Projects",
+    "🗂️ Administration",
+    "🧹 Cleaning",
+    "💬 Communication",
+    "🍳 Cooking",
     "🎉 Events",
     "👨‍👩‍👧‍👦 Family",
+    "💰 Finance",
+    "🩺 Health",
     "🎨 Hobbies",
-    "✈️ Travel",
-    "🍳 Cooking",
-    "🧹 Cleaning",
-    "🔧 Maintenance",
-    "🛒 Shopping",
-    "🗂️ Administration",
-    "💬 Communication",
+    "🏠 Home",
     "🎡 Leisure",
+    "🔧 Maintenance",
+    "🗂️ Organization",
+    "📁 Projects",
+    "🛒 Shopping",
     "🏅 Sports",
+    "📚 Study",
+    "✈️ Travel",
     "🤝 Volunteering",
-    "🗂️ Organization"
+    "💼 Work",
 )

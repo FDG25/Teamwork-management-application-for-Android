@@ -350,6 +350,7 @@ fun WriteMessage(
                             AsyncImage(
                                 model = ImageRequest.Builder(LocalContext.current)
                                     .data(suggestion.profilePic)
+                                    .error(R.drawable.avatar)
                                     .crossfade(true)
                                     .build(),
                                 placeholder = painterResource(R.drawable.avatar),

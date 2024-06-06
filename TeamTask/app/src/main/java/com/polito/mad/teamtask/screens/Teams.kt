@@ -2,6 +2,7 @@ package com.polito.mad.teamtask.screens
 
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -47,10 +49,12 @@ import com.polito.mad.teamtask.components.CustomSearchBar
 import com.polito.mad.teamtask.components.TeamEntry
 import com.polito.mad.teamtask.components.categories
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 data class TeamAndNotification(
     val name: String,
@@ -99,7 +103,8 @@ class TeamsViewModel(private val myModel: AppModel) : ViewModel() {
                 val imageRef = storage.reference.child("teamImages/$imageName").downloadUrl.await()
 
                 if (imageRef != null) {
-                    _teamImages.value = _teamImages.value.toMutableMap().apply { put(teamId, imageRef) }
+                    _teamImages.value =
+                        _teamImages.value.toMutableMap().apply { put(teamId, imageRef) }
                 } else {
                     _teamImages.value = _teamImages.value.toMutableMap().apply { put(teamId, null) }
                 }
@@ -127,6 +132,9 @@ class TeamsViewModel(private val myModel: AppModel) : ViewModel() {
     fun setMyTeamCategory(c: String) {
         teamCategory = c
     }
+
+    var isLoading by mutableStateOf(false)
+        private set
 
     private fun checkTeamName() {
         // Remove leading and trailing spaces
@@ -161,15 +169,27 @@ class TeamsViewModel(private val myModel: AppModel) : ViewModel() {
         checkTeamCategory()
         if (teamNameError.isBlank() && teamCategoryError.isBlank()) {
             setIsShowingCreateTeam(false)
-            if(isInCreation){
-            //create new Team on Firebase
-            val result = myModel.createTeam(teamNameValue, teamCategory, imageUri)
-            //if success go to create team people
-            if(result) Actions.getInstance().goToCreateTeamPeople()
+            if (isInCreation) {
+                //create new Team on Firebase
+                viewModelScope.launch {
+                    isLoading = true
+                    val result = myModel.createTeam(teamNameValue, teamCategory, imageUri)
+                    isLoading = false
+                    //if success go to create team people
+                    if (result.isNotEmpty()) Actions.getInstance().goToCreateTeamPeople(result, teamNameValue)
+                    else {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                myModel.applicationContext,
+                                "Error during the creation of the team",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
             } else {
                 Actions.getInstance().goToTeamTasks(teamId)
             }
-
         }
     }
 
