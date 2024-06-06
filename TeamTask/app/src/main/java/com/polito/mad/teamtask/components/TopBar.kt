@@ -300,6 +300,20 @@ fun TopBar(
             }
         }
 
+        "teams/{teamId}/edit/description" -> {
+            CenterAlignedTopAppBar(
+                // Back button
+                navigationIcon = {
+                    BackButton(onClick = { Actions.getInstance().navigateBack() })
+                },
+
+                // Title
+                title = { Text("Edit Team Description", style = typography.titleLarge) },
+
+                colors = TopAppBarDefaults.topAppBarColors(palette.primary),
+            )
+        }
+
         "teams/newTeam/info" -> {
             CenterAlignedTopAppBar(
                 // Back button

@@ -4621,9 +4621,7 @@ fun SpecificTeamScreen(
 
     // Initialize ViewModel state with the converted data using LaunchedEffect
     LaunchedEffect(key1 = teamId, key2 = teampeople) {
-        if (vm.teampeople.isEmpty()) {
             vm.init(toDoTasks, teampeople, filteredPeople)
-        }
     }
 
     val tabs = listOf("Tasks", "Description", "People")

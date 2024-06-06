@@ -556,6 +556,7 @@ class AppModel(
         }
         awaitClose { listener?.remove() }
     }
+
     // Notifications
     fun getNotifications(): Flow<List<Pair<String, Notification>>> = callbackFlow {
         val listener = auth.currentUser?.uid?.let {
@@ -1760,7 +1761,7 @@ class AppFactory(
             // model.generateData()
             @Suppress("UNCHECKED_CAST")
             return DescriptionViewModel(model) as T
-        }else throw IllegalArgumentException("Unexpected ViewModel class")
+        } else throw IllegalArgumentException("Unexpected ViewModel class")
     }
 }
 
