@@ -398,6 +398,17 @@ class SpecificTeamViewModel: ViewModel() {
                             updatedTeams.remove(teamId)
                             userRef.update("teams", updatedTeams).await()
                         }
+
+                        // Remove tasks related to the team from the user's tasks field
+                        val userTasks = userDocument.get("tasks") as? List<String> ?: emptyList()
+                        val tasksToRemove = userTasks.filter { taskId ->
+                            val taskRef = db.collection("tasks").document(taskId)
+                            val taskDocument = taskRef.get().await()
+                            taskDocument.exists() && taskDocument.getString("teamId") == teamId
+                        }
+                        val updatedTasks = userTasks.toMutableList()
+                        updatedTasks.removeAll(tasksToRemove)
+                        userRef.update("tasks", updatedTasks).await()
                     }
 
                     // Remove the user from the tasks associated with the team
@@ -424,6 +435,7 @@ class SpecificTeamViewModel: ViewModel() {
             }
         }
     }
+
 
     var showDeleteTeamModal by mutableStateOf(false)
     fun setShwDeleteTeamModal(bool: Boolean) {
