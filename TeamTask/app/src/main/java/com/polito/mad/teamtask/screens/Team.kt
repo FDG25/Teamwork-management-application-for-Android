@@ -3431,100 +3431,188 @@ fun InviteConfirmationScreen(
             }
         }
     } else {
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(1f)
+        if(status == "User not logged in") {
+            Actions.getInstance().goToFirstScreen()
+        }
+        if(status == "Team not found") {
+            Row (
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(modifier = Modifier.height(40.dp))
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxWidth()
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.group_2),
-                        contentDescription = "Team Image",
-                        modifier = Modifier
-                            .border(1.dp, palette.secondary, RoundedCornerShape(5))
-                            .width(120.dp)
-                            .height(120.dp),
-                    )
+                    Spacer(modifier = Modifier.height(40.dp))
+
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.group_2),
+                            contentDescription = "Team Not Found",
+                            modifier = Modifier
+                                .border(1.dp, palette.secondary, RoundedCornerShape(5))
+                                .width(120.dp)
+                                .height(120.dp),
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "Ops, this team does ",
+                            fontSize = 20.sp,
+                            color = palette.onSurface
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "not exist...",
+                            fontSize = 20.sp,
+                            color = palette.onSurface
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                val teamName = "Team Name"
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f).padding(end = 30.dp)
                 ) {
-                    Text(
-                        text = "You have been invited to join ",
-                        fontSize = 20.sp,
-                        color = palette.onSurface
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = teamName,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp,
-                        color = palette.onSurface
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "",
-                        fontSize = 24.sp,
-                        color = palette.onSurface
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(1f)
-            ) {
-                Button(
-                    onClick = { },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = palette.primary,
-                        contentColor = palette.secondary
-                    )
-                ) {
-                    Text("Join team")
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = { },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = palette.secondary,
-                        contentColor = palette.background
-                    )
-                ) {
-                    Text("Reject invite")
+                    Box {
+                        Column {
+                            Button(
+                                onClick = { Actions.getInstance().goToHome() },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = palette.primary,
+                                    contentColor = palette.secondary
+                                )
+                            ) {
+                                Text("Go to home")
+                            }
+                        }
+                    }
                 }
             }
-            Spacer(modifier = Modifier.width(32.dp))
+        }
+        if(status == "User already a member of the team") {
+            Actions.getInstance().goToTeamTasks(teamId)
+        }
+        if(status == "User not a member of the team") {
+            Row (
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Spacer(modifier = Modifier.height(40.dp))
+
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.group_2),
+                            contentDescription = "Team Image",
+                            modifier = Modifier
+                                .border(1.dp, palette.secondary, RoundedCornerShape(5))
+                                .width(120.dp)
+                                .height(120.dp),
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "You have been invited to join ",
+                            fontSize = 20.sp,
+                            color = palette.onSurface
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        team?.let {
+                            Text(
+                                text = it.name,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 24.sp,
+                                color = palette.onSurface
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "",
+                            fontSize = 24.sp,
+                            color = palette.onSurface
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f).padding(end = 30.dp)
+                ) {
+                    Box {
+                        Column {
+                            Button(
+                                onClick = { vm.joinTeam(teamId) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = palette.primary,
+                                    contentColor = palette.secondary
+                                )
+                            ) {
+                                Text("Join team")
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Button(
+                                onClick = { Actions.getInstance().goToHome() },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = palette.secondary,
+                                    contentColor = palette.background
+                                )
+                            ) {
+                                Text("Reject invite")
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -4225,7 +4313,7 @@ fun CalendarGrid(
 
             val textColor = when {
                 day <= 0 -> Color.Transparent
-                isCurrentDay -> palette.secondary
+                isCurrentDay -> palette.inverseSurface
                 else -> palette.onSurface
             }
             val currentDay = if (day <= 0) "" else day.toString()
@@ -4250,7 +4338,7 @@ fun CalendarGrid(
                 modifier = Modifier
                     .padding(2.dp)
                     .background(
-                        if (isSelectedDay) palette.primary else Color.Transparent,
+                        if (isSelectedDay) palette.primaryContainer else Color.Transparent,
                         CircleShape
                     )
                     .clickable {

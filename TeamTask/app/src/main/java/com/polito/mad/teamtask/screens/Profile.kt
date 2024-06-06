@@ -528,7 +528,10 @@ fun ProfileScreen (
     user: Pair<String, Person>,
     userId: String,
     teams: List<Pair<String, Team>>, teamParticipants: List<TeamParticipant>,
-    vm: ProfileFormViewModel = viewModel(), onLogout: () -> Unit, updateAccountBeenDeletedStatus: (Boolean) -> Unit
+    vm: ProfileFormViewModel = viewModel(), onLogout: () -> Unit, updateAccountBeenDeletedStatus: (Boolean) -> Unit,
+    numTeams: Int,
+    completedTasks: Int, totalTasks: Int,
+    completedTasksPerTeam: List<Pair<String, Int>>, totalTasksPerTeam: List<Pair<String, Int>>
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
@@ -686,6 +689,20 @@ fun ProfileScreen (
                 }
 
                 item { Spacer(Modifier.height(16.dp)) }
+
+                /*
+                item {
+                    Statistics(
+                        numTeams,
+                        teams, teamParticipants,
+                        completedTasks, totalTasks,
+                        completedTasksPerTeam.ifEmpty { listOf(Pair("No team", 0)) },
+                        totalTasksPerTeam.ifEmpty { listOf(Pair("No team", 0)) }
+                    )
+                }
+
+                item { Spacer(Modifier.height(16.dp)) }
+                */
             }
         }
     } else {
@@ -721,6 +738,18 @@ fun ProfileScreen (
             }
 
             item { Spacer(Modifier.height(16.dp)) }
+
+            /*
+            item {
+                Statistics(
+                    numTeams,
+                    teams, teamParticipants,
+                    completedTasks, totalTasks,
+                    completedTasksPerTeam.ifEmpty { listOf(Pair("No team", 0)) },
+                    totalTasksPerTeam.ifEmpty { listOf(Pair("No team", 0)) }
+                )
+            }
+            */
         }
     }
     if (vm.isLoading) {

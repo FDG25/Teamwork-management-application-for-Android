@@ -2286,6 +2286,28 @@ fun AppMainScreen(
                     } // TODO: Implement
 
                     composable("profile") {
+                        val numTeams = personal.second.teams.size
+
+                        val filteredTeamParticipants = teamParticipants
+                            .filter { tp -> tp.personId == auth.currentUser?.uid ?: "" }
+
+                        // Using fold instead of reduce to handle empty lists
+                        val totalTasks = filteredTeamParticipants
+                            .map { tp -> tp.totalTasks }
+                            .fold(0L) { acc, totalTasks -> acc + totalTasks }
+                            .toInt()
+
+                        val completedTasks = filteredTeamParticipants
+                            .map { tp -> tp.completedTasks }
+                            .fold(0L) { acc, completedTasks -> acc + completedTasks }
+                            .toInt()
+
+                        val totalTasksPerTeam = filteredTeamParticipants
+                            .map { tp -> Pair(tp.teamId, tp.totalTasks.toInt()) }
+
+                        val completedTasksPerTeam = filteredTeamParticipants
+                            .map { tp -> Pair(tp.teamId, tp.completedTasks.toInt()) }
+
                         auth.currentUser?.let { it1 ->
                             ProfileScreen(
                                 personal,
@@ -2294,7 +2316,10 @@ fun AppMainScreen(
                                 teamParticipants,
                                 profileVM,
                                 onLogout = signOut,
-                                updateAccountBeenDeletedStatus = appVM::updateAccountBeenDeletedStatus
+                                updateAccountBeenDeletedStatus = appVM::updateAccountBeenDeletedStatus,
+                                numTeams,
+                                completedTasks, totalTasks,
+                                completedTasksPerTeam, totalTasksPerTeam,
                             )
                         }
                     }
