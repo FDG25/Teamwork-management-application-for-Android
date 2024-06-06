@@ -55,6 +55,18 @@ fun FloatingButton (
                 )
             }
         }
+        "chats" -> {
+            FloatingActionButton(
+                onClick = {},
+                containerColor = palette.secondary
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.outline_add_24),
+                    contentDescription = "New message",
+                    colorFilter = ColorFilter.tint(palette.background)
+                )
+            }
+        }
         else -> {
 
 

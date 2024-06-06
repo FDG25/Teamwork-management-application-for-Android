@@ -285,9 +285,43 @@ class SpecificTeamViewModel: ViewModel() {
         }
     }
 
+    // Function to add or remove a team from the favourite section in Home
+    fun addOrRemoveTeamToFavourites(teamId: String, frequentlyAccessed: Boolean) {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            return
+        }
 
-    // Function to add the current logged-in user to a team and navigate if successful
-    // Function to add the current logged-in user to a team and navigate if successful
+        val userId = currentUser.uid
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Query to find the team participant document
+                val participantQuery = db.collection("team_participants")
+                    .whereEqualTo("teamId", teamId)
+                    .whereEqualTo("personId", userId)
+                    .get()
+                    .await()
+
+                if (participantQuery.documents.isNotEmpty()) {
+                    // Update the frequentlyAccessed field for the existing participant document
+                    val participantDoc = participantQuery.documents[0]
+                    val participantRef = db.collection("team_participants").document(participantDoc.id)
+                    participantRef.update("frequentlyAccessed", !frequentlyAccessed).await()
+                } else {
+                    // Handle the case where no participant document is found
+                    Log.e("SpecificTeamViewModel", "No participant document found for teamId: $teamId and userId: $userId")
+                }
+
+                withContext(Dispatchers.Main) {
+                    Actions.getInstance().goToTeamTasks(teamId)
+                }
+            } catch (e: Exception) {
+                // Handle any errors that occur during the database operation
+                Log.e("SpecificTeamViewModel", "Error updating favourite status", e)
+            }
+        }
+    }
+
     // Function to add the current logged-in user to a team and navigate if successful
     fun joinTeam(teamId: String) {
         val currentUser = auth.currentUser

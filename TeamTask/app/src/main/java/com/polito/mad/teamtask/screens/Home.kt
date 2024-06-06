@@ -91,10 +91,10 @@ fun HomeScreen(
     //Log.d("GroupedTasks", "GroupedTasks: $groupedTasks")
 
     LazyColumn {
-        // Frequently accessed teams
+        // Favourite teams
         item {
             Text(
-                text = "Frequently accessed teams",
+                text = "Favourite Teams",
                 style = typography.titleMedium,
                 color = palette.secondary,
                 modifier = Modifier.padding(horizontal = 15.dp, vertical = 8.dp)
@@ -111,7 +111,7 @@ fun HomeScreen(
                         .padding(16.dp)
                 ) {
                     Text(
-                        "No frequently accessed teams",
+                        "No teams added to favourite",
                         style = typography.labelMedium,
                         color = palette.onSurfaceVariant
                     )
