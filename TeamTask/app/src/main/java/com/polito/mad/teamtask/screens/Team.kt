@@ -139,6 +139,7 @@ import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
@@ -205,6 +206,44 @@ class SpecificTeamViewModel: ViewModel() {
     fun setStrinValueForDelete(a: String) {
         stringValueForDelete = a.trim()
         stringErrorForDelete = ""
+    }
+
+    suspend fun getUserPermission(teamId: String, userId: String?): String? {
+        return try {
+            val teamDoc = withContext(Dispatchers.IO) {
+                db.collection("teams").document(teamId).get().await()
+            }
+            val admins = teamDoc.get("admins") as? List<String> ?: listOf()
+            val members = teamDoc.get("members") as? List<String> ?: listOf()
+            val ownerId = teamDoc.getString("ownerId")
+
+            when {
+                ownerId == userId -> "Owner"
+                admins.contains(userId) -> "Admin"
+                members.contains(userId) -> "Member"
+                else -> null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    fun hasHigherPermission(teamId: String, userId: String?, personPermission: String): Boolean {
+        var result = false
+        runBlocking {
+            launch(Dispatchers.IO) {
+                val currentUserPermission = userId?.let { getUserPermission(teamId, it) }
+                Log.e("prova", "$personPermission - $currentUserPermission")
+
+                result = currentUserPermission != null && (
+                        currentUserPermission == "Owner" && personPermission == "Admin" ||
+                                currentUserPermission == "Owner" && personPermission == "" ||
+                                currentUserPermission == "Admin" && personPermission == "" //EMPTY STRING = MEMBER
+                        )
+            }.join()
+        }
+        return result
     }
 
     fun validateStringForDeleteTeam(teamId: String) {
@@ -4736,7 +4775,7 @@ fun SpecificTeamScreen(
 
     // Initialize ViewModel state with the converted data using LaunchedEffect
     LaunchedEffect(key1 = teamId, key2 = teampeople) {
-            vm.init(toDoTasks, teampeople, filteredPeople)
+        vm.init(toDoTasks, teampeople, filteredPeople)
     }
 
     val tabs = listOf("Tasks", "Description", "People")
@@ -5057,6 +5096,8 @@ private fun PeopleEntry(
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
     val currentRoute = Actions.getInstance().getCurrentRoute()
+    val auth = FirebaseAuth.getInstance()
+
 
     var isSelected = selectedPeople.any { it.username == person.username }
     val isAlreadyInTask =
@@ -5112,6 +5153,31 @@ private fun PeopleEntry(
                     ) {
                         Text(
                             text = if (person.permission == "Admin") "Declass to Member" else "Set as Admin",
+                            style = typography.bodySmall
+                        )
+                    }
+                    // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
+                    Button(
+                        onClick = {
+                            /*
+                            vm.promoteOrDeclassPersonInTeam(
+                                teamId,
+                                person.personId,
+                                person.permission
+                            )
+                             */
+                            showMenu = false  // Close the dialog after action
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = palette.primary,
+                            contentColor = palette.secondary
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                    ) {
+                        Text(
+                            text = if (person.role == "") "Assign Role" else "Edit Role",
                             style = typography.bodySmall
                         )
                     }
@@ -5171,7 +5237,7 @@ private fun PeopleEntry(
                         removePerson(person)
                     }
                 } else if ((currentRoute != "teams/{teamId}/edit/people" && currentRoute != "teams/{teamId}/filterTasks" && currentRoute != "teams/{teamId}/newTask/people")) Modifier.combinedClickable(
-                    onLongClick = { if (person.permission != "Owner") showMenu = true },
+                    onLongClick = { if (person.permission != "Owner" && person.personId != auth.uid && vm.hasHigherPermission(teamId, auth.uid, person.permission)) showMenu = true },
                     onClick = {
                         Actions
                             .getInstance()
@@ -5302,7 +5368,7 @@ private fun PeopleEntry(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = person.username,
+                    text = if(person.personId != auth.uid){person.username} else {person.username + " (you)"},
                     style = typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
