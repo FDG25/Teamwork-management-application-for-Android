@@ -237,6 +237,7 @@ class SpecificTeamViewModel: ViewModel() {
                 Log.e("prova", "$personPermission - $currentUserPermission")
 
                 result = currentUserPermission != null && (
+                        currentUserPermission == "Owner" && personPermission == "Owner" ||
                         currentUserPermission == "Owner" && personPermission == "Admin" ||
                                 currentUserPermission == "Owner" && personPermission == "" ||
                                 currentUserPermission == "Admin" && personPermission == "" //EMPTY STRING = MEMBER
@@ -629,6 +630,53 @@ class SpecificTeamViewModel: ViewModel() {
             } catch (e: Exception) {
                 // Handle any errors that occur during the database operation
             }
+        }
+    }
+
+    var selectedRole by mutableStateOf("")
+        private set
+    var selectedRoleError by mutableStateOf("")
+    fun setSelectdRole(a: String) {
+        selectedRole = a
+    }
+
+    suspend fun addOrUpdateRoleInTeamParticipants(teamId: String, userId: String, role: String) {
+        withContext(Dispatchers.IO) {
+            try {
+                val participantsRef = db.collection("team_participants")
+                val querySnapshot = participantsRef
+                    .whereEqualTo("teamId", teamId)
+                    .whereEqualTo("personId", userId)
+                    .get()
+                    .await()
+
+                if (querySnapshot.documents.isNotEmpty()) {
+                    val document = querySnapshot.documents[0]
+                    val docRef = participantsRef.document(document.id)
+                    docRef.update("role", role).await()
+                } else {
+                    // If the document does not exist, create a new one
+                    val newParticipant = hashMapOf(
+                        "teamId" to teamId,
+                        "personId" to userId,
+                        "role" to role,
+                        "completedTasks" to 0,
+                        "frequentlyAccessed" to false,
+                        "totalTasks" to 0
+                    )
+                    participantsRef.add(newParticipant).await()
+                }
+            } catch (e: Exception) {
+                // Handle any errors that occur during the database operation
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun validateRole(teamId: String, userId: String, role: String) {
+        viewModelScope.launch {
+            addOrUpdateRoleInTeamParticipants(teamId, userId, role)
+            setSelectdRole("")
         }
     }
 
@@ -4839,7 +4887,17 @@ fun SpecificTeamScreen(
                             imeAction = ImeAction.Done
                         ),
                         colors = TextFieldDefaults.colors(
-                            // your colors
+                            focusedContainerColor = palette.surfaceVariant,
+                            unfocusedContainerColor = palette.surfaceVariant,
+                            disabledContainerColor = palette.surfaceVariant,
+                            cursorColor = palette.secondary,
+                            focusedIndicatorColor = palette.secondary,
+                            unfocusedIndicatorColor = palette.onSurfaceVariant,
+                            errorIndicatorColor = palette.error,
+                            focusedLabelColor = palette.secondary,
+                            unfocusedLabelColor = palette.onSurfaceVariant,
+                            errorLabelColor = palette.error,
+                            selectionColors = TextSelectionColors(palette.primary, palette.surface)
                         ),
                         isError = vm.stringErrorForDelete.isNotBlank()
                     )
@@ -5103,6 +5161,8 @@ private fun PeopleEntry(
     val isAlreadyInTask =
         remember(taskpeople) { taskpeople.any { it.username == person.username } && !showingCreateTask }
     var showMenu by remember { mutableStateOf(false) }
+    var showMenuAssignRole by remember { mutableStateOf(false) }
+    var showOwnerMenu by remember { mutableStateOf(false) }
 
     val backgroundColor = if (isSelected &&
         (currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people")
@@ -5159,13 +5219,7 @@ private fun PeopleEntry(
                     // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
                     Button(
                         onClick = {
-                            /*
-                            vm.promoteOrDeclassPersonInTeam(
-                                teamId,
-                                person.personId,
-                                person.permission
-                            )
-                             */
+                            showMenuAssignRole = true
                             showMenu = false  // Close the dialog after action
                         },
                         colors = ButtonDefaults.buttonColors(
@@ -5217,6 +5271,128 @@ private fun PeopleEntry(
         )
     }
 
+    if(showMenuAssignRole){
+        AlertDialog(
+            onDismissRequest = {
+                showMenuAssignRole = false
+            },
+            title = { Text(text = if (person.role == "") "Assign Role" else "Edit Role") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "Assign a role to " + person.name + " " + person.surname + ":"
+                    )
+                    Spacer(modifier = Modifier.height(15.dp))
+                    TextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = vm.selectedRole,
+                        onValueChange = { if (it.length <= 30) vm.setSelectdRole(it) },
+                        singleLine = true,
+                        label = {
+                            Row {
+                                Text("Role")
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("(${30 - vm.selectedRole.length} characters left)")
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            imeAction = ImeAction.Done
+                        ),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = palette.surfaceVariant,
+                            unfocusedContainerColor = palette.surfaceVariant,
+                            disabledContainerColor = palette.surfaceVariant,
+                            cursorColor = palette.secondary,
+                            focusedIndicatorColor = palette.secondary,
+                            unfocusedIndicatorColor = palette.onSurfaceVariant,
+                            errorIndicatorColor = palette.error,
+                            focusedLabelColor = palette.secondary,
+                            unfocusedLabelColor = palette.onSurfaceVariant,
+                            errorLabelColor = palette.error,
+                            selectionColors = TextSelectionColors(palette.primary, palette.surface)
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    vm.validateRole(teamId, person.personId, vm.selectedRole)
+                    showMenuAssignRole = false
+                }) {
+                    Text(
+                        text = "Assign",
+                        style = typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CaribbeanCurrent
+                    )
+                }
+            },
+            dismissButton = {
+                Button(onClick = {
+                    vm.selectedRoleError = ""
+                    showMenuAssignRole = false
+                }) {
+                    Text(
+                        text = "Cancel",
+                        style = typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CaribbeanCurrent
+                    )
+                }
+            }
+        )
+    }
+    if(showOwnerMenu){
+        AlertDialog(
+            onDismissRequest = { showOwnerMenu = false },
+            title = {
+                Text(
+                    "${person.name} ${person.surname}",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+            },
+            text = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
+                    Button(
+                        onClick = {
+                            showMenuAssignRole = true
+                            showOwnerMenu = false  // Close the dialog after action
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = palette.primary,
+                            contentColor = palette.secondary
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                    ) {
+                        Text(
+                            text = if (person.role == "") "Assign Role" else "Edit Role",
+                            style = typography.bodySmall
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showOwnerMenu = false }) {
+                    Text(
+                        "Close",
+                        color = palette.secondary
+                    )
+                }
+            }
+        )
+    }
+
+
     // Person details
     Row(
         modifier = Modifier
@@ -5237,7 +5413,7 @@ private fun PeopleEntry(
                         removePerson(person)
                     }
                 } else if ((currentRoute != "teams/{teamId}/edit/people" && currentRoute != "teams/{teamId}/filterTasks" && currentRoute != "teams/{teamId}/newTask/people")) Modifier.combinedClickable(
-                    onLongClick = { if (person.permission != "Owner" && person.personId != auth.uid && vm.hasHigherPermission(teamId, auth.uid, person.permission)) showMenu = true },
+                    onLongClick = { if (vm.hasHigherPermission(teamId, auth.uid, person.permission)) if(person.permission == "Owner"){ showOwnerMenu = true } else{showMenu = true} },
                     onClick = {
                         Actions
                             .getInstance()

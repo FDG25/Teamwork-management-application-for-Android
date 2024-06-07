@@ -603,7 +603,17 @@ fun ProfileScreen (
                             imeAction = ImeAction.Done
                         ),
                         colors = TextFieldDefaults.colors(
-                            // your colors
+                            focusedContainerColor = palette.surfaceVariant,
+                            unfocusedContainerColor = palette.surfaceVariant,
+                            disabledContainerColor = palette.surfaceVariant,
+                            cursorColor = palette.secondary,
+                            focusedIndicatorColor = palette.secondary,
+                            unfocusedIndicatorColor = palette.onSurfaceVariant,
+                            errorIndicatorColor = palette.error,
+                            focusedLabelColor = palette.secondary,
+                            unfocusedLabelColor = palette.onSurfaceVariant,
+                            errorLabelColor = palette.error,
+                            selectionColors = TextSelectionColors(palette.primary, palette.surface)
                         ),
                         isError = vm.emailAddressErrorForDelete.isNotBlank()
                     )
