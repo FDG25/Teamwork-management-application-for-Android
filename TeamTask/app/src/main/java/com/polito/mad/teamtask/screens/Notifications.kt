@@ -117,7 +117,7 @@ fun NotificationsScreen (
                     modifier = Modifier.fillMaxWidth().padding(16.dp)
                 ) {
                     Text(
-                        "Everything is quiet",
+                        "Everything is quiet \uD83D\uDCA4\uD83D\uDCA4",
                         style = typography.labelMedium,
                         color = palette.onSurfaceVariant
                     )

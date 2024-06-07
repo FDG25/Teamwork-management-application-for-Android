@@ -111,7 +111,7 @@ fun HomeScreen(
                         .padding(16.dp)
                 ) {
                     Text(
-                        "No teams added to favourite",
+                        "No teams added to favourite \uD83C\uDF1F",
                         style = typography.labelMedium,
                         color = palette.onSurfaceVariant
                     )
@@ -180,7 +180,7 @@ fun HomeScreen(
                         .padding(16.dp)
                 ) {
                     Text(
-                        "Currently you don't have any task",
+                        "Currently you don't have any task \uD83E\uDD71",
                         style = typography.labelMedium,
                         color = palette.onSurfaceVariant
                     )

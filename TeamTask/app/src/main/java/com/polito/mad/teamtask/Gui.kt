@@ -1903,7 +1903,7 @@ fun AppMainScreen(
     // Get the list of team IDs the user is part of
     val teamIds = teams.map { it.first }
 
-    Log.e("ppp", isLoggedIn.toString())
+    //Log.e("ppp", isLoggedIn.toString())
 
     Scaffold(
         topBar = {
