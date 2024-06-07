@@ -5272,6 +5272,13 @@ private fun PeopleEntry(
     }
 
     if(showMenuAssignRole){
+        LaunchedEffect(showMenuAssignRole) {
+            if (person.role.isNotEmpty()) {
+                vm.setSelectdRole(person.role)
+            } else {
+                vm.setSelectdRole("")
+            }
+        }
         AlertDialog(
             onDismissRequest = {
                 showMenuAssignRole = false
