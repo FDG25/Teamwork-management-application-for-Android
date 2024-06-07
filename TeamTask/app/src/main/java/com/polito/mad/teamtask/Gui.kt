@@ -2046,7 +2046,7 @@ fun AppMainScreen(
 
                     composable("teams") {
                         TeamsScreen(
-                            teams,
+                            teams.sortedBy { it.second.name },
                             Actions.getInstance().goToTeamTasks, teamsVM
                         )
                     }

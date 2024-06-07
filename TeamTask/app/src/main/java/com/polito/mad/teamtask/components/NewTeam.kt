@@ -73,6 +73,7 @@ import com.google.firebase.storage.FirebaseStorage
 import com.polito.mad.teamtask.AppFactory
 import com.polito.mad.teamtask.CameraActivity
 import com.polito.mad.teamtask.R
+import com.polito.mad.teamtask.screens.LoadingScreen
 import com.polito.mad.teamtask.screens.TeamsViewModel
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 import kotlinx.coroutines.tasks.await
@@ -682,6 +683,8 @@ fun NewTeam(
 
         //in charging state
         if (teamsVM.isLoading) {
+            LoadingScreen()
+            /*
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -692,6 +695,7 @@ fun NewTeam(
                     color = palette.primary
                 )
             }
+            */
         }
 
     }
