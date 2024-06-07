@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -35,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.google.firebase.auth.FirebaseAuth
 import com.polito.mad.teamtask.Actions
 import com.polito.mad.teamtask.Person
 import com.polito.mad.teamtask.R
@@ -85,9 +87,9 @@ fun TopBar(
                         Image(
                             painter = painterResource(id = R.drawable.teamtasklogo),
                             contentDescription = "Logo",
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(40.dp)
                         )
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(6.dp))
                         Text("TeamTask", style = typography.titleLarge)
                     }
                 },
@@ -441,12 +443,13 @@ fun TopBar(
                         Image(
                             painter = painterResource(id = R.drawable.teamtasklogo),  // TODO: Adapt team image
                             contentDescription = "Team logo",
-                            modifier = Modifier.size(30.dp)
+                            modifier = Modifier.size(38.dp)
                         )
                         Spacer(modifier = Modifier.width(5.dp))
                         if (team?.second?.name != null) {
                             Column(
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f)
+                                    .padding(bottom = 4.dp),
                                 verticalArrangement = Arrangement.Center
                             ) {
                                 Text(
@@ -480,7 +483,7 @@ fun TopBar(
                             Image(
                                 painter = painterResource(id = R.drawable.outline_chat_24),
                                 contentDescription = "Chat",
-                                modifier = Modifier.scale(1.2f)
+                                modifier = Modifier.scale(1.2f).padding(top = 3.dp)
                             )
                         }
                         // Dropdown
@@ -638,12 +641,13 @@ fun TopBar(
                         Image(
                             painter = painterResource(id = R.drawable.teamtasklogo),  // TODO: Adapt team image
                             contentDescription = "Team logo",
-                            modifier = Modifier.size(30.dp)
+                            modifier = Modifier.size(38.dp)
                         )
                         Spacer(modifier = Modifier.width(5.dp))
                         if (team?.second?.name != null) {
                             Column(
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f)
+                                    .padding(bottom = 4.dp),
                                 verticalArrangement = Arrangement.Center
                             ) {
                                 Text(
@@ -663,6 +667,7 @@ fun TopBar(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary),
+                /*
                 actions = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -677,11 +682,12 @@ fun TopBar(
                             Image(
                                 painter = painterResource(id = R.drawable.outline_chat_24),
                                 contentDescription = "Chat",
-                                modifier = Modifier.scale(1.2f)
+                                modifier = Modifier.scale(1.2f).padding(top = 3.dp)
                             )
                         }
                     }
                 }
+                */
             )
         }
 
@@ -1009,15 +1015,16 @@ fun TopBar(
                             contentDescription = "Team logo",
                             modifier = if (!isGroupChat) {
                                 Modifier
-                                    .size(30.dp)
+                                    .size(38.dp)
                                     .clip(CircleShape)
                             } else {
-                                Modifier.size(30.dp)
+                                Modifier.size(38.dp)
                             }
                         )
                         Spacer(modifier = Modifier.width(5.dp))
                         Column(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f)
+                                .padding(bottom = 4.dp),
                             verticalArrangement = Arrangement.Center
                         ) {
                             Text(
@@ -1141,6 +1148,11 @@ fun TopBar(
         }
 
         "accounts/{accountId}" -> {
+            val accountId = Actions.getInstance().getStringParameter("accountId")
+
+            val auth = FirebaseAuth.getInstance()
+
+
             CenterAlignedTopAppBar(
                 // Back button
                 navigationIcon = {
@@ -1156,12 +1168,24 @@ fun TopBar(
                 },
 
                 actions = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        ChatButton(onClick = { /* TODO: Handle click */ })
-                        Spacer(Modifier.width(10.dp))
-                        DropDownButton(onClick = { /* TODO: Handle click */ })
+                    if(auth.uid != accountId){
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Chat
+                            IconButton(onClick = {
+                                if (accountId != null) {
+                                    Actions.getInstance().goToChat(accountId, false)
+                                }
+                            }) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.outline_chat_24),
+                                    contentDescription = "Chat",
+                                    modifier = Modifier.scale(1.2f).padding(top = 3.dp)
+                                )
+                            }
+                            DropDownButton(onClick = { /* TODO: Handle click */ })
+                        }
                     }
                 },
 

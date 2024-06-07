@@ -297,7 +297,8 @@ fun BottomBar (
                                         "teams/{teamId}/filterTasks", "teams/{teamId}/edit/description", "teams/{teamId}/edit/people",
                                         "teams/{teamId}/newTask/status", "teams/{teamId}/newTask/description", "teams/{teamId}/newTask/people",
                                         "teams/{teamId}/tasks/{taskId}/comments", "teams/{teamId}/tasks/{taskId}/comments/{commentId}", "teams/{teamId}/tasks/{taskId}/info", "teams/{teamId}/tasks/{taskId}/description", "teams/{teamId}/tasks/{taskId}/people",
-                                        "teams/{teamId}/tasks/{taskId}/edit/info", "teams/{teamId}/tasks/{taskId}/edit/description", "teams/{teamId}/tasks/{taskId}/edit/people"
+                                        "teams/{teamId}/tasks/{taskId}/edit/info", "teams/{teamId}/tasks/{taskId}/edit/description", "teams/{teamId}/tasks/{taskId}/edit/people",
+                                        "teams/{teamId}/statistics",
                                         -> R.drawable.baseline_groups_24
 
                                         else -> R.drawable.outline_groups_24

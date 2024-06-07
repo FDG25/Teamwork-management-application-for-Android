@@ -758,6 +758,8 @@ fun ProfileScreen (
                     totalTasksPerTeam.ifEmpty { listOf(Pair("No team", 0)) }
                 )
             }
+            item { Spacer(Modifier.height(16.dp)) }
+
         }
     }
     if (vm.isLoading) {

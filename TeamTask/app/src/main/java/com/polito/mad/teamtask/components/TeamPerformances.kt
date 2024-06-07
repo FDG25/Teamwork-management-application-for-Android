@@ -100,6 +100,7 @@ fun TeamPerformances(
             .background(palette.background)
             .padding(horizontal = 16.dp)
     ) {
+        item{Spacer(Modifier.height(10.dp))}
         item {
             Row (
                 horizontalArrangement = Arrangement.Center
@@ -111,7 +112,7 @@ fun TeamPerformances(
             }
         }
 
-        item { Spacer(modifier = Modifier.height(16.dp)) }
+        item { Spacer(modifier = Modifier.height(6.dp)) }
 
         item {
             Column(
@@ -173,7 +174,7 @@ fun TeamPerformances(
             }
         }
 
-        item { Spacer(modifier = Modifier.height(16.dp)) }
+        item { Spacer(modifier = Modifier.height(20.dp)) }
 
         item {
             Column(
@@ -208,7 +209,7 @@ fun TeamPerformances(
             }
         }
 
-        item { Spacer(modifier = Modifier.height(16.dp)) }
+        item { Spacer(modifier = Modifier.height(6.dp)) }
 
         item {
             Row(
@@ -291,7 +292,7 @@ fun TeamPerformances(
             }
         }
 
-        item { Spacer(modifier = Modifier.height(16.dp)) }
+        item { Spacer(modifier = Modifier.height(6.dp)) }
 
         item {
             Column {
