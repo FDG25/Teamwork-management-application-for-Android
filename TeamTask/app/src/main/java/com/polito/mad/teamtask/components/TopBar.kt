@@ -393,7 +393,9 @@ fun TopBar(
             }
         }
 
-        "teams/newTeam/share", "teams/newTeam/qr" -> {
+        "teams/newTeam/share/{teamId}/{teamName}", "teams/newTeam/qr" -> {
+            val teamId = Actions.getInstance().getStringParameter("teamId")
+
             CenterAlignedTopAppBar(
                 // Back button
                 navigationIcon = {
@@ -405,7 +407,9 @@ fun TopBar(
 
                 actions = {
                     DoneButton(onClick = {
-                        //Actions.getInstance().goToTeamTasks()  //TODO: PASS teamId OF THE CREATED TEAM
+                        if (teamId != null) {
+                            Actions.getInstance().goToTeamTasks(teamId)
+                        }
                     })
                 },
 
@@ -473,12 +477,19 @@ fun TopBar(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                Text(
-                                    team.second.category,
-                                    style = typography.labelSmall,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                Row{
+                                    Text(
+                                        team.second.category,
+                                        style = typography.labelSmall,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        " | " + team.second.creationDate.split("T")[0],
+                                        style = typography.labelSmall,
+                                        maxLines = 1,
+                                    )
+                                }
                             }
                         }
                     }
@@ -680,12 +691,19 @@ fun TopBar(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                Text(
-                                    team.second.category,
-                                    style = typography.labelSmall,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                Row{
+                                    Text(
+                                        team.second.category,
+                                        style = typography.labelSmall,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        " | " + team.second.creationDate.split("T")[0],
+                                        style = typography.labelSmall,
+                                        maxLines = 1,
+                                    )
+                                }
                             }
                         }
                     }

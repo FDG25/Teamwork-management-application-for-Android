@@ -110,17 +110,22 @@ fun NotificationsScreen (
 
     LazyColumn {
         if (groupedNotifications.isEmpty()) {
+            item{Spacer(modifier = Modifier.height(40.dp)) }
             item {
-                Row (
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(16.dp)
-                ) {
-                    Text(
-                        "Everything is quiet \uD83D\uDCA4\uD83D\uDCA4",
-                        style = typography.labelMedium,
-                        color = palette.onSurfaceVariant
-                    )
+                Column(verticalArrangement = Arrangement.Center) {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            "Everything is quiet \uD83D\uDCA4\uD83D\uDCA4",
+                            style = typography.labelMedium,
+                            color = palette.onSurfaceVariant
+                        )
+                    }
                 }
             }
         } else {
