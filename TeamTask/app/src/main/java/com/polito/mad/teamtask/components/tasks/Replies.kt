@@ -1,4 +1,4 @@
-package com.polito.mad.teamtask.tasks
+package com.polito.mad.teamtask.components.tasks
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
@@ -18,14 +18,23 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.polito.mad.teamtask.tasks.components.Reply
-import com.polito.mad.teamtask.tasks.components.ReplyObject
-import com.polito.mad.teamtask.tasks.components.WriteComment
+import com.google.firebase.auth.FirebaseAuth
+import com.polito.mad.teamtask.components.tasks.components.Reply
+import com.polito.mad.teamtask.components.tasks.components.ReplyObject
+import com.polito.mad.teamtask.components.tasks.components.SendObject
+import com.polito.mad.teamtask.components.tasks.components.WriteComment
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 import kotlinx.coroutines.flow.MutableStateFlow
 
 
 class RepliesViewModel : ViewModel() {
+    var recomposeParent by mutableStateOf(false)
+        private set
+
+    fun setRecomposeParent() {
+        recomposeParent = !recomposeParent
+    }
+
     var commentValues by mutableStateOf(Pair("", true))
         private set
 
@@ -36,54 +45,41 @@ class RepliesViewModel : ViewModel() {
     var replies = MutableStateFlow<Map<String, MutableSet<ReplyObject>>>(mapOf())
         private set
 
-    fun addReply(reply: ReplyObject) {
-        if (reply.text.isNotBlank() || reply.attachments.isNotEmpty()) {
-            replies.value.getOrElse(reply.commentId) { emptySet() }.toMutableSet().apply {
-                add(reply)
-            }.let { updatedReplies ->
-                replies.value = replies.value.toMutableMap().apply {
-                    put(reply.commentId, updatedReplies)
-                }
-            }
-        }
+    fun addReply(reply: SendObject) {
+        //todo: add reply to the database
     }
 
     fun deleteReply(commentId: String, replyId: String) {
-        replies.value[commentId]?.toMutableSet()?.apply {
-            removeIf { it.id == replyId }
-        }?.let {
-            replies.value = replies.value.toMutableMap().apply {
-                this[commentId] = it
-            }
-        }
+        //todo: delete reply from the database
     }
 
-    fun editReply(reply: ReplyObject) {
-        replies.value[reply.commentId]?.toMutableSet()?.apply {
-            removeIf { it.id == reply.id }
-            add(reply)
-        }?.let { updatedReplies ->
-            replies.value = replies.value.toMutableMap().apply {
-                this[reply.commentId] = updatedReplies
-            }
-        }
+    fun editReply(reply: SendObject) {
+        //todo: edit reply in the database
     }
 }
 
 
-@Preview
 @Composable
-fun Replies(vm: RepliesViewModel = viewModel()) {
+fun Replies(
+    teamId: String = "",
+    taskId: String = "",
+    commentId: String,
+    vm: RepliesViewModel = viewModel()
+) {
     //val typography = TeamTaskTypography
 
     val replies by vm.replies.collectAsState()
 
+    val recompose = vm.recomposeParent
+
     Scaffold(
         bottomBar = {
-            if(vm.commentValues.second) {
+            if (vm.commentValues.second) {
                 WriteComment(
                     onSend = vm::addReply, onEdit = vm::editReply,
-                    isComment = false, commentId = vm.commentValues.first
+                    isComment = false, commentId = commentId,
+                    senderId = FirebaseAuth.getInstance().currentUser?.uid ?: "",
+                    taskId = taskId
                 )
             }
         },
@@ -91,7 +87,7 @@ fun Replies(vm: RepliesViewModel = viewModel()) {
         LazyColumn(
             modifier = Modifier.padding(innerPadding)
         ) {
-            if(vm.commentValues.second || replies[vm.commentValues.first]?.isNotEmpty() == true) {
+            if (vm.commentValues.second || replies[vm.commentValues.first]?.isNotEmpty() == true) {
                 item {
                     Text(
                         text = "Replies",
@@ -102,15 +98,16 @@ fun Replies(vm: RepliesViewModel = viewModel()) {
                 }
             }
 
-            replies[vm.commentValues.first]?.toList()?.sortedBy { it.date }?.forEach { reply ->                item {
+            replies[vm.commentValues.first]?.toList()?.sortedBy { it.date }?.forEach { reply ->
+                item {
                     Box(modifier = Modifier.padding(start = 16.dp, end = 16.dp)) {
-                        Reply(reply, vm::deleteReply)
+                        Reply(reply, vm::deleteReply, recomposeParent = vm::setRecomposeParent)
                     }
                     Spacer(modifier = Modifier.size(16.dp))
                 }
             }
 
-            if(!vm.commentValues.second) {
+            if (!vm.commentValues.second) {
                 item {
                     Box(modifier = Modifier.padding(16.dp)) {
                         Text(

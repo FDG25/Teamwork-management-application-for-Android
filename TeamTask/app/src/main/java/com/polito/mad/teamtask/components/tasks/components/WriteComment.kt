@@ -1,6 +1,6 @@
 @file:Suppress("UNCHECKED_CAST")
 
-package com.polito.mad.teamtask.tasks.components
+package com.polito.mad.teamtask.components.tasks.components
 
 import android.app.Activity
 import android.content.ContentResolver
@@ -39,43 +39,46 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.app.ActivityCompat
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import java.sql.Timestamp
-import kotlin.random.Random
+import com.polito.mad.teamtask.chat.visualization.UriCouple
+import com.polito.mad.teamtask.chat.visualization.multipleFilesContract
+import com.polito.mad.teamtask.components.FilesBar
+import java.time.LocalDateTime
 
 
 data class EditableObject(
-    val id: String,
+    val id: String,    //id of comment or reply
     val commentId: String?,
     val profilePic: Uri,
     val username: String,
     val role: String,
     var text: String,
-    val date: Timestamp,
-    val attachments: Set<Uri>,
+    val date: LocalDateTime,
+    val attachments: Set<UriCouple>,
     val repliesNumber: Int?,
+)
+
+data class SendObject(
+    val id: String?,
+    val taskId: String,
+    val senderId: String,
+    val timestamp: LocalDateTime,
+    val body: String?,
+    val media: Set<UriCouple>?,
+    val repliesAllowed: Boolean?,
+    val replies: List<String>?,
+    val commentId: String?
 )
 
 
@@ -102,7 +105,7 @@ class WTViewModel : ViewModel() {
             "",
             "",
             "",
-            Timestamp(System.currentTimeMillis()),
+            LocalDateTime.now(),
             emptySet(),
             null
         )
@@ -130,7 +133,7 @@ class WTViewModel : ViewModel() {
     }
 
     fun goEditing(editingObject: EditableObject) {
-        attachments.value = editingObject.attachments
+        attachments.value = editingObject.attachments.mapNotNull { it.firebaseUri }.toSet()
         text = TextFieldValue(editingObject.text)
         this.editingObject = editingObject
         isEditing = true
@@ -139,13 +142,16 @@ class WTViewModel : ViewModel() {
 
 
 @Composable
-fun <T : TaskInteraction> WriteComment(
+fun WriteComment(
     vm: WTViewModel = viewModel(),
-    onSend: (T) -> Unit = {},
-    onEdit: (T) -> Unit = {},
+    onSend: (SendObject) -> Unit = {},
+    onEdit: (SendObject) -> Unit = {},
     isComment: Boolean = true,
-    commentId: String?
+    commentId: String?,
+    senderId: String,
+    taskId: String
 ) {
+
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
 
@@ -171,12 +177,27 @@ fun <T : TaskInteraction> WriteComment(
         vm.removeAllAttachment()
     }
 
-    val getContent =
-        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-            if (uri != null) {
+    //get multiple files
+    val getContent = rememberLauncherForActivityResult(multipleFilesContract) { uris ->
+        // Handle the returned URIs here
+        uris.forEach { uri ->
+            val fileSizeInMB =
+                context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { it.length.div(1024.0).div(1024.0) }
+            if (fileSizeInMB != null && fileSizeInMB < 5.0)
                 vm.addAttachment(uri)
+            else {
+                val fileName = com.polito.mad.teamtask.components.getFileNameWithExtension(
+                    uri,
+                    context.contentResolver
+                )
+                Toast.makeText(
+                    context,
+                    "File $fileName too big: you can upload a file of max 5MB",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
+    }
 
     val storagePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -210,65 +231,88 @@ fun <T : TaskInteraction> WriteComment(
     )
     //onClick Function
     val onClickFunction = {
+        if (files.size > 5) {
+            Toast.makeText(
+                context,
+                "You can upload a maximum of 5 files per message (5MB max for each file)",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+
         if ((vm.isEditing && isComment && vm.editingObject.id.isBlank()) ||
             (vm.isEditing && !isComment && vm.editingObject.id.isBlank())
         ) {
             throw RuntimeException("Comment/Reply ID cannot be null or empty during editing")
         }
+
         if (vm.isEditing) {
             onEdit(
                 if (isComment) {
-                    CommentObject(
-                        vm.editingObject.id,
-                        vm.editingObject.profilePic,
-                        vm.editingObject.username,
-                        vm.editingObject.role,
-                        vm.text.text,
-                        vm.editingObject.date,
-                        files,
-                        vm.editingObject.repliesNumber ?: 0,
-                        true
-                    ) as T
+                    SendObject(
+                        id = vm.editingObject.id,
+                        taskId = taskId,
+                        senderId = senderId,
+                        timestamp = vm.editingObject.date,
+                        body = vm.text.text,
+                        media = if (files.isNotEmpty()) files.map { UriCouple(
+                            firebaseUri = it,
+                            firebaseRelativePath = ""
+                        ) }.toSet() else null,
+                        repliesAllowed = true,
+                        replies = emptyList(),
+                        null
+                    )
                 } else {
-                    ReplyObject(
-                        vm.editingObject.id,
-                        vm.editingObject.commentId ?: "",
-                        vm.editingObject.profilePic,
-                        vm.editingObject.username,
-                        vm.editingObject.role,
-                        vm.text.text,
-                        vm.editingObject.date,
-                        files
-                    ) as T
+                    SendObject(
+                        id = vm.editingObject.id,
+                        taskId = taskId,
+                        senderId = senderId,
+                        timestamp = vm.editingObject.date,
+                        body = vm.text.text,
+                        media = if (files.isNotEmpty()) files.map { UriCouple(
+                            firebaseUri = it,
+                            firebaseRelativePath = ""
+                        ) }.toSet() else null,
+                        repliesAllowed = null,
+                        replies = null,
+                        commentId
+                    )
                 }
             )
             //reset editing state
             vm.setIsEditing(false)
-        } else {
+        } else if(vm.text.text.isNotBlank() || files.isNotEmpty()) {
             onSend(
                 if (isComment) {
-                    CommentObject(
-                        Random.nextInt(100).toString() + "afhas",
-                        Uri.parse("android.resource://com.polito.mad.teamtask/drawable/person_4"),
-                        "luca_bianchi",
-                        "Owner",
-                        vm.text.text,
-                        Timestamp(System.currentTimeMillis()),
-                        files.map { it }.toSet(),
-                        0,
-                        true
-                    ) as T
+                    SendObject(
+                        id = null,
+                        taskId = taskId,
+                        senderId = senderId,
+                        timestamp = LocalDateTime.now(),
+                        body = vm.text.text,
+                        media = if (files.isNotEmpty()) files.map { UriCouple(
+                            firebaseUri = it,
+                            firebaseRelativePath = ""
+                        ) }.toSet() else null,
+                        repliesAllowed = true,
+                        replies = emptyList(),
+                        null
+                    )
                 } else {
-                    ReplyObject(
-                        Random.nextInt(100).toString() + "aAAas",
-                        commentId ?: "",
-                        Uri.parse("android.resource://com.polito.mad.teamtask/drawable/person_4"),
-                        "luca_bianchi",
-                        "Owner",
-                        vm.text.text,
-                        Timestamp(System.currentTimeMillis()),
-                        files.map { it }.toSet()
-                    ) as T
+                    SendObject(
+                        id = null,
+                        taskId = taskId,
+                        senderId = senderId,
+                        timestamp = LocalDateTime.now(),
+                        body = vm.text.text,
+                        media = if (files.isNotEmpty()) files.map { UriCouple(
+                            firebaseUri = it,
+                            firebaseRelativePath = ""
+                        ) }.toSet() else null,
+                        repliesAllowed = null,
+                        replies = null,
+                        commentId
+                    )
                 }
             )
         }
@@ -325,144 +369,8 @@ fun <T : TaskInteraction> WriteComment(
         }
 
         // File attachments
-        if (files.isNotEmpty()) {
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp, bottom = 8.dp, start = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                files.forEach { file ->
-                    item {
-                        if ((getFileNameWithExtension(
-                                file,
-                                context.contentResolver
-                            )?.substringAfterLast('.', "") ?: "") in listOf(
-                                "jpg",
-                                "png",
-                                "webp",
-                                "gif"
-                            )
-                        ) {
-                            // Image
-                            Box(
-                                modifier = Modifier
-                                    .size(100.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(palette.surfaceVariant),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(LocalContext.current)
-                                        .data(file)
-                                        .crossfade(true)
-                                        .build(),
-                                    placeholder = painterResource(R.drawable.outline_camera_alt_24),
-                                    contentDescription = "Team Image",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .aspectRatio(1f)
-                                        .width(40.dp)
-                                )
-
-                                // Close button
-                                IconButton(
-                                    onClick = {
-                                        vm.removeAttachment(file)
-                                    },
-                                    modifier = Modifier
-                                        .size(30.dp)
-                                        .align(Alignment.TopEnd)
-                                ) {
-                                    Icon(
-                                        tint = palette.surface,
-                                        painter = painterResource(id = R.drawable.baseline_clear_24),
-                                        contentDescription = "options",
-                                        modifier = Modifier
-                                            .size(26.dp)
-                                            .clip(CircleShape)
-                                            .background(palette.onSurface)
-                                    )
-                                }
-                            }
-                        } else {
-                            // Other files
-                            Box(
-                                modifier = Modifier
-                                    .size(100.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(palette.surfaceVariant)
-                                    .padding(1.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .width(80.dp)
-                                        .aspectRatio(1f),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    // File icon
-                                    Icon(
-                                        tint = palette.onSurface,
-                                        painter = painterResource(
-                                            id = formatToIcon(
-                                                getFileNameWithExtension(
-                                                    file,
-                                                    context.contentResolver
-                                                )
-                                                    ?: "File Not Found"
-                                            )
-                                        ),
-                                        contentDescription = "options",
-                                        modifier = Modifier.size(40.dp)
-                                    )
-
-                                    Spacer(modifier = Modifier.height(5.dp))
-
-                                    // File name
-                                    Text(
-                                        text = getFileNameWithExtension(
-                                            file,
-                                            context.contentResolver
-                                        )!!,
-                                        style = typography.labelSmall.copy(
-                                            color = palette.onSurface,
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Normal,
-                                            lineHeight = 10.sp
-                                        ),
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-
-                                // Close button
-                                IconButton(
-                                    onClick = {
-                                        vm.removeAttachment(file)
-                                    },
-                                    modifier = Modifier
-                                        .size(30.dp)
-                                        .align(Alignment.TopEnd)
-                                ) {
-                                    Icon(
-                                        tint = palette.surface,
-                                        painter = painterResource(id = R.drawable.baseline_clear_24),
-                                        contentDescription = "options",
-                                        modifier = Modifier
-                                            .size(26.dp)
-                                            .clip(CircleShape)
-                                            .background(palette.onSurface)
-                                    )
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                }
-            }
-        }
+        if(files.isNotEmpty())
+            FilesBar(files = files, vm::removeAttachment)
 
         // TexField
         BasicTextField(

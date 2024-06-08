@@ -1,4 +1,4 @@
-package com.polito.mad.teamtask.tasks.components
+package com.polito.mad.teamtask.components.tasks.components
 
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -45,10 +45,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.polito.mad.teamtask.R
-import com.polito.mad.teamtask.tasks.RepliesViewModel
-import com.polito.mad.teamtask.tasks.TaskViewModel
+import com.polito.mad.teamtask.chat.visualization.UriCouple
+import com.polito.mad.teamtask.chat.visualization.isMessageDateDifferentFromToday
+import com.polito.mad.teamtask.components.FileElement
+import com.polito.mad.teamtask.components.FileToDownload
+import com.polito.mad.teamtask.components.tasks.RepliesViewModel
+import com.polito.mad.teamtask.screens.TaskViewModel
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
+import com.polito.mad.teamtask.utils.isFileAlreadyDownloaded
 import java.text.SimpleDateFormat
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.reflect.KFunction2
 
@@ -61,8 +68,8 @@ data class CommentObject(
     val username: String,
     val role: String,
     val text: String,
-    val date: Timestamp,
-    val attachments: Set<Uri>,
+    val date: LocalDateTime,
+    val attachments: Set<UriCouple>?,
     val repliesNumber: Int,
     val areRepliesOn: Boolean
 ) : TaskInteraction
@@ -77,12 +84,8 @@ fun Comment(
             "john.delafuente",
             "Owner",
             "This is a comment",
-            Timestamp(System.currentTimeMillis().minus(1000000)),
-            attachments = setOf(
-                Uri.parse("android.resource://com.polito.mad.teamtask/raw/riff"),
-                Uri.parse("android.resource://com.polito.mad.teamtask/raw/scores"),
-                Uri.parse("android.resource://com.polito.mad.teamtask/drawable/image1")
-            ),
+            LocalDateTime.now(),
+            attachments = null,
             3,
             true
         ),
@@ -90,7 +93,8 @@ fun Comment(
     repliesVM: RepliesViewModel = viewModel(),
     writeCommentVM: WTViewModel = viewModel(),
     onDelete: (String) -> Unit = {},
-    editAreRepliesOn: KFunction2<String, Boolean, Unit>
+    editAreRepliesOn: KFunction2<String, Boolean, Unit>,
+    recomposeParent: () -> Unit = {}
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
@@ -121,9 +125,10 @@ fun Comment(
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(comment.profilePic)
+                            .error(R.drawable.avatar)
                             .crossfade(true)
                             .build(),
-                        placeholder = painterResource(R.drawable.outline_camera_alt_24),
+                        placeholder = painterResource(R.drawable.avatar),
                         contentDescription = "Team Image",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
@@ -168,7 +173,14 @@ fun Comment(
 
                         //Date
                         Text(
-                            text = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(comment.date),
+                            text = comment.date.format(
+                                DateTimeFormatter.ofPattern(
+                                    if (isMessageDateDifferentFromToday(
+                                            comment.date
+                                        )
+                                    ) "dd/MM/yyyy HH:mm" else "HH:mm"
+                                )
+                            ),
                             style = typography.labelSmall.copy(
                                 color = palette.onSurfaceVariant,
                                 fontSize = 12.sp,
@@ -220,7 +232,7 @@ fun Comment(
                                         comment.role,
                                         comment.text,
                                         comment.date,
-                                        comment.attachments,
+                                        comment.attachments ?: emptySet(),
                                         comment.repliesNumber
                                     )
                                 )
@@ -339,15 +351,32 @@ fun Comment(
                     )
                 }
 
-                if (comment.attachments.isNotEmpty() && comment.text.isNotEmpty()) {
+                if (!comment.attachments.isNullOrEmpty() && comment.text.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(20.dp))
                 }
 
-                // Comment attachments
-                comment.attachments.forEachIndexed { index, it ->
-                    CommentFile(it)
-                    if (index != (comment.attachments.size - 1)) {
-                        Spacer(modifier = Modifier.height(6.dp))
+                //Files
+                if (comment.attachments != null) {
+                    //Spacer
+                    Spacer(modifier = Modifier.height(5.dp))
+                    //File
+                    comment.attachments.forEachIndexed { index, uri ->
+                        val isThereUri =
+                            isFileAlreadyDownloaded(uri.firebaseRelativePath, LocalContext.current)
+                        if (isThereUri != null) {
+                            //File is already downloaded
+                            FileElement(isThereUri, recomposeParent)
+                            if (index != (comment.attachments.size - 1)) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                            }
+                        } else {
+                            //File should be downloaded
+                            FileToDownload(uri.firebaseRelativePath, recomposeParent)
+
+                            if (index != (comment.attachments.size - 1)) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                            }
+                        }
                     }
                 }
             }

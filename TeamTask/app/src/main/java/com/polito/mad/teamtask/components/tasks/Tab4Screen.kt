@@ -1,4 +1,4 @@
-package com.polito.mad.teamtask.tasks
+package com.polito.mad.teamtask.components.tasks
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
@@ -18,12 +18,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.polito.mad.teamtask.components.tasks.Description
-import com.polito.mad.teamtask.components.tasks.DescriptionViewModel
-import com.polito.mad.teamtask.components.tasks.Info
+import com.polito.mad.teamtask.AppFactory
 import com.polito.mad.teamtask.screens.PeopleSection
 import com.polito.mad.teamtask.screens.SpecificTeamViewModel
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
@@ -36,7 +35,7 @@ fun Tab4Screen (
     teamId: String,
     taskId: String,
     vm: SpecificTeamViewModel = viewModel(),
-    descriptionVm: DescriptionViewModel = viewModel()
+    descriptionVm: DescriptionViewModel = viewModel(factory = AppFactory(LocalContext.current))
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
@@ -94,7 +93,7 @@ fun Tab4Screen (
             state = pagerState,
         ) { page ->
             when (page) {
-                0 -> Comments()
+                0 -> Comments(teamId, taskId)
                 1 -> Info()
                 2 -> Description(vm.taskDescriptionValue, vm::setTaskDescription)
                 3 -> PeopleSection(

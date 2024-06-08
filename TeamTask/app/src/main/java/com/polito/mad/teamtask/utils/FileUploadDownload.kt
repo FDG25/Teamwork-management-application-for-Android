@@ -6,6 +6,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageReference
 import com.polito.mad.teamtask.components.getFileNameWithExtension
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
@@ -74,6 +75,88 @@ suspend fun uploadFilesToFirebaseStorage(
             } else {
                 // Upload the file
                 val fileRef = storage.reference.child("chats/$clientId/$chatId/${fileName}")
+                try {
+                    withContext(Dispatchers.IO) {
+                        fileRef.putFile(uri).await()
+                        fileRefs.add(fileRef.path)
+                    }
+                } catch (e: Exception) {
+                    Log.e(
+                        "FILE UPLOAD ERROR",
+                        "Error during the uploading of the file: ${e.message}"
+                    )
+                }
+            }
+        }
+    } else {
+        //Too many files
+        withContext(Dispatchers.Main) {
+            Toast.makeText(
+                context,
+                "Too many files: you can upload a maximum of 5 files",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+        throw Exception("Too many files: you can upload a maximum of 5 files")
+    }
+
+    return fileRefs
+}
+
+suspend fun uploadFilesToFirebaseStorageCommentOrReply(
+    uris: List<Uri?>,
+    clientId: String,
+    teamId: String,
+    taskId: String,
+    isComment: Boolean,
+    context: Context
+): List<String> {
+    val storage = FirebaseStorage.getInstance()
+    val fileRefs = mutableListOf<String>()
+
+    if (uris.size <= 5) {
+        // Upload each file to Firebase Storage
+        for (uri in uris) {
+            //it should not happen
+            if (uri == null) continue
+
+            val fileSizeInMB =
+                context.contentResolver.openAssetFileDescriptor(uri, "r")
+                    ?.use { it.length.div(1024.0).div(1024.0) }
+            val fileName = getFileNameWithExtension(uri, context.contentResolver)
+
+            Log.d("FILE UPLOAD", "Uploading file $fileName")
+
+
+
+            if (fileSizeInMB != null && fileSizeInMB > 5.0) {
+                // File too big
+                Log.e("FILE TOO BIG", "File $fileName too big: you can upload a file of 5MB Max")
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        context,
+                        "File $fileName too big: you can upload a file of 5MB Max",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } else if (fileName == null) {
+                // File not found
+                Log.e("FILE NOT FOUND", "File not found")
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        context,
+                        "File not found, can't upload file number ${uris.indexOf(uri) + 1}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } else {
+
+                // Upload the file
+                val fileRef: StorageReference = if (isComment)
+                    storage.reference.child("comments/$teamId/$taskId/$clientId/${fileName}")
+                else
+                    storage.reference.child("replies/$teamId/$taskId/$clientId/${fileName}")
+
                 try {
                     withContext(Dispatchers.IO) {
                         fileRef.putFile(uri).await()
@@ -173,5 +256,20 @@ suspend fun deleteFileFromUri(uri: Uri, context: Context) {
                 Toast.LENGTH_SHORT
             ).show()
         }
+    }
+}
+
+//delete files from Firebase Storage given a list of file references
+fun deleteFilesFromFirebaseStorage(fileRef: Set<String>) {
+    val storage = FirebaseStorage.getInstance()
+    try {
+        for (ref in fileRef) {
+            val storageRef = storage.reference.child(ref)
+            storageRef.delete()
+        }
+    } catch (
+        e: Exception
+    ) {
+        throw e
     }
 }

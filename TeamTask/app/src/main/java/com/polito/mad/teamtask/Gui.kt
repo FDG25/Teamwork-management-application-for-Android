@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -53,8 +54,10 @@ import com.polito.mad.teamtask.components.CategoryFilterScreen
 import com.polito.mad.teamtask.components.FloatingButton
 import com.polito.mad.teamtask.components.NewTeam
 import com.polito.mad.teamtask.components.TopBar
+import com.polito.mad.teamtask.components.tasks.CommentsViewModel
 import com.polito.mad.teamtask.components.tasks.DescriptionViewModel
 import com.polito.mad.teamtask.components.tasks.EditTeamDescription
+import com.polito.mad.teamtask.components.tasks.components.SendObject
 import com.polito.mad.teamtask.screens.AddMemberToTeamScreen
 import com.polito.mad.teamtask.screens.CalendarWithEvents
 import com.polito.mad.teamtask.screens.ChatScreen
@@ -73,10 +76,12 @@ import com.polito.mad.teamtask.screens.SpecificTeamViewModel
 import com.polito.mad.teamtask.screens.TeamsScreen
 import com.polito.mad.teamtask.screens.TeamsViewModel
 import com.polito.mad.teamtask.screens.generateHash
-import com.polito.mad.teamtask.tasks.ShowTaskDetails
+import com.polito.mad.teamtask.screens.ShowTaskDetails
 import com.polito.mad.teamtask.ui.theme.CaribbeanCurrent
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
+import com.polito.mad.teamtask.utils.deleteFilesFromFirebaseStorage
 import com.polito.mad.teamtask.utils.uploadFilesToFirebaseStorage
+import com.polito.mad.teamtask.utils.uploadFilesToFirebaseStorageCommentOrReply
 import com.polito.mad.teamtask.utils.uploadTeamImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -435,6 +440,42 @@ class AppModel(
 
                         val comment = Comment(
                             taskId, senderId, timestamp, body,
+                            media, repliesAllowed, replies
+                        )
+
+                        l.add(Pair(id, comment))
+                    }
+
+                    trySend(l)
+                } else {
+                    Log.e("ERROR", e.toString())
+                    trySend(emptyList())
+                }
+            }
+        awaitClose { listener.remove() }
+    }
+
+    //get comments by taskId
+    fun getCommentsByTask(taskId: String): Flow<List<Pair<String, Comment>>> = callbackFlow {
+        // TODO: Fetch tasks for logged-in user
+        // TODO: Filter comments according to taskId
+        val listener = db.collection("comments").where(Filter.equalTo("taskId", taskId))
+            .addSnapshotListener { r, e ->
+                if (r != null) {
+                    val l = mutableListOf<Pair<String, Comment>>()
+
+                    for (obj in r) {
+                        val id = obj.id
+                        val myTaskId = obj.getString("taskId") ?: "Toy task 1"
+                        val senderId = obj.getString("senderId") ?: "Toy person 1"
+                        val timestamp = obj.getString("timestamp") ?: currentDateTime
+                        val body = obj.getString("body") ?: ""
+                        val media = obj.getString("media") ?: ""
+                        val repliesAllowed = obj.getBoolean("repliesAllowed") ?: false
+                        val replies = obj.get("replies") as List<String>
+
+                        val comment = Comment(
+                            myTaskId, senderId, timestamp, body,
                             media, repliesAllowed, replies
                         )
 
@@ -1742,11 +1783,12 @@ class AppModel(
         //if Uri == EMPTY (no image changed), ==null (remove image), ==Uri (new image)
         try {
             var image: String? = null
-            val oldImage = db.collection("teams").document(teamId).get().await().toObject(Team::class.java)?.image
-            if(teamImage!=null && teamImage!=Uri.EMPTY) {
+            val oldImage = db.collection("teams").document(teamId).get().await()
+                .toObject(Team::class.java)?.image
+            if (teamImage != null && teamImage != Uri.EMPTY) {
                 image = uploadTeamImage(teamImage, teamId, applicationContext)
             }
-            val newImage = image ?: if(teamImage==null) "" else oldImage
+            val newImage = image ?: if (teamImage == null) "" else oldImage
 
             db.collection("teams").document(teamId).update(
                 mapOf(
@@ -1755,17 +1797,79 @@ class AppModel(
                     "image" to newImage
                 )
             ).await()
-            if(!oldImage.isNullOrBlank() && teamImage!=Uri.EMPTY)
-                FirebaseStorage.getInstance().reference.child("teamImages/${oldImage}").delete().await()
-        }
-        catch (e: Exception) {
+            if (!oldImage.isNullOrBlank() && teamImage != Uri.EMPTY)
+                FirebaseStorage.getInstance().reference.child("teamImages/${oldImage}").delete()
+                    .await()
+        } catch (e: Exception) {
             withContext(Dispatchers.Main) {
                 Toast.makeText(applicationContext, e.toString(), Toast.LENGTH_SHORT).show()
             }
         }
     }
-}
 
+    //add new Comment
+    fun addComment(teamId: String, taskId: String, comment: SendObject) {
+        val newComment = Comment(
+            taskId,
+            auth.currentUser?.uid ?: "",
+            LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME),
+            comment.body ?: "",
+            null,
+            true,
+            emptyList()
+        )
+
+        db.runTransaction {
+            CoroutineScope(Dispatchers.IO).launch {
+                val newDocument = db.collection("comments").add(newComment).await()
+
+                if (!comment.media.isNullOrEmpty()) {
+                    try {
+                        val filesRef = uploadFilesToFirebaseStorageCommentOrReply(
+                            comment.media.map { it.firebaseUri },
+                            auth.currentUser?.uid ?: "",
+                            teamId,
+                            taskId,
+                            true,
+                            applicationContext
+                        )
+
+                        db.collection("comments").document(newDocument?.id ?: "")
+                            .update("media", Gson().toJson(filesRef))
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(applicationContext, e.toString(), Toast.LENGTH_SHORT)
+                                .show()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun deleteComment(commentId: String) {
+        db.runTransaction {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    //get media files
+                    val document = db.collection("comments").document(commentId).get().await()
+                        .getString("media")
+                    //delete comment
+                    db.collection("comments").document(commentId).delete()
+                    if(!document.isNullOrBlank()) {
+                        val filesRef = Gson().fromJson(document, Array<String>::class.java).toSet()
+                        //delete associated files from FireStore
+                        deleteFilesFromFirebaseStorage(filesRef)
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(applicationContext, e.toString(), Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
+}
 
 class AppFactory(
     context: Context
@@ -1790,6 +1894,21 @@ class AppFactory(
             // model.generateData()
             @Suppress("UNCHECKED_CAST")
             return DescriptionViewModel(model) as T
+        } else throw IllegalArgumentException("Unexpected ViewModel class")
+    }
+}
+
+class ParametricFactory(context: Context, teamId: String, taskId: String) :
+    ViewModelProvider.Factory {
+    val model = (context.applicationContext as? TeamTask)?.model
+        ?: throw IllegalArgumentException("Wrong application class")
+    private val myTeamId = teamId
+    private val myTaskId = taskId
+    override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+        if (modelClass.isAssignableFrom(CommentsViewModel::class.java)) {
+            // model.generateData()
+            @Suppress("UNCHECKED_CAST")
+            return CommentsViewModel(model, teamId = myTeamId, taskId = myTaskId) as T
         } else throw IllegalArgumentException("Unexpected ViewModel class")
     }
 }
@@ -1897,7 +2016,8 @@ fun AppMainScreen(
     val notifications by appVM.getNotifications().collectAsState(initial = listOf())
     val teamMessages by appVM.getTeamMessages().collectAsState(initial = listOf())
     val teamParticipants by appVM.getTeamParticipants().collectAsState(initial = listOf())
-    val realTeamParticipants by appVM.getRealTeamParticipants().collectAsState(initial = listOf())
+    val realTeamParticipants by appVM.getRealTeamParticipants()
+        .collectAsState(initial = listOf())
     val userNotifications by appVM.getUserNotifications().collectAsState(initial = listOf())
 
     // Get the list of team IDs the user is part of
@@ -2406,7 +2526,8 @@ class Actions(
     val goToTeamTasks: (String) -> Unit = { teamId -> navCont.navigate("teams/$teamId/tasks") }
     val goToTeamDescription: (String) -> Unit =
         { teamId -> navCont.navigate("teams/$teamId/description") }
-    val goToTeamPeople: (String) -> Unit = { teamId -> navCont.navigate("teams/$teamId/people") }
+    val goToTeamPeople: (String) -> Unit =
+        { teamId -> navCont.navigate("teams/$teamId/people") }
 
     val goToTeamTasksCalendar: (String) -> Unit =
         { teamId -> navCont.navigate("teams/$teamId/tasksCalendar") }

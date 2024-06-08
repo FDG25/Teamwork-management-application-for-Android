@@ -1715,6 +1715,7 @@ fun CustomFloatingButton(
     clearSelectedPeople: () -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     setTaskDescription: (String) -> Unit,
+    teamId: String = ""
 ) {
     val palette = MaterialTheme.colorScheme
 
@@ -2872,7 +2873,7 @@ private fun TaskList(
             CustomFloatingButton(
                 modifier = Modifier.align(Alignment.BottomEnd),
                 "New Task",
-                {}, createTask, {}, clearSelectedPeople, {}, setTaskDescription,
+                {}, createTask, {}, clearSelectedPeople, {}, setTaskDescription, teamId
             )
 
         }

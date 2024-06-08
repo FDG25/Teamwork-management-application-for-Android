@@ -1,4 +1,4 @@
-package com.polito.mad.teamtask.tasks
+package com.polito.mad.teamtask.screens
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
@@ -10,7 +10,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
-//import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
+import com.polito.mad.teamtask.components.tasks.Replies
+import com.polito.mad.teamtask.components.tasks.Tab4Screen
 
 
 class TaskViewModel : ViewModel() {
@@ -54,7 +55,7 @@ fun ShowTaskDetails(
                 modifier = Modifier
                     .padding(it)
             ) {
-                Replies()
+                //Replies(teamId, taskId)
             }
         }
     }

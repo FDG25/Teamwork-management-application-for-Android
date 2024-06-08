@@ -470,10 +470,10 @@ class ProfileFormViewModel : ViewModel() {
 
     // ----- Personal stats -----
     var statistics by mutableStateOf(StatisticsData(3, 18, 30, listOf(
-        TeamTaskData("Team Rocket", R.drawable.image1, "Admin", 5, 6),
-        TeamTaskData("Team2", R.drawable.image1, "Owner", 3, 30),
-        TeamTaskData("Super team with a long name", R.drawable.image1, "", 18, 60),
-        TeamTaskData("Team four!", R.drawable.image1, "Admin", 120, 500),
+        TeamTaskData("Team Rocket", "", "Admin", 5, 6),
+        TeamTaskData("Team2", "", "Owner", 3, 30),
+        TeamTaskData("Super team with a long name", "", "", 18, 60),
+        TeamTaskData("Team four!", "", "Admin", 120, 500),
     )))
 
     fun fetchProfileImage(userId: String) {
