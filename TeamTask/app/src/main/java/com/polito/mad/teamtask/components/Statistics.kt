@@ -1,5 +1,6 @@
 package com.polito.mad.teamtask.components
 
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -39,7 +40,7 @@ data class StatisticsData(
 
 data class TeamTaskData(
     val teamName: String,
-    val teamImage: Int,
+    val teamImage: String,
     val teamRole: String,
     val tasksCompleted: Int,
     val totalTasks: Int
@@ -63,7 +64,7 @@ fun Statistics(
         if (t!=null && tp!=null && totTasks!=null) {
             ttdata.add(
                 TeamTaskData(
-                    t.second.name, R.drawable.teamtasklogo, // t.image.toInt(),
+                    t.second.name, t.second.image, // t.image.toInt(),
                     tp.role, v, totTasks
                 )
             )
@@ -128,7 +129,7 @@ fun Statistics(
 
 @Composable
 fun TeamStatistics(
-    teamImage: Int = R.drawable.teamtasklogo,
+    teamImage: String = "",
     teamName: String = "Team Rocket",
     teamRole: String = "Admin",
     taskCompleted: Int = 18, totalTask: Int = 30

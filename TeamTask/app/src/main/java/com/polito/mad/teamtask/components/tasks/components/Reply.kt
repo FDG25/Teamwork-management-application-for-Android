@@ -1,4 +1,4 @@
-package com.polito.mad.teamtask.tasks.components
+package com.polito.mad.teamtask.components.tasks.components
 
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -45,8 +45,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.polito.mad.teamtask.R
+import com.polito.mad.teamtask.chat.visualization.UriCouple
+import com.polito.mad.teamtask.components.FileElement
+import com.polito.mad.teamtask.components.FileToDownload
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
+import com.polito.mad.teamtask.utils.isFileAlreadyDownloaded
 import java.text.SimpleDateFormat
+import java.time.LocalDateTime
 import java.util.Locale
 
 
@@ -57,8 +62,8 @@ data class ReplyObject(
     val username: String,
     val role: String,
     val text: String,
-    val date: Timestamp,
-    val attachments: Set<Uri>
+    val date: LocalDateTime,
+    val attachments: Set<UriCouple>?
 ) : TaskInteraction
 
 
@@ -73,14 +78,11 @@ fun Reply(
             "john.delafuente",
             "Owner",
             "This is a comment",
-            Timestamp(System.currentTimeMillis().minus(1000000)),
-            attachments = setOf(
-                Uri.parse("android.resource://com.polito.mad.teamtask/raw/riff"),
-                Uri.parse("android.resource://com.polito.mad.teamtask/raw/scores"),
-                Uri.parse("android.resource://com.polito.mad.teamtask/drawable/image1")
-            )
+            LocalDateTime.now(),
+            attachments = emptySet()
         ),
     onDelete: (String, String) -> Unit = { _: String, _: String  -> },
+    recomposeParent: () -> Unit = {},
     writeCommentVM: WTViewModel = viewModel()
 ) {
     val palette = MaterialTheme.colorScheme
@@ -212,7 +214,7 @@ fun Reply(
                                     reply.role,
                                     reply.text,
                                     reply.date,
-                                    reply.attachments,
+                                    reply.attachments ?: emptySet(),
                                     0
                                 ))
                             },
@@ -287,15 +289,32 @@ fun Reply(
                     )
                 }
 
-                if (reply.attachments.isNotEmpty() && reply.text.isNotEmpty()) {
+                if (!reply.attachments.isNullOrEmpty() && reply.text.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(20.dp))
                 }
 
-                // Comment attachments
-                reply.attachments.forEachIndexed { index, it ->
-                    CommentFile(it)
-                    if (index != (reply.attachments.size - 1)) {
-                        Spacer(modifier = Modifier.height(6.dp))
+                //Files
+                if (reply.attachments != null) {
+                    //Spacer
+                    Spacer(modifier = Modifier.height(5.dp))
+                    //File
+                    reply.attachments.forEachIndexed { index, uri ->
+                        val isThereUri =
+                            isFileAlreadyDownloaded(uri.firebaseRelativePath, LocalContext.current)
+                        if (isThereUri != null) {
+                            //File is already downloaded
+                            FileElement(isThereUri, recomposeParent)
+                            if (index != (reply.attachments.size - 1)) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                            }
+                        } else {
+                            //File should be downloaded
+                            FileToDownload(uri.firebaseRelativePath, recomposeParent)
+
+                            if (index != (reply.attachments.size - 1)) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                            }
+                        }
                     }
                 }
             }

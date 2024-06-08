@@ -1,3 +1,4 @@
+@file: Suppress("UNCHECKED_CAST")
 package com.polito.mad.teamtask.chat.visualization
 
 import android.content.res.Configuration
@@ -310,7 +311,7 @@ fun <T : Message> Message(
                         text = message.date.format(
                             DateTimeFormatter.ofPattern(
                                 if (isMessageDateDifferentFromToday(
-                                        message
+                                        message.date
                                     )
                                 ) "dd/MM/yyyy HH:mm" else "HH:mm"
                             )
@@ -327,9 +328,9 @@ fun <T : Message> Message(
     }
 }
 
-fun isMessageDateDifferentFromToday(message: Message): Boolean {
+fun isMessageDateDifferentFromToday(date: LocalDateTime): Boolean {
     val messageDate =
-        Instant.ofEpochMilli(message.date.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+        Instant.ofEpochMilli(date.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
             .atZone(ZoneId.systemDefault())
             .toLocalDate()
 

@@ -1,4 +1,4 @@
-package com.polito.mad.teamtask.tasks.components
+package com.polito.mad.teamtask.components.tasks.components
 
 import android.content.Context
 import android.content.Intent
