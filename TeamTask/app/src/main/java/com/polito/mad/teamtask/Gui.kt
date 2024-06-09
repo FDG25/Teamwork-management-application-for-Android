@@ -533,35 +533,36 @@ class AppModel(
     }
 
     // Task replies by commentId
-    fun getTaskRepliesByCommentId(commentId: String): Flow<List<Pair<String, TaskReply>>> = callbackFlow {
-        val listener = db.collection("task_replies")
-            .where(Filter.equalTo("commentId", commentId))
-            // TODO: Same filters of Comment
-            .addSnapshotListener { r, e ->
-                if (r != null) {
-                    val l = mutableListOf<Pair<String, TaskReply>>()
+    fun getTaskRepliesByCommentId(commentId: String): Flow<List<Pair<String, TaskReply>>> =
+        callbackFlow {
+            val listener = db.collection("task_replies")
+                .where(Filter.equalTo("commentId", commentId))
+                // TODO: Same filters of Comment
+                .addSnapshotListener { r, e ->
+                    if (r != null) {
+                        val l = mutableListOf<Pair<String, TaskReply>>()
 
-                    for (obj in r) {
-                        val id = obj.id
-                        val myCommentId = obj.getString("commentId") ?: "Toy comment 1"
-                        val senderId = obj.getString("senderId") ?: "Toy person 1"
-                        val timestamp = obj.getString("timestamp") ?: currentDateTime
-                        val body = obj.getString("body") ?: ""
-                        val media = obj.getString("media") ?: ""
+                        for (obj in r) {
+                            val id = obj.id
+                            val myCommentId = obj.getString("commentId") ?: "Toy comment 1"
+                            val senderId = obj.getString("senderId") ?: "Toy person 1"
+                            val timestamp = obj.getString("timestamp") ?: currentDateTime
+                            val body = obj.getString("body") ?: ""
+                            val media = obj.getString("media") ?: ""
 
-                        val tr = TaskReply(myCommentId, senderId, timestamp, body, media)
+                            val tr = TaskReply(myCommentId, senderId, timestamp, body, media)
 
-                        l.add(Pair(id, tr))
+                            l.add(Pair(id, tr))
+                        }
+
+                        trySend(l)
+                    } else {
+                        Log.e("ERROR", e.toString())
+                        trySend(emptyList())
                     }
-
-                    trySend(l)
-                } else {
-                    Log.e("ERROR", e.toString())
-                    trySend(emptyList())
                 }
-            }
-        awaitClose { listener.remove() }
-    }
+            awaitClose { listener.remove() }
+        }
 
     // Teams
 // Teams
@@ -694,6 +695,21 @@ class AppModel(
     // Team participants
     fun getRealTeamParticipants(): Flow<List<TeamParticipant>> = callbackFlow {
         val listener = db.collection("team_participants")
+            .addSnapshotListener { r, e ->
+                if (r != null) {
+                    val tps = r.toObjects(TeamParticipant::class.java)
+                    trySend(tps)
+                } else {
+                    Log.e("ERROR", e.toString())
+                    trySend(emptyList())
+                }
+            }
+        awaitClose { listener.remove() }
+    }
+
+    fun getRealTeamParticipantsByTeamId(teamId: String): Flow<List<TeamParticipant>> = callbackFlow {
+        val listener = db.collection("team_participants")
+            .where(Filter.equalTo("teamId", teamId))
             .addSnapshotListener { r, e ->
                 if (r != null) {
                     val tps = r.toObjects(TeamParticipant::class.java)
@@ -1857,7 +1873,7 @@ class AppModel(
                     //get media files + conditions
                     val documentRef = db.collection("comments").document(commentId).get().await()
                     val documentObject = documentRef.toObject(Comment::class.java)
-                    if(documentObject?.senderId != auth.currentUser?.uid) return@launch
+                    if (documentObject?.senderId != auth.currentUser?.uid) return@launch
                     val document = documentObject?.media
 
                     //delete comment
@@ -1877,14 +1893,14 @@ class AppModel(
     }
 
     fun editComment(teamId: String, taskId: String, comment: SendObject) {
-        if(comment.id == null) return
+        if (comment.id == null) return
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 //get media files
                 val documentRef = db.collection("comments").document(comment.id).get().await()
                 val documentObject = documentRef.toObject(Comment::class.java)
-                if(documentObject?.senderId != auth.currentUser?.uid) return@launch
+                if (documentObject?.senderId != auth.currentUser?.uid) return@launch
                 val documentFiles = documentObject?.media
 
                 //update comment body
@@ -1949,7 +1965,7 @@ class AppModel(
             val snapshot = transaction.get(commentRef)
             val senderId = snapshot.getString("senderId")
 
-            if(senderId != auth.currentUser?.uid) return@runTransaction
+            if (senderId != auth.currentUser?.uid) return@runTransaction
 
             val repliesAllowed = snapshot.getBoolean("repliesAllowed")
             if (repliesAllowed != null)
@@ -2026,7 +2042,7 @@ class AppModel(
                         db.collection("task_replies").document(replyId).get().await()
                     val reply = replyDocument.toObject(TaskReply::class.java)
 
-                    if(reply?.senderId != auth.currentUser?.uid) return@launch
+                    if (reply?.senderId != auth.currentUser?.uid) return@launch
 
                     val media = reply?.media
 
@@ -2063,7 +2079,7 @@ class AppModel(
                 val documentFiles =
                     document.getString("media")
 
-                if(document.getString("senderId") != auth.currentUser?.uid) return@launch
+                if (document.getString("senderId") != auth.currentUser?.uid) return@launch
 
                 //update reply body
                 db.collection("task_replies").document(reply.id).update("body", reply.body)
@@ -2119,6 +2135,26 @@ class AppModel(
             }
         }
     }
+
+    fun updateTaskDescription(taskId: String, description: String) {
+        db.collection("tasks").document(taskId).update("description", description)
+    }
+
+    fun getTaskById(taskId: String): Flow<Task?> =
+        callbackFlow {
+            val listener = db.collection("tasks").document(taskId)
+                .addSnapshotListener { r, e ->
+                    if (r != null) {
+                        val task = db.collection("tasks").document(taskId)
+                            .get().result.toObject(Task::class.java)
+                        trySend(task)
+                    } else {
+                        Log.e("ERROR", e.toString())
+                        trySend(null)
+                    }
+                }
+            awaitClose { listener.remove() }
+        }
 }
 
 class AppFactory(
@@ -2148,20 +2184,30 @@ class AppFactory(
     }
 }
 
-class ParametricFactory(context: Context, val teamId: String, val taskId: String, val commentId: String) :
+class ParametricFactory(
+    context: Context,
+    val teamId: String,
+    val taskId: String,
+    val commentId: String
+) :
     ViewModelProvider.Factory {
     val model = (context.applicationContext as? TeamTask)?.model
         ?: throw IllegalArgumentException("Wrong application class")
+
     override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
         if (modelClass.isAssignableFrom(CommentsViewModel::class.java)) {
             // model.generateData()
             @Suppress("UNCHECKED_CAST")
             return CommentsViewModel(model, teamId = teamId, taskId = taskId) as T
-        }
-        else if (modelClass.isAssignableFrom(RepliesViewModel::class.java)) {
+        } else if (modelClass.isAssignableFrom(RepliesViewModel::class.java)) {
             // model.generateData()
             @Suppress("UNCHECKED_CAST")
-            return RepliesViewModel(model, teamId = teamId, taskId = taskId, commentId = commentId) as T
+            return RepliesViewModel(
+                model,
+                teamId = teamId,
+                taskId = taskId,
+                commentId = commentId
+            ) as T
         } else throw IllegalArgumentException("Unexpected ViewModel class")
     }
 }
@@ -2259,7 +2305,6 @@ fun AppMainScreen(
     val personal by appVM.getPersonal().collectAsState(initial = Pair("", Person()))
     val people by appVM.getPeople().collectAsState(initial = listOf())
     val tasks by appVM.getTasks().collectAsState(initial = listOf())
-    val comments by appVM.getComments().collectAsState(initial = listOf())
     val privateMessages by appVM.getPrivateMessages().collectAsState(initial = listOf())
     val teams by appVM.getTeams().collectAsState(initial = listOf())
     val notifications by appVM.getNotifications().collectAsState(initial = listOf())
@@ -2566,9 +2611,13 @@ fun AppMainScreen(
                         val teamId = backStackEntry.arguments?.getString("teamId")
                         val taskId = backStackEntry.arguments?.getString("taskId")
 
-                        if (teamId != null) {
+                        val task = tasks.find { it.first == taskId }
+                        val person = people.find { it.first == task?.second?.creatorId }
+                        val creatorName = person?.second?.name + " " + person?.second?.surname
+
+                        if (teamId != null && task != null) {
                             if (taskId != null) {
-                                ShowTaskDetails(teamId, taskId)
+                                ShowTaskDetails(teamId, taskId, task.second, creatorName)
                             }
                         }
 
@@ -2579,10 +2628,16 @@ fun AppMainScreen(
                         val teamId = backStackEntry.arguments?.getString("teamId")
                         val taskId = backStackEntry.arguments?.getString("taskId")
                         val commentId = backStackEntry.arguments?.getString("commentId")
-                        val areRepliesOn = backStackEntry.arguments?.getString("areRepliesOn").toBoolean()
+                        val areRepliesOn =
+                            backStackEntry.arguments?.getString("areRepliesOn").toBoolean()
 
-                        if(teamId != null && taskId != null && commentId != null)
-                            Replies(teamId = teamId, taskId = taskId, commentId = commentId, areRepliesOn = areRepliesOn)
+                        if (teamId != null && taskId != null && commentId != null)
+                            Replies(
+                                teamId = teamId,
+                                taskId = taskId,
+                                commentId = commentId,
+                                areRepliesOn = areRepliesOn
+                            )
                     }
                     composable("teams/{teamId}/tasks/{taskId}/info") { NotImplementedScreen() } // TODO: Implement
                     composable("teams/{teamId}/tasks/{taskId}/description") { NotImplementedScreen() } // TODO: Implement

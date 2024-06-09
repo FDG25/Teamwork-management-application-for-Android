@@ -178,10 +178,14 @@ enum class TaskCreationStep {
     People
 }
 
-class SpecificTeamViewModel: ViewModel() {
+class SpecificTeamViewModel : ViewModel() {
     val auth = FirebaseAuth.getInstance()
 
-    fun init(toDoTasks: List<ToDoTask>, teampeople: List<PersonData>, filteredPeople: List<PersonData>) {
+    fun init(
+        toDoTasks: List<ToDoTask>,
+        teampeople: List<PersonData>,
+        filteredPeople: List<PersonData>
+    ) {
         _toDoTasks.value = toDoTasks
         //_teampeople.value = teampeople
 
@@ -203,6 +207,7 @@ class SpecificTeamViewModel: ViewModel() {
         private set
     var stringErrorForDelete by mutableStateOf("")
         private set
+
     fun setStrinValueForDelete(a: String) {
         stringValueForDelete = a.trim()
         stringErrorForDelete = ""
@@ -238,7 +243,7 @@ class SpecificTeamViewModel: ViewModel() {
 
                 result = currentUserPermission != null && (
                         currentUserPermission == "Owner" && personPermission == "Owner" ||
-                        currentUserPermission == "Owner" && personPermission == "Admin" ||
+                                currentUserPermission == "Owner" && personPermission == "Admin" ||
                                 currentUserPermission == "Owner" && personPermission == "" ||
                                 currentUserPermission == "Admin" && personPermission == "" //EMPTY STRING = MEMBER
                         )
@@ -272,7 +277,8 @@ class SpecificTeamViewModel: ViewModel() {
             } else {
                 val userId = currentUser.uid
 
-                val teamQuery = db.collection("teams").whereEqualTo("inviteLink", hash).get().await()
+                val teamQuery =
+                    db.collection("teams").whereEqualTo("inviteLink", hash).get().await()
                 if (teamQuery.documents.isNotEmpty()) {
                     val teamDocument = teamQuery.documents.first()
                     val teamData = teamDocument.data
@@ -302,7 +308,10 @@ class SpecificTeamViewModel: ViewModel() {
                         )
 
                         // Check if the current user is already a member of the team
-                        val isUserInTeam = teamMemberIds.contains(userId) || teamOwnerId == userId || teamAdminIds.contains(userId)
+                        val isUserInTeam =
+                            teamMemberIds.contains(userId) || teamOwnerId == userId || teamAdminIds.contains(
+                                userId
+                            )
 
                         userStatus = if (isUserInTeam) {
                             "User already a member of the team"
@@ -344,11 +353,15 @@ class SpecificTeamViewModel: ViewModel() {
                 if (participantQuery.documents.isNotEmpty()) {
                     // Update the frequentlyAccessed field for the existing participant document
                     val participantDoc = participantQuery.documents[0]
-                    val participantRef = db.collection("team_participants").document(participantDoc.id)
+                    val participantRef =
+                        db.collection("team_participants").document(participantDoc.id)
                     participantRef.update("frequentlyAccessed", !frequentlyAccessed).await()
                 } else {
                     // Handle the case where no participant document is found
-                    Log.e("SpecificTeamViewModel", "No participant document found for teamId: $teamId and userId: $userId")
+                    Log.e(
+                        "SpecificTeamViewModel",
+                        "No participant document found for teamId: $teamId and userId: $userId"
+                    )
                 }
             } catch (e: Exception) {
                 // Handle any errors that occur during the database operation
@@ -371,7 +384,8 @@ class SpecificTeamViewModel: ViewModel() {
                 val teamDocument = teamRef.get().await()
 
                 if (teamDocument.exists()) {
-                    val members = teamDocument.get("members") as? MutableList<String> ?: mutableListOf()
+                    val members =
+                        teamDocument.get("members") as? MutableList<String> ?: mutableListOf()
                     if (!members.contains(userId)) {
                         members.add(userId)
                         teamRef.update("members", members).await()
@@ -439,7 +453,8 @@ class SpecificTeamViewModel: ViewModel() {
                 val teamDocument = teamRef.get().await()
 
                 if (teamDocument.exists()) {
-                    val members = teamDocument.get("members") as? MutableList<String> ?: mutableListOf()
+                    val members =
+                        teamDocument.get("members") as? MutableList<String> ?: mutableListOf()
                     if (members.contains(userId)) {
                         members.remove(userId)
                         teamRef.update("members", members).await()
@@ -453,7 +468,8 @@ class SpecificTeamViewModel: ViewModel() {
                         .await()
 
                     for (participantDoc in participantQuery.documents) {
-                        db.collection("team_participants").document(participantDoc.id).delete().await()
+                        db.collection("team_participants").document(participantDoc.id).delete()
+                            .await()
                     }
 
                     // Update the user's teams field in the people collection
@@ -487,10 +503,12 @@ class SpecificTeamViewModel: ViewModel() {
                         .await()
 
                     for (taskDoc in tasksQuery.documents) {
-                        val taskPeople = taskDoc.get("people") as? MutableList<String> ?: mutableListOf()
+                        val taskPeople =
+                            taskDoc.get("people") as? MutableList<String> ?: mutableListOf()
                         if (taskPeople.contains(userId)) {
                             taskPeople.remove(userId)
-                            db.collection("tasks").document(taskDoc.id).update("people", taskPeople).await()
+                            db.collection("tasks").document(taskDoc.id).update("people", taskPeople)
+                                .await()
                         }
                     }
 
@@ -531,7 +549,8 @@ class SpecificTeamViewModel: ViewModel() {
                         val userRef = db.collection("people").document(memberId)
                         val userDocument = userRef.get().await()
                         if (userDocument.exists()) {
-                            val userTeams = userDocument.get("teams") as? List<String> ?: emptyList()
+                            val userTeams =
+                                userDocument.get("teams") as? List<String> ?: emptyList()
                             val updatedTeams = userTeams.toMutableList()
                             if (updatedTeams.contains(teamId)) {
                                 updatedTeams.remove(teamId)
@@ -539,7 +558,8 @@ class SpecificTeamViewModel: ViewModel() {
                             }
 
                             // Remove tasks related to the team from the user's tasks field
-                            val userTasks = userDocument.get("tasks") as? List<String> ?: emptyList()
+                            val userTasks =
+                                userDocument.get("tasks") as? List<String> ?: emptyList()
                             val tasksToRemove = userTasks.filter { taskId ->
                                 val taskRef = db.collection("tasks").document(taskId)
                                 val taskDocument = taskRef.get().await()
@@ -558,7 +578,8 @@ class SpecificTeamViewModel: ViewModel() {
                         .await()
 
                     for (participantDoc in participantQuery.documents) {
-                        db.collection("team_participants").document(participantDoc.id).delete().await()
+                        db.collection("team_participants").document(participantDoc.id).delete()
+                            .await()
                     }
 
                     // Delete all tasks associated with the team
@@ -2567,7 +2588,7 @@ fun DescriptionStep(
     Text("Description", style = typography.titleMedium)
 
     Description(
-        taskDescriptionValue, setTaskDescription
+        taskDescriptionValue, setTaskDescription, "", true
     )
 
     /*LazyColumn(
@@ -3354,13 +3375,13 @@ fun InviteConfirmationScreen(
         val (teamInfo, statusMessage) = vm.retrieveTeamInfoByInviteHash(hash)
         team = teamInfo
         status = statusMessage.split("-")[0]
-        if(statusMessage.contains("-")){
+        if (statusMessage.contains("-")) {
             teamId = statusMessage.split("-")[1]
         }
         Log.e("InviteConfirmationScreen", status)
     }
 
-    if(LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE) {
+    if (LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -3372,10 +3393,10 @@ fun InviteConfirmationScreen(
             //Spacer(modifier = Modifier.height(16.dp))
             item {
                 Column {
-                    if(status == "User not logged in") {
+                    if (status == "User not logged in") {
                         Actions.getInstance().goToFirstScreen()
                     }
-                    if(status == "Team not found") {
+                    if (status == "Team not found") {
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier.fillMaxWidth()
@@ -3429,10 +3450,10 @@ fun InviteConfirmationScreen(
                             Text("Go to home")
                         }
                     }
-                    if(status == "User already a member of the team") {
+                    if (status == "User already a member of the team") {
                         Actions.getInstance().goToTeamTasks(teamId)
                     }
-                    if(status == "User not a member of the team") {
+                    if (status == "User not a member of the team") {
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier.fillMaxWidth()
@@ -3519,11 +3540,11 @@ fun InviteConfirmationScreen(
             }
         }
     } else {
-        if(status == "User not logged in") {
+        if (status == "User not logged in") {
             Actions.getInstance().goToFirstScreen()
         }
-        if(status == "Team not found") {
-            Row (
+        if (status == "Team not found") {
+            Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(
@@ -3574,7 +3595,9 @@ fun InviteConfirmationScreen(
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(1f).padding(end = 30.dp)
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 30.dp)
                 ) {
                     Box {
                         Column {
@@ -3596,11 +3619,11 @@ fun InviteConfirmationScreen(
                 }
             }
         }
-        if(status == "User already a member of the team") {
+        if (status == "User already a member of the team") {
             Actions.getInstance().goToTeamTasks(teamId)
         }
-        if(status == "User not a member of the team") {
-            Row (
+        if (status == "User not a member of the team") {
+            Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(
@@ -3664,7 +3687,9 @@ fun InviteConfirmationScreen(
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(1f).padding(end = 30.dp)
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 30.dp)
                 ) {
                     Box {
                         Column {
@@ -5272,7 +5297,7 @@ private fun PeopleEntry(
         )
     }
 
-    if(showMenuAssignRole){
+    if (showMenuAssignRole) {
         LaunchedEffect(showMenuAssignRole) {
             if (person.role.isNotEmpty()) {
                 vm.setSelectdRole(person.role)
@@ -5352,7 +5377,7 @@ private fun PeopleEntry(
             }
         )
     }
-    if(showOwnerMenu){
+    if (showOwnerMenu) {
         AlertDialog(
             onDismissRequest = { showOwnerMenu = false },
             title = {
@@ -5421,7 +5446,18 @@ private fun PeopleEntry(
                         removePerson(person)
                     }
                 } else if ((currentRoute != "teams/{teamId}/edit/people" && currentRoute != "teams/{teamId}/filterTasks" && currentRoute != "teams/{teamId}/newTask/people")) Modifier.combinedClickable(
-                    onLongClick = { if (vm.hasHigherPermission(teamId, auth.uid, person.permission)) if(person.permission == "Owner"){ showOwnerMenu = true } else{showMenu = true} },
+                    onLongClick = {
+                        if (vm.hasHigherPermission(
+                                teamId,
+                                auth.uid,
+                                person.permission
+                            )
+                        ) if (person.permission == "Owner") {
+                            showOwnerMenu = true
+                        } else {
+                            showMenu = true
+                        }
+                    },
                     onClick = {
                         Actions
                             .getInstance()
@@ -5496,7 +5532,9 @@ private fun PeopleEntry(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "${person.name[0]}${person.surname[0]}",
+                    text = if (person.name.isNotEmpty() && person.surname.isNotEmpty()) "${person.name[0]}${person.surname[0]}"
+                    else if (person.name.isNotEmpty()) "${person.name[0]}"
+                    else "",
                     style = typography.bodyLarge,
                     color = palette.onSurface
                 )
@@ -5552,7 +5590,11 @@ private fun PeopleEntry(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = if(person.personId != auth.uid){person.username} else {person.username + " (you)"},
+                    text = if (person.personId != auth.uid) {
+                        person.username
+                    } else {
+                        person.username + " (you)"
+                    },
                     style = typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

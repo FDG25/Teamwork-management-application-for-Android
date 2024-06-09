@@ -10,14 +10,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.polito.mad.teamtask.Task
 import com.polito.mad.teamtask.components.tasks.Replies
 import com.polito.mad.teamtask.components.tasks.Tab4Screen
 
 @Composable
 fun ShowTaskDetails(
     teamId: String,
-    taskId: String
-    //task: Task
+    taskId: String,
+    task: Task,
+    creator: String
 ) {
     //val palette = MaterialTheme.colorScheme
     //val typography = TeamTaskTypography
@@ -28,6 +30,8 @@ fun ShowTaskDetails(
                     tabs = listOf("Comments", "Info", "Description", "People"),
                     teamId,
                     taskId,
+                    task,
+                    creator
                 )
             }
     }

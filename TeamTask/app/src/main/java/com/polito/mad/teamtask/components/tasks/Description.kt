@@ -47,7 +47,7 @@ import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 
 
 class DescriptionViewModel(private val model: AppModel) : ViewModel() {
-//    var finalDescription =
+    //    var finalDescription =
 //        "In any industry where the people behind a company are as important as the company itself, you’re likely to find a kind of expanded “about” page that includes information on individual employees. “Meet the Team” pages are popular among web design and other creative firms, but are also found on sites within various other industries. These pages are a valuable addition to any site where human contact is an important part of the industry. It adds a personal touch to the company and can lend trust to visitors."
 //
 //    fun setMyFinalDescription(value: String) {
@@ -58,6 +58,13 @@ class DescriptionViewModel(private val model: AppModel) : ViewModel() {
 
     fun setMyTeamDescription(value: TextFieldValue) {
         myTeamDescription.value = value
+    }
+
+    var myTaskDescription = mutableStateOf(TextFieldValue(""))
+        private set
+
+    fun setMyTaskDescription(value: TextFieldValue) {
+        myTaskDescription.value = value
     }
 
     var isDescriptionEditing by mutableStateOf(false)
@@ -71,32 +78,41 @@ class DescriptionViewModel(private val model: AppModel) : ViewModel() {
         model.updateTeamDescription(teamId, myTeamDescription.value.text)
         Actions.getInstance().navigateBack()
     }
+
+    fun updateTaskDescriptionDB(taskId: String) {
+        model.updateTaskDescription(taskId, myTaskDescription.value.text)
+    }
 }
 
-
+//Edit of a task description
 @Composable
 fun Description(
     descriptionValue: String,
     setDescription: (String) -> Unit,
+    taskId: String,
+    isInCreation: Boolean,
     vm: DescriptionViewModel = viewModel(factory = AppFactory(LocalContext.current))
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
-    val currentRoute = Actions.getInstance().getCurrentRoute()
-
 
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(vm.isDescriptionEditing) {
         if (vm.isDescriptionEditing) {
+            vm.setMyTaskDescription(
+                TextFieldValue(
+                    descriptionValue,
+                    selection = TextRange(descriptionValue.length)
+                )
+            )
             focusRequester.requestFocus()
             keyboardController?.show()
         }
     }
 
     Box {
-        //if ((currentRoute != "teams/{teamId}/newTask/description") && (currentRoute != "teams/{teamId}/newTask/people")) {
         if (!vm.isDescriptionEditing) {
             Box(
                 modifier = Modifier
@@ -124,7 +140,6 @@ fun Description(
                 FloatingActionButton(
                     onClick = {
                         vm.setIsDescriptionEditing(true)
-                        //Actions.getInstance().goToEditTeamDescription(teamId)
                     },
                     containerColor = palette.secondary,
                     modifier = Modifier.padding(25.dp)
@@ -139,10 +154,10 @@ fun Description(
             }
         } else {
             BasicTextField(
-                value = descriptionValue,
+                value = vm.myTaskDescription.value,
                 onValueChange = { newValue ->
-                    if (newValue.length <= 200) { // Prevent input past max length
-                        setDescription(newValue)
+                    if (newValue.text.length <= 200) { // Prevent input past max length
+                        vm.setMyTaskDescription(newValue)
                     }
                 },
                 keyboardOptions = KeyboardOptions.Default,
@@ -196,14 +211,16 @@ fun Description(
                     }
                 }
             )
-            //if ((currentRoute != "teams/{teamId}/newTask/people")) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.BottomEnd
             ) {
                 FloatingActionButton(
                     onClick = {
-                        setDescription(descriptionValue)
+                        if (!isInCreation)
+                            vm.updateTaskDescriptionDB(taskId = taskId)
+                        else
+                            setDescription(vm.myTaskDescription.value.text)
                         vm.setIsDescriptionEditing(false)
                     },
                     containerColor = palette.secondary,
@@ -217,12 +234,12 @@ fun Description(
                     )
                 }
             }
-            //}
         }
     }
 
 }
 
+//Edit only for a Team
 @Composable
 fun EditTeamDescription(
     descriptionValue: String,
@@ -308,7 +325,6 @@ fun EditTeamDescription(
             }
         }
     )
-    //if ((currentRoute != "teams/{teamId}/newTask/people")) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomEnd
@@ -316,7 +332,6 @@ fun EditTeamDescription(
         FloatingActionButton(
             onClick = {
                 vm.updateTeamDescriptionDB(teamId)
-                //vm.setIsDescriptionEditing(false)
             },
             containerColor = palette.secondary,
             modifier = Modifier.padding(25.dp)
@@ -331,6 +346,7 @@ fun EditTeamDescription(
     }
 }
 
+//View Description only for a team
 @Composable
 fun DescriptionViewOnly(
     descriptionValue: String,
@@ -340,44 +356,44 @@ fun DescriptionViewOnly(
     val typography = TeamTaskTypography
 
     Box {
-            Box(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxSize()
-                    .shadow(elevation = 10.dp, shape = RoundedCornerShape(10.dp))
-                    .background(palette.surfaceVariant)
+        Box(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxSize()
+                .shadow(elevation = 10.dp, shape = RoundedCornerShape(10.dp))
+                .background(palette.surfaceVariant)
+        ) {
+            Text(
+                text = descriptionValue,
+                modifier = Modifier.padding(16.dp),
+                style = typography.labelSmall.copy(
+                    color = palette.onSurface,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Normal,
+                    lineHeight = 23.sp
+                )
+            )
+        }
+
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.BottomEnd
+        ) {
+            FloatingActionButton(
+                onClick = {
+                    Actions.getInstance().goToEditTeamDescription(teamId)
+                },
+                containerColor = palette.secondary,
+                modifier = Modifier.padding(25.dp)
             ) {
-                Text(
-                    text = descriptionValue,
-                    modifier = Modifier.padding(16.dp),
-                    style = typography.labelSmall.copy(
-                        color = palette.onSurface,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Normal,
-                        lineHeight = 23.sp
-                    )
+                Image(
+                    painter = painterResource(id = R.drawable.outline_edit_24),
+                    contentDescription = "Add",
+                    modifier = Modifier.size(30.dp),
+                    colorFilter = ColorFilter.tint(palette.background)
                 )
             }
-
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.BottomEnd
-            ) {
-                FloatingActionButton(
-                    onClick = {
-                        Actions.getInstance().goToEditTeamDescription(teamId)
-                    },
-                    containerColor = palette.secondary,
-                    modifier = Modifier.padding(25.dp)
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.outline_edit_24),
-                        contentDescription = "Add",
-                        modifier = Modifier.size(30.dp),
-                        colorFilter = ColorFilter.tint(palette.background)
-                    )
-                }
-            }
+        }
     }
 
 }

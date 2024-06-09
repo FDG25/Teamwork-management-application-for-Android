@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.polito.mad.teamtask.R
+import com.polito.mad.teamtask.Task
 import com.polito.mad.teamtask.screens.CustomToggle
 import com.polito.mad.teamtask.screens.DateTimePicker
 import com.polito.mad.teamtask.screens.PersonData
@@ -441,7 +442,7 @@ fun InfoSection(
                 }
 
                 item {
-                    InfoRow(labelValue = "Creation Date: ", value = creationDate)
+                    InfoRow(labelValue = "Creation Date: ", value =  if (creationDate == "") {""} else {"${creationDate.split('T')[0]}, ${creationDate.split('T')[1].split('+')[0].split(':')[0]}:${creationDate.split('T')[1].split('+')[0].split(':')[1]}"})
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
@@ -732,24 +733,25 @@ fun EditInfoSection(
     }
 }
 
-@Preview
 @Composable
 fun Info(
+    task: Task,
+    creator: String,
     vm: InfoViewModel = viewModel(),
 ) {
     if(!vm.isInfoEditing){
         InfoSection(
-            createdBy = vm.createdBy,
-            creationDate = vm.selectedCreationDateTime,
-            taskName = vm.taskNameValue,
-            dueDate = vm.selectedDueDateTime,
-            selectedTags = vm.selectedTags,
+            createdBy = creator,
+            creationDate = task.creationDate,
+            taskName = task.title,
+            dueDate = task.deadline,
+            selectedTags = task.tags,
             //addTag = vm::addTag,
             //removeTag = vm::removeTag,
-            taskPriority = vm.taskPriority,
+            taskPriority = if (task.prioritized) 0 else 1,
             priorityOpt = vm.priorityOptions,
-            taskRecurrence = vm.selectedTextForRecurrence,
-            taskStatus = vm.taskStatus,
+            taskRecurrence = task.recurrence,
+            taskStatus = task.status,
             setIsInfoEditing = vm::setIsInfoEditing
         )
     } else {
