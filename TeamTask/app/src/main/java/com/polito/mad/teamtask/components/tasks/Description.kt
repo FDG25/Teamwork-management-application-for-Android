@@ -96,46 +96,130 @@ fun Description(
     }
 
     Box {
-        //if ((currentRoute != "teams/{teamId}/newTask/description") && (currentRoute != "teams/{teamId}/newTask/people")) {
-        if (!vm.isDescriptionEditing) {
-            Box(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxSize()
-                    .shadow(elevation = 10.dp, shape = RoundedCornerShape(10.dp))
-                    .background(palette.surfaceVariant)
-            ) {
-                Text(
-                    text = descriptionValue,
-                    modifier = Modifier.padding(16.dp),
-                    style = typography.labelSmall.copy(
+        if (currentRoute != "teams/{teamId}/newTask/status") {
+            if (!vm.isDescriptionEditing) {
+                Box(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxSize()
+                        .shadow(elevation = 10.dp, shape = RoundedCornerShape(10.dp))
+                        .background(palette.surfaceVariant)
+                ) {
+                    Text(
+                        text = descriptionValue,
+                        modifier = Modifier.padding(16.dp),
+                        style = typography.labelSmall.copy(
+                            color = palette.onSurface,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Normal,
+                            lineHeight = 23.sp
+                        )
+                    )
+                }
+
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.BottomEnd
+                ) {
+                    if (currentRoute != "teams/{teamId}/newTask/status") {
+                        FloatingActionButton(
+                            onClick = {
+                                vm.setIsDescriptionEditing(true)
+                                //Actions.getInstance().goToEditTeamDescription(teamId)
+                            },
+                            containerColor = palette.secondary,
+                            modifier = Modifier.padding(25.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.outline_edit_24),
+                                contentDescription = "Add",
+                                modifier = Modifier.size(30.dp),
+                                colorFilter = ColorFilter.tint(palette.background)
+                            )
+                        }
+                    }
+                }
+            } else {
+                BasicTextField(
+                    value = descriptionValue,
+                    onValueChange = { newValue ->
+                        if (newValue.length <= 200) { // Prevent input past max length
+                            setDescription(newValue)
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions.Default,
+                    textStyle = typography.labelSmall.copy(
                         color = palette.onSurface,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Normal,
                         lineHeight = 23.sp
-                    )
+                    ),
+                    cursorBrush = SolidColor(palette.onSurface),
+                    modifier = Modifier
+                        .focusRequester(focusRequester)
+                        .onFocusChanged { focusState ->
+                            if (!focusState.isFocused) {
+                                keyboardController?.show()
+                            }
+                        },
+                    decorationBox = { innerTextField ->
+                        LazyColumn(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxSize()
+                                .border(1.dp, palette.secondary)
+                                .shadow(elevation = 10.dp, shape = RoundedCornerShape(10.dp))
+                                .background(palette.surfaceVariant)
+                        ) {
+                            item {
+                                if (descriptionValue.isNotEmpty()) {
+                                    Text(
+                                        "Description (${200 - descriptionValue.length} characters left)",
+                                        style = typography.bodySmall,
+                                        color = palette.onSurfaceVariant,
+                                        modifier = Modifier.padding(start = 16.dp, top = 10.dp)
+                                    )
+                                    Box(modifier = Modifier.padding(16.dp)) {
+                                        innerTextField()
+                                    }
+                                } else {
+                                    Box(modifier = Modifier.padding(start = 16.dp, top = 10.dp)) {
+                                        Text(
+                                            "Insert at most ${200 - descriptionValue.length} characters",
+                                            style = typography.headlineSmall,
+                                            color = palette.onSurfaceVariant
+                                        )
+                                    }
+                                    Box(modifier = Modifier.padding(16.dp)) {
+                                        innerTextField()
+                                    }
+                                }
+                            }
+                        }
+                    }
                 )
-            }
-
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.BottomEnd
-            ) {
-                FloatingActionButton(
-                    onClick = {
-                        vm.setIsDescriptionEditing(true)
-                        //Actions.getInstance().goToEditTeamDescription(teamId)
-                    },
-                    containerColor = palette.secondary,
-                    modifier = Modifier.padding(25.dp)
+                //if ((currentRoute != "teams/{teamId}/newTask/people")) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.BottomEnd
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.outline_edit_24),
-                        contentDescription = "Add",
-                        modifier = Modifier.size(30.dp),
-                        colorFilter = ColorFilter.tint(palette.background)
-                    )
+                    FloatingActionButton(
+                        onClick = {
+                            setDescription(descriptionValue)
+                            vm.setIsDescriptionEditing(false)
+                        },
+                        containerColor = palette.secondary,
+                        modifier = Modifier.padding(25.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.outline_done_24),
+                            contentDescription = "Add",
+                            modifier = Modifier.size(30.dp),
+                            colorFilter = ColorFilter.tint(palette.background)
+                        )
+                    }
                 }
+                //}
             }
         } else {
             BasicTextField(
@@ -196,28 +280,6 @@ fun Description(
                     }
                 }
             )
-            //if ((currentRoute != "teams/{teamId}/newTask/people")) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.BottomEnd
-            ) {
-                FloatingActionButton(
-                    onClick = {
-                        setDescription(descriptionValue)
-                        vm.setIsDescriptionEditing(false)
-                    },
-                    containerColor = palette.secondary,
-                    modifier = Modifier.padding(25.dp)
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.outline_done_24),
-                        contentDescription = "Add",
-                        modifier = Modifier.size(30.dp),
-                        colorFilter = ColorFilter.tint(palette.background)
-                    )
-                }
-            }
-            //}
         }
     }
 

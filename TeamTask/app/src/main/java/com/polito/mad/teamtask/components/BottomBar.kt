@@ -39,7 +39,9 @@ fun BottomBar (
     navController: NavHostController,
     goToPreviousStep: () -> Unit,
     onSearchQueryChanged: (String) -> Unit,
-    validateCreateTask: (String) -> Unit
+    validateCreateTask: (String) -> Unit,
+    clearTempState: () -> Unit, applyTempState: () -> Unit,
+    sortTasks: () -> Unit
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
@@ -59,6 +61,8 @@ fun BottomBar (
         "teams/filter" -> {}
 
         "teams/{teamId}/filterTasks" -> {
+            val teamId = Actions.getInstance().getStringParameter("teamId")
+
             BottomAppBar(
                 containerColor = palette.background,
                 contentColor = palette.secondary,
@@ -75,7 +79,12 @@ fun BottomBar (
                         modifier = Modifier.weight(1f)
                     ) {
                         Button(
-                            onClick = { /*TODO*/ },
+                            onClick = {
+                                clearTempState()
+                                if (teamId != null) {
+                                    Actions.getInstance().goToTeamTasks(teamId)
+                                }
+                            },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = palette.primary,
                                 contentColor = palette.secondary
@@ -95,7 +104,13 @@ fun BottomBar (
                         modifier = Modifier.weight(1f)
                     ) {
                         Button(
-                            onClick = { /*TODO*/ },
+                            onClick = {
+                                applyTempState()
+                                sortTasks()
+                                if (teamId != null) {
+                                    Actions.getInstance().goToTeamTasks(teamId)
+                                }
+                            },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = palette.secondary,
                                 contentColor = palette.background
@@ -116,8 +131,11 @@ fun BottomBar (
 
         }
 
+
         "teams/{teamId}/newTask/status" -> {
+            /*
             val teamId = Actions.getInstance().getStringParameter("teamId")
+
 
             Log.d("ciau", teamId.toString())
 
@@ -147,6 +165,7 @@ fun BottomBar (
                     }
                 }
             }
+            */
         }
 
         /*
