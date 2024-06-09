@@ -780,18 +780,11 @@ class SpecificTeamViewModel: ViewModel() {
         currentStep = TaskCreationStep.Status
     }
 
-    fun goToPreviousStep(teamId: String, currentRoute: String?) {
-        when (currentRoute) {
-            "teams/{teamId}/newTask/status" -> {
-
-            } // Already at the first step
-            "teams/{teamId}/newTask/description" -> {
-                Actions.getInstance().goToCreateTaskStatus(teamId)
-            }
-
-            "teams/{teamId}/newTask/people" -> {
-                Actions.getInstance().goToCreateTaskDescription(teamId)
-            }
+    fun goToPreviousStep(){
+        when (currentStep) {
+            TaskCreationStep.Status -> {Actions.getInstance().goToTeams()} // Already at the first step
+            TaskCreationStep.Description -> currentStep = TaskCreationStep.Status
+            TaskCreationStep.People -> currentStep = TaskCreationStep.Description
         }
     }
 
@@ -805,12 +798,6 @@ class SpecificTeamViewModel: ViewModel() {
 
     fun setBackButtModalCreateTask(bool: Boolean) {
         showBackButtonModalCreateTask = bool
-    }
-
-    fun goBackToTasks() {
-        cancelCreateTask()
-        clearSelectedPeople()
-        clearSelectedTagsForNewTask()
     }
 
     fun createTask() {
@@ -1063,27 +1050,30 @@ class SpecificTeamViewModel: ViewModel() {
         }
     }
 
-    fun validateCreateTask(teamId: String, step: String) {
-        Log.d("ciau", teamId.toString() + "1")
-        when (step) {
-            "status" -> {
-                Log.d("ciau", teamId.toString() + "status")
+    fun validateCreateTask(teamId: String) {
+        when (currentStep) {
+            TaskCreationStep.Status -> {
+                Log.e("provino", "provino3")
                 //check all the fields contained in "Status" step
                 checkTaskName()
                 checkSelectedDateTimeError()
-                if (taskNameError.isBlank() && selectedDateTimeError.isBlank()) {
-                    Actions.getInstance().goToCreateTaskDescription(teamId)
+                Log.e("provino", taskNameError)
+                Log.e("provino", selectedDateTimeError)
+                Log.e("provino", taskNameValue)
+
+                if(taskNameError.isBlank() && selectedDateTimeError.isBlank()) {
+                    Log.e("provino", "provino4")
+                    currentStep = TaskCreationStep.Description
                 }
             }
-
-            "description" -> {
+            TaskCreationStep.Description -> {
                 checkTaskDescription()
-                if (taskDescriptionError.isBlank()) {
-                    Actions.getInstance().goToCreateTaskPeople(teamId)
+                if(taskDescriptionError.isBlank()) {
+                    currentStep = TaskCreationStep.People
                 }
             }
 
-            "people" -> {
+            TaskCreationStep.People -> {
                 addTask(
                     ToDoTask(
                         "hardcoded", //TODO: HARDCODED
@@ -1831,6 +1821,7 @@ fun CustomFloatingButton(
                         setTaskDescription("")
                         createTask()
                         clearSelectedPeople()
+                        Actions.getInstance().goToCreateTaskStatus(teamId)
                     }
 
                     "Add Members" -> {
@@ -1900,11 +1891,10 @@ fun NewTask(
     teamId: String,
     vm: SpecificTeamViewModel = viewModel()
 ) {
-    val currentRoute = Actions.getInstance().getCurrentRoute()
 
     Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-        when (currentRoute) {
-            "teams/{teamId}/newTask/status" -> StatusStep(
+        when (vm.currentStep) {
+            TaskCreationStep.Status -> StatusStep(
                 vm.taskNameValue,
                 vm.taskNameError,
                 vm::setTaskName,
@@ -1927,13 +1917,11 @@ fun NewTask(
                 vm::addTagForNewTask,
                 vm::removeTagForNewTask,
             )
-
-            "teams/{teamId}/newTask/description" -> DescriptionStep(
+            TaskCreationStep.Description -> DescriptionStep(
                 vm.taskDescriptionValue,
                 vm::setTaskDescription
             )
-
-            "teams/{teamId}/newTask/people" -> PeopleStep(
+            TaskCreationStep.People -> PeopleStep(
                 teamId,
                 vm.taskpeople, vm.teampeople, vm.selectedPeople, vm::clearSelectedPeople,
                 vm::addPerson, vm::removePerson,

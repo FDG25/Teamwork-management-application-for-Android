@@ -2048,6 +2048,7 @@ fun AppMainScreen(
                         profileVM::editProfile,
                         profileVM::validate,
                         profileVM::cancelEditProfile,
+                        teamVM::goToPreviousStep,
                         people,
                         teams,
                         tasks,

@@ -37,9 +37,9 @@ import com.polito.mad.teamtask.R
 @Composable
 fun BottomBar (
     navController: NavHostController,
-    goToPreviousStep: (String, String) -> Unit,
+    goToPreviousStep: () -> Unit,
     onSearchQueryChanged: (String) -> Unit,
-    validateCreateTask: (String, String) -> Unit
+    validateCreateTask: (String) -> Unit
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
@@ -137,7 +137,7 @@ fun BottomBar (
                     Button(
                         onClick = {
                             if (teamId != null) {
-                                validateCreateTask(teamId, "status")
+                                validateCreateTask(teamId)
                             }
                         },
                         modifier = Modifier.width(110.dp),
@@ -149,6 +149,7 @@ fun BottomBar (
             }
         }
 
+        /*
         "teams/{teamId}/newTask/description" -> {
             val teamId = Actions.getInstance().getStringParameter("teamId")
             BottomAppBar(
@@ -167,7 +168,7 @@ fun BottomBar (
                     Button(
                         onClick = {
                             if (teamId != null) {
-                                goToPreviousStep(teamId, "description")
+                                goToPreviousStep()
                             }
                         },
                         enabled = true, // Disable back button on first step
@@ -214,7 +215,7 @@ fun BottomBar (
                     Button(
                         onClick = {
                             if (teamId != null) {
-                                goToPreviousStep(teamId, currentRoute)
+                                goToPreviousStep()
                             }
                         },
                         enabled = true, // Disable back button on first step
@@ -242,7 +243,7 @@ fun BottomBar (
                 }
             }
         }
-
+        */
         "chats/{isGroupChat}/{chatId}" -> {
 
         }

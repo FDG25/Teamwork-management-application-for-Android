@@ -66,6 +66,7 @@ fun TopBar(
     editProfile: () -> Unit,
     validate: (String) -> Unit,
     cancelEditProfile: () -> Unit,
+    goToPreviousStep: () -> Unit,
     people: List<Pair<String, Person>>,
     teams: List<Pair<String, Team>>,
     tasks: List<Pair<String, Task>>,
@@ -871,7 +872,13 @@ fun TopBar(
             CenterAlignedTopAppBar(
                 // Back button
                 navigationIcon = {
-                    BackButton(onClick = { Actions.getInstance().navigateBack() })
+                    BackButton(onClick = {
+                        if(currentRoute == "teams/{teamId}/newTask/status") {
+                            Actions.getInstance().navigateBack()
+                        } else {
+                            goToPreviousStep
+                        }
+                    })
                 },
 
                 // Title
