@@ -11,6 +11,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -52,6 +53,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -801,18 +803,11 @@ class SpecificTeamViewModel : ViewModel() {
         currentStep = TaskCreationStep.Status
     }
 
-    fun goToPreviousStep(teamId: String, currentRoute: String?) {
-        when (currentRoute) {
-            "teams/{teamId}/newTask/status" -> {
-
-            } // Already at the first step
-            "teams/{teamId}/newTask/description" -> {
-                Actions.getInstance().goToCreateTaskStatus(teamId)
-            }
-
-            "teams/{teamId}/newTask/people" -> {
-                Actions.getInstance().goToCreateTaskDescription(teamId)
-            }
+    fun goToPreviousStep(){
+        when (currentStep) {
+            TaskCreationStep.Status -> { }
+            TaskCreationStep.Description -> currentStep = TaskCreationStep.Status
+            TaskCreationStep.People -> currentStep = TaskCreationStep.Description
         }
     }
 
@@ -826,12 +821,6 @@ class SpecificTeamViewModel : ViewModel() {
 
     fun setBackButtModalCreateTask(bool: Boolean) {
         showBackButtonModalCreateTask = bool
-    }
-
-    fun goBackToTasks() {
-        cancelCreateTask()
-        clearSelectedPeople()
-        clearSelectedTagsForNewTask()
     }
 
     fun createTask() {
@@ -1084,27 +1073,23 @@ class SpecificTeamViewModel : ViewModel() {
         }
     }
 
-    fun validateCreateTask(teamId: String, step: String) {
-        Log.d("ciau", teamId.toString() + "1")
-        when (step) {
-            "status" -> {
-                Log.d("ciau", teamId.toString() + "status")
-                //check all the fields contained in "Status" step
+    fun validateCreateTask(teamId: String) {
+        when (currentStep) {
+            TaskCreationStep.Status -> {
                 checkTaskName()
                 checkSelectedDateTimeError()
-                if (taskNameError.isBlank() && selectedDateTimeError.isBlank()) {
-                    Actions.getInstance().goToCreateTaskDescription(teamId)
+                if(taskNameError.isBlank() && selectedDateTimeError.isBlank()) {
+                    currentStep = TaskCreationStep.Description
                 }
             }
-
-            "description" -> {
+            TaskCreationStep.Description -> {
                 checkTaskDescription()
-                if (taskDescriptionError.isBlank()) {
-                    Actions.getInstance().goToCreateTaskPeople(teamId)
+                if(taskDescriptionError.isBlank()) {
+                    currentStep = TaskCreationStep.People
                 }
             }
 
-            "people" -> {
+            TaskCreationStep.People -> {
                 addTask(
                     ToDoTask(
                         "hardcoded", //TODO: HARDCODED
@@ -1117,6 +1102,9 @@ class SpecificTeamViewModel : ViewModel() {
                     )
                 )
                 cancelCreateTask()
+                Actions.getInstance().goToTeamTasks(teamId)
+                onSearchQueryChanged("")
+                currentStep = TaskCreationStep.Status
             }
         }
     }
@@ -1204,7 +1192,8 @@ class SpecificTeamViewModel : ViewModel() {
     }
 
     // Task people
-    private val _taskpeople = mutableStateOf(listOf(
+    private val _taskpeople = mutableStateOf(listOf<PersonData>())
+        /*
         PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
         PersonData(
             "1",
@@ -1217,7 +1206,9 @@ class SpecificTeamViewModel : ViewModel() {
         ),
         PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
         PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
+
     ).sortedBy { it.name })
+         */
 
     // Provide an immutable view of the taskpeople to the UI
     val taskpeople: List<PersonData> get() = _taskpeople.value
@@ -1852,6 +1843,7 @@ fun CustomFloatingButton(
                         setTaskDescription("")
                         createTask()
                         clearSelectedPeople()
+                        Actions.getInstance().goToCreateTaskStatus(teamId)
                     }
 
                     "Add Members" -> {
@@ -1921,50 +1913,100 @@ fun NewTask(
     teamId: String,
     vm: SpecificTeamViewModel = viewModel()
 ) {
-    val currentRoute = Actions.getInstance().getCurrentRoute()
+    val palette = MaterialTheme.colorScheme
+    val typography = TeamTaskTypography
 
-    Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-        when (currentRoute) {
-            "teams/{teamId}/newTask/status" -> StatusStep(
-                vm.taskNameValue,
-                vm.taskNameError,
-                vm::setTaskName,
-                vm.selectedDateTime,
-                vm.selectedDateTimeError,
-                vm::setDueDateDateTime,
-                vm.showDatePicker,
-                vm::setShowingDatePicker,
-                vm.showTimePicker,
-                vm::setShowingTimePicker,
-                vm.recurrencyOptions,
-                vm.expandedRecurrenceDropdown,
-                vm::setExpandedRecurrencDropdown,
-                vm.selectedTextForRecurrence,
-                vm::setTaskRecurrency,
-                vm.notPriorityValue,
-                vm::setTaskPriority,
-                vm.taskTagsList,
-                vm.selectedTags,
-                vm::addTagForNewTask,
-                vm::removeTagForNewTask,
-            )
+    Scaffold(
+        bottomBar = {
+            BottomAppBar(
+                containerColor = palette.background,
+                contentColor = palette.background,
+                modifier = Modifier.height(65.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = if (vm.currentStep == TaskCreationStep.Status) Arrangement.End else Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (vm.currentStep != TaskCreationStep.Status) {
+                        // Back button
+                        Button(
+                            onClick = { vm.goToPreviousStep() },
+                            enabled = true, // Disable back button on first step
+                            modifier = Modifier.width(110.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = palette.primary, contentColor = palette.secondary)
+                        ) {
+                            Text("Back")
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
 
-            "teams/{teamId}/newTask/description" -> DescriptionStep(
-                vm.taskDescriptionValue,
-                vm::setTaskDescription
-            )
-
-            "teams/{teamId}/newTask/people" -> PeopleStep(
-                teamId,
-                vm.taskpeople, vm.teampeople, vm.selectedPeople, vm::clearSelectedPeople,
-                vm::addPerson, vm::removePerson,
-                vm::addSelectedTeamPeopleToTask, vm::removePersonFromTask,
-                vm.filteredPeople,
-                //isInAddMode, setAddMode,
-                vm.searchQueryForNewTask.value, vm::onSearchQueryForNewTaskChanged
-            )
+                    // Next/Create button
+                    Button(
+                        onClick = {
+                            vm.validateCreateTask(teamId)
+                        },
+                        modifier = Modifier.width(110.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = palette.secondary, contentColor = palette.background)
+                    ) {
+                        Text(if (vm.currentStep == TaskCreationStep.People) { "Create" } else { "Next" })
+                    }
+                }
+            }
         }
-        Spacer(modifier = Modifier.height(20.dp))
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            when (vm.currentStep) {
+                TaskCreationStep.Status -> StatusStep(
+                    vm.taskNameValue,
+                    vm.taskNameError,
+                    vm::setTaskName,
+                    vm.selectedDateTime,
+                    vm.selectedDateTimeError,
+                    vm::setDueDateDateTime,
+                    vm.showDatePicker,
+                    vm::setShowingDatePicker,
+                    vm.showTimePicker,
+                    vm::setShowingTimePicker,
+                    vm.recurrencyOptions,
+                    vm.expandedRecurrenceDropdown,
+                    vm::setExpandedRecurrencDropdown,
+                    vm.selectedTextForRecurrence,
+                    vm::setTaskRecurrency,
+                    vm.notPriorityValue,
+                    vm::setTaskPriority,
+                    vm.taskTagsList,
+                    vm.selectedTags,
+                    vm::addTagForNewTask,
+                    vm::removeTagForNewTask,
+                )
+
+                TaskCreationStep.Description -> DescriptionStep(
+                    vm.taskDescriptionValue,
+                    vm::goToPreviousStep,
+                    vm::setTaskDescription
+                )
+
+                TaskCreationStep.People -> PeopleStep(
+                    teamId,
+                    vm::goToPreviousStep,
+                    vm.taskpeople, vm.teampeople, vm.selectedPeople, vm::clearSelectedPeople,
+                    vm::addPerson, vm::removePerson,
+                    vm::addSelectedTeamPeopleToTask, vm::removePersonFromTask,
+                    vm.filteredPeople,
+                    //isInAddMode, setAddMode,
+                    vm.searchQueryForNewTask.value, vm::onSearchQueryForNewTaskChanged
+                )
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+        }
     }
 }
 
@@ -2385,10 +2427,11 @@ fun RecurrencyDropdownMenu(
 ) {
     val palette = MaterialTheme.colorScheme
 
-    Box(
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-        //.padding(32.dp)
+            .fillMaxSize()
+        //.padding(top = 16.dp, start = 16.dp, end = 16.dp),
+        //verticalArrangement = Arrangement.SpaceBetween
     ) {
         ExposedDropdownMenuBox(
             expanded = expandedRecurrenceDropdown,
@@ -2553,11 +2596,10 @@ fun StatusStep(
                     addTag, removeTag
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
-
+                //Spacer(modifier = Modifier.height(16.dp))
 
                 CustomToggle(
-                    "Priority",
+                    "",
                     listOf("Priority", "Non priority"),
                     notPriorityValue,
                     setTaskPriority,
@@ -2572,11 +2614,15 @@ fun StatusStep(
 
 @Composable
 fun DescriptionStep(
-    taskDescriptionValue: String, setTaskDescription: (String) -> Unit
+    taskDescriptionValue: String, goToPreviousStep: () -> Unit,
+    setTaskDescription: (String) -> Unit
 ) {
     //val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
 
+    BackHandler {
+        goToPreviousStep()
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -2653,6 +2699,7 @@ fun DescriptionStep(
 @Composable
 fun PeopleStep(
     teamId: String,
+    goToPreviousStep: () -> Unit,
     taskpeople: List<PersonData>,
     teampeople: List<PersonData>,
     selectedPeople: List<PersonData>,
@@ -2668,6 +2715,9 @@ fun PeopleStep(
 ) {
     val typography = TeamTaskTypography
 
+    BackHandler {
+        goToPreviousStep()
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -5684,7 +5734,7 @@ fun PeopleSection(
         val maxWidth = this.maxWidth
 
         Column {
-            if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people")) {
+            if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status")) {
                 if (teampeople.isNotEmpty() || !isInTeamPeople && taskpeople.isNotEmpty()) {
                     // Search bar
                     CustomSearchBar(
@@ -5719,7 +5769,7 @@ fun PeopleSection(
             LazyColumn(
                 modifier = Modifier.fillMaxHeight()
             ) {
-                if ((currentRoute != "teams/{teamId}/edit/people" && currentRoute != "teams/{teamId}/filterTasks" && currentRoute != "teams/{teamId}/newTask/people")) {
+                if ((currentRoute != "teams/{teamId}/edit/people" && currentRoute != "teams/{teamId}/filterTasks" && currentRoute != "teams/{teamId}/newTask/status")) {
                     item {
                         Box(
                             contentAlignment = Alignment.Center,
@@ -5736,18 +5786,20 @@ fun PeopleSection(
                             if ((isInTeamPeople && teampeople.isEmpty() && taskpeople.isEmpty())
                                 || (teampeople.isNotEmpty() && taskpeople.isEmpty())
                             ) {
-                                Text(
-                                    "Press on the button below to add members!",
-                                    style = typography.bodyMedium,
-                                    modifier = Modifier.align(Alignment.Center)
-                                )
+                                if(currentRoute != "teams/{teamId}/newTask/status") {
+                                    Text(
+                                        "Press on the button below to add members!",
+                                        style = typography.bodyMedium,
+                                        modifier = Modifier.align(Alignment.Center)
+                                    )
+                                }
                             }
                         }
                     }
                 }
 
-                if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people")) {
-                    if (currentRoute == "teams/{teamId}/newTask/people") {
+                if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status")) {
+                    if (currentRoute == "teams/{teamId}/newTask/status") {
                         items(filteredPeople) {
                             PeopleEntry(
                                 teamId,
@@ -5827,7 +5879,7 @@ fun PeopleSection(
             }
         }
 
-        if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people") && currentRoute != "teams/{teamId}/newTask/people") {
+        if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status") && currentRoute != "teams/{teamId}/newTask/status") {
             CustomFloatingButton(modifier = Modifier.align(Alignment.BottomEnd),
                 "Confirm Add Members",
                 {},
@@ -5838,7 +5890,7 @@ fun PeopleSection(
                 {}
             )
         }
-        if ((currentRoute != "teams/{teamId}/edit/people" && currentRoute != "teams/{teamId}/filterTasks" && currentRoute != "teams/{teamId}/newTask/people")) {
+        if ((currentRoute != "teams/{teamId}/edit/people" && currentRoute != "teams/{teamId}/filterTasks" && currentRoute != "teams/{teamId}/newTask/status")) {
             if (isInTeamPeople) {
             } else {
                 if (teampeople.isNotEmpty()) {
@@ -5855,21 +5907,23 @@ fun PeopleSection(
         }
 
         //invite people to team
-        FloatingActionButton(
-            onClick = {
-                Actions.getInstance().goToEditTeamPeople(teamId)
-                //Actions.getInstance().goToCreateTaskStatus(teamId)
-            },
-            containerColor = palette.secondary,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(25.dp)
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.outline_person_add_24),
-                contentDescription = "Add",
-                colorFilter = ColorFilter.tint(palette.background)
-            )
+        if(currentRoute != "teams/{teamId}/newTask/status"){
+            FloatingActionButton(
+                onClick = {
+                    Actions.getInstance().goToEditTeamPeople(teamId)
+                    //Actions.getInstance().goToCreateTaskStatus(teamId)
+                },
+                containerColor = palette.secondary,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(25.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.outline_person_add_24),
+                    contentDescription = "Add",
+                    colorFilter = ColorFilter.tint(palette.background)
+                )
+            }
         }
     }
 }

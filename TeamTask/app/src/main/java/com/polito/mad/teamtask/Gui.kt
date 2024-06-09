@@ -2342,6 +2342,8 @@ fun AppMainScreen(
                         profileVM::editProfile,
                         profileVM::validate,
                         profileVM::cancelEditProfile,
+                        teamVM::goToPreviousStep,
+                        teamVM::cancelCreateTask,
                         people,
                         teams,
                         tasks,
@@ -2354,7 +2356,9 @@ fun AppMainScreen(
             BottomBar(
                 navController,
                 teamVM::goToPreviousStep,
-                teamVM::onSearchQueryChanged, teamVM::validateCreateTask
+                teamVM::onSearchQueryChanged, teamVM::validateCreateTask,
+                teamVM::clearTempState, teamVM::applyTempState,
+                teamVM::sortTasks
             )
         },
         floatingActionButton = { FloatingButton(navController) }
@@ -2562,7 +2566,7 @@ fun AppMainScreen(
                         NotImplementedScreen()
                     } // TODO: Implement
 
-                    composable("teams/{teamId}/filterTasks") { FilterTasksScreen() }
+                    composable("teams/{teamId}/filterTasks") { FilterTasksScreen(teamVM) }
                     composable("teams/{teamId}/edit/status") { backStackEntry ->
                         val teamId = backStackEntry.arguments?.getString("teamId")
                         val team = teams.find { it.first == teamId }
@@ -2601,7 +2605,7 @@ fun AppMainScreen(
                     composable("teams/{teamId}/newTask/status") { backStackEntry ->
                         val teamId = backStackEntry.arguments?.getString("teamId")
                         teamId?.let {
-                            NewTask(teamId)
+                            NewTask(teamId, teamVM)
                         }
                     }
                     composable("teams/{teamId}/newTask/description") { NotImplementedScreen() } // TODO: Implement

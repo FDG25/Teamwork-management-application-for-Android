@@ -37,9 +37,11 @@ import com.polito.mad.teamtask.R
 @Composable
 fun BottomBar (
     navController: NavHostController,
-    goToPreviousStep: (String, String) -> Unit,
+    goToPreviousStep: () -> Unit,
     onSearchQueryChanged: (String) -> Unit,
-    validateCreateTask: (String, String) -> Unit
+    validateCreateTask: (String) -> Unit,
+    clearTempState: () -> Unit, applyTempState: () -> Unit,
+    sortTasks: () -> Unit
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
@@ -59,6 +61,8 @@ fun BottomBar (
         "teams/filter" -> {}
 
         "teams/{teamId}/filterTasks" -> {
+            val teamId = Actions.getInstance().getStringParameter("teamId")
+
             BottomAppBar(
                 containerColor = palette.background,
                 contentColor = palette.secondary,
@@ -75,7 +79,12 @@ fun BottomBar (
                         modifier = Modifier.weight(1f)
                     ) {
                         Button(
-                            onClick = { /*TODO*/ },
+                            onClick = {
+                                clearTempState()
+                                if (teamId != null) {
+                                    Actions.getInstance().goToTeamTasks(teamId)
+                                }
+                            },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = palette.primary,
                                 contentColor = palette.secondary
@@ -95,7 +104,13 @@ fun BottomBar (
                         modifier = Modifier.weight(1f)
                     ) {
                         Button(
-                            onClick = { /*TODO*/ },
+                            onClick = {
+                                applyTempState()
+                                sortTasks()
+                                if (teamId != null) {
+                                    Actions.getInstance().goToTeamTasks(teamId)
+                                }
+                            },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = palette.secondary,
                                 contentColor = palette.background
@@ -116,8 +131,11 @@ fun BottomBar (
 
         }
 
+
         "teams/{teamId}/newTask/status" -> {
+            /*
             val teamId = Actions.getInstance().getStringParameter("teamId")
+
 
             Log.d("ciau", teamId.toString())
 
@@ -137,7 +155,7 @@ fun BottomBar (
                     Button(
                         onClick = {
                             if (teamId != null) {
-                                validateCreateTask(teamId, "status")
+                                validateCreateTask(teamId)
                             }
                         },
                         modifier = Modifier.width(110.dp),
@@ -147,8 +165,10 @@ fun BottomBar (
                     }
                 }
             }
+            */
         }
 
+        /*
         "teams/{teamId}/newTask/description" -> {
             val teamId = Actions.getInstance().getStringParameter("teamId")
             BottomAppBar(
@@ -167,7 +187,7 @@ fun BottomBar (
                     Button(
                         onClick = {
                             if (teamId != null) {
-                                goToPreviousStep(teamId, "description")
+                                goToPreviousStep()
                             }
                         },
                         enabled = true, // Disable back button on first step
@@ -214,7 +234,7 @@ fun BottomBar (
                     Button(
                         onClick = {
                             if (teamId != null) {
-                                goToPreviousStep(teamId, currentRoute)
+                                goToPreviousStep()
                             }
                         },
                         enabled = true, // Disable back button on first step
@@ -242,7 +262,7 @@ fun BottomBar (
                 }
             }
         }
-
+        */
         "chats/{isGroupChat}/{chatId}" -> {
 
         }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -522,10 +523,11 @@ fun TagsDropdownMenu(tags: List<String>, selectedTags: List<String>,
     }
     val palette = MaterialTheme.colorScheme
 
-    Box(
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-        //.padding(32.dp)
+            .fillMaxSize()
+            .padding(start = 0.dp, end = 0.dp),
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
         ExposedDropdownMenuBox(
             expanded = isExpanded,
