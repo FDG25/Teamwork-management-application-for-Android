@@ -2634,7 +2634,7 @@ fun DescriptionStep(
     Text("Description", style = typography.titleMedium)
 
     Description(
-        taskDescriptionValue, setTaskDescription, "", true
+        taskDescriptionValue, setTaskDescription
     )
 
     /*LazyColumn(

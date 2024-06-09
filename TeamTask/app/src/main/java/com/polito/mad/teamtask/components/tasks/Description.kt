@@ -341,50 +341,7 @@ fun DescriptionVariant(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Normal,
                         lineHeight = 23.sp
-                    ),
-                    cursorBrush = SolidColor(palette.onSurface),
-                    modifier = Modifier
-                        .focusRequester(focusRequester)
-                        .onFocusChanged { focusState ->
-                            if (!focusState.isFocused) {
-                                keyboardController?.show()
-                            }
-                        },
-                    decorationBox = { innerTextField ->
-                        LazyColumn(
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .fillMaxSize()
-                                .border(1.dp, palette.secondary)
-                                .shadow(elevation = 10.dp, shape = RoundedCornerShape(10.dp))
-                                .background(palette.surfaceVariant)
-                        ) {
-                            item {
-                                if (descriptionValue.isNotEmpty()) {
-                                    Text(
-                                        "Description (${200 - descriptionValue.length} characters left)",
-                                        style = typography.bodySmall,
-                                        color = palette.onSurfaceVariant,
-                                        modifier = Modifier.padding(start = 16.dp, top = 10.dp)
-                                    )
-                                    Box(modifier = Modifier.padding(16.dp)) {
-                                        innerTextField()
-                                    }
-                                } else {
-                                    Box(modifier = Modifier.padding(start = 16.dp, top = 10.dp)) {
-                                        Text(
-                                            "Insert at most ${200 - descriptionValue.length} characters",
-                                            style = typography.headlineSmall,
-                                            color = palette.onSurfaceVariant
-                                        )
-                                    }
-                                    Box(modifier = Modifier.padding(16.dp)) {
-                                        innerTextField()
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    )
                 )
             }
 
@@ -392,30 +349,21 @@ fun DescriptionVariant(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.BottomEnd
             ) {
-                FloatingActionButton(
-                    onClick = {
-                        vm.setIsDescriptionEditing(true)
-                    },
-                    containerColor = palette.secondary,
-                    modifier = Modifier.padding(25.dp)
-                ) {
                     FloatingActionButton(
                         onClick = {
-                            setDescription(descriptionValue)
-                            vm.setIsDescriptionEditing(false)
+                            vm.setIsDescriptionEditing(true)
+                            //Actions.getInstance().goToEditTeamDescription(teamId)
                         },
                         containerColor = palette.secondary,
                         modifier = Modifier.padding(25.dp)
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable.outline_done_24),
+                            painter = painterResource(id = R.drawable.outline_edit_24),
                             contentDescription = "Add",
                             modifier = Modifier.size(30.dp),
                             colorFilter = ColorFilter.tint(palette.background)
                         )
                     }
-                }
-                //}
             }
         } else {
             BasicTextField(
