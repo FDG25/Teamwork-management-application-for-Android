@@ -46,12 +46,14 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.polito.mad.teamtask.R
 import com.polito.mad.teamtask.chat.visualization.UriCouple
+import com.polito.mad.teamtask.chat.visualization.isMessageDateDifferentFromToday
 import com.polito.mad.teamtask.components.FileElement
 import com.polito.mad.teamtask.components.FileToDownload
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 import com.polito.mad.teamtask.utils.isFileAlreadyDownloaded
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 
@@ -63,7 +65,8 @@ data class ReplyObject(
     val role: String,
     val text: String,
     val date: LocalDateTime,
-    val attachments: Set<UriCouple>?
+    val attachments: Set<UriCouple>?,
+    val clientReply: Boolean = false
 ) : TaskInteraction
 
 
@@ -81,7 +84,7 @@ fun Reply(
             LocalDateTime.now(),
             attachments = emptySet()
         ),
-    onDelete: (String, String) -> Unit = { _: String, _: String  -> },
+    onDelete: (String) -> Unit = {},
     recomposeParent: () -> Unit = {},
     writeCommentVM: WTViewModel = viewModel()
 ) {
@@ -114,9 +117,10 @@ fun Reply(
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(reply.profilePic)
+                            .error(R.drawable.avatar)
                             .crossfade(true)
                             .build(),
-                        placeholder = painterResource(R.drawable.outline_camera_alt_24),
+                        placeholder = painterResource(R.drawable.avatar),
                         contentDescription = "Team Image",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
@@ -143,26 +147,31 @@ fun Reply(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            
+
                             Spacer(modifier = Modifier.width(5.dp))
-                            
+
                             // Role
-                            Text(
-                                text = "(${reply.role})",
-                                style = typography.labelSmall.copy(
-                                    color = palette.onSurfaceVariant,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Light
-                                ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+//                            Text(
+//                                text = "(${reply.role})",
+//                                style = typography.labelSmall.copy(
+//                                    color = palette.onSurfaceVariant,
+//                                    fontSize = 12.sp,
+//                                    fontWeight = FontWeight.Light
+//                                ),
+//                                maxLines = 1,
+//                                overflow = TextOverflow.Ellipsis
+//                            )
                         }
 
                         // Date
                         Text(
-                            text = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(
-                                reply.date
+                            text = reply.date.format(
+                                DateTimeFormatter.ofPattern(
+                                    if (isMessageDateDifferentFromToday(
+                                            reply.date
+                                        )
+                                    ) "dd/MM/yyyy HH:mm" else "HH:mm"
+                                )
                             ),
                             style = typography.labelSmall.copy(
                                 color = palette.onSurfaceVariant,
@@ -173,7 +182,7 @@ fun Reply(
                     }
 
                     Spacer(modifier = Modifier.weight(1f))
-                    
+
                     // Forward button
                     IconButton(modifier = Modifier.size(30.dp),
                         onClick = { /* TODO */ }) {
@@ -188,85 +197,88 @@ fun Reply(
                     Spacer(modifier = Modifier.width(5.dp))
 
                     // Options button
-                    IconButton(modifier = Modifier.size(30.dp),
-                        onClick = { expanded = true }) {
-                        Icon(
-                            tint = palette.onSurface,
-                            painter = painterResource(id = R.drawable.outline_more_vert_24),
-                            contentDescription = "options",
-                            modifier = Modifier.size(24.dp)
-                        )
-                        
-                        // Dropdown menu
-                        DropdownMenu(
-                            modifier = Modifier.background(palette.background),
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false },
-                        ) {
-                            // Edit
-                            DropdownMenuItem(onClick = {
-                                expanded = false
-                                writeCommentVM.goEditing(EditableObject(
-                                    reply.id,
-                                    reply.commentId,
-                                    reply.profilePic,
-                                    reply.username,
-                                    reply.role,
-                                    reply.text,
-                                    reply.date,
-                                    reply.attachments ?: emptySet(),
-                                    0
-                                ))
-                            },
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            tint = palette.onSurface,
-                                            painter = painterResource(id = R.drawable.outline_edit_24),
-                                            contentDescription = "edit",
-                                            modifier = Modifier.size(25.dp)
-                                        )
-                                        
-                                        Spacer(modifier = Modifier.size(5.dp))
-                                        
-                                        Text(
-                                            "Edit",
-                                            style = typography.labelSmall.copy(
-                                                fontSize = 15.sp
-                                            )
-                                        )
-                                    }
-                                }
+                    if (reply.clientReply)
+                        IconButton(modifier = Modifier.size(30.dp),
+                            onClick = { expanded = true }) {
+                            Icon(
+                                tint = palette.onSurface,
+                                painter = painterResource(id = R.drawable.outline_more_vert_24),
+                                contentDescription = "options",
+                                modifier = Modifier.size(24.dp)
                             )
 
-                            // Delete
-                            DropdownMenuItem(onClick = {
-                                onDelete(reply.commentId, reply.id)
-                                expanded = false
-                            },
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            tint = palette.error,
-                                            painter = painterResource(id = R.drawable.outline_delete_outline_24),
-                                            contentDescription = "delete",
-                                            modifier = Modifier.size(25.dp)
+                            // Dropdown menu
+                            DropdownMenu(
+                                modifier = Modifier.background(palette.background),
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false },
+                            ) {
+                                // Edit
+                                DropdownMenuItem(onClick = {
+                                    expanded = false
+                                    writeCommentVM.goEditing(
+                                        EditableObject(
+                                            reply.id,
+                                            reply.commentId,
+                                            reply.profilePic,
+                                            reply.username,
+                                            reply.role,
+                                            reply.text,
+                                            reply.date,
+                                            reply.attachments ?: emptySet(),
+                                            0
                                         )
-                                        
-                                        Spacer(modifier = Modifier.size(5.dp))
-                                        
-                                        Text(
-                                            "Delete",
-                                            style = typography.labelSmall.copy(
-                                                fontSize = 15.sp
-                                            ),
-                                            color = palette.error
-                                        )
+                                    )
+                                },
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                tint = palette.onSurface,
+                                                painter = painterResource(id = R.drawable.outline_edit_24),
+                                                contentDescription = "edit",
+                                                modifier = Modifier.size(25.dp)
+                                            )
+
+                                            Spacer(modifier = Modifier.size(5.dp))
+
+                                            Text(
+                                                "Edit",
+                                                style = typography.labelSmall.copy(
+                                                    fontSize = 15.sp
+                                                )
+                                            )
+                                        }
                                     }
-                                }
-                            )
+                                )
+
+                                // Delete
+                                DropdownMenuItem(onClick = {
+                                    onDelete(reply.id)
+                                    expanded = false
+                                },
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                tint = palette.error,
+                                                painter = painterResource(id = R.drawable.outline_delete_outline_24),
+                                                contentDescription = "delete",
+                                                modifier = Modifier.size(25.dp)
+                                            )
+
+                                            Spacer(modifier = Modifier.size(5.dp))
+
+                                            Text(
+                                                "Delete",
+                                                style = typography.labelSmall.copy(
+                                                    fontSize = 15.sp
+                                                ),
+                                                color = palette.error
+                                            )
+                                        }
+                                    }
+                                )
+                            }
                         }
-                    }
                 }
             }
 
@@ -278,7 +290,7 @@ fun Reply(
                     .padding(10.dp)
             ) {
                 // Comment body
-                if(reply.text.isNotEmpty()) {
+                if (reply.text.isNotEmpty()) {
                     Text(
                         text = reply.text,
                         style = typography.labelSmall.copy(

@@ -1,12 +1,17 @@
 package com.polito.mad.teamtask.components.tasks
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -27,6 +32,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
 import com.google.gson.Gson
+import com.polito.mad.teamtask.Actions
 import com.polito.mad.teamtask.AppModel
 import com.polito.mad.teamtask.ParametricFactory
 import com.polito.mad.teamtask.chat.visualization.MemberTag
@@ -40,6 +46,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transform
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -49,8 +57,7 @@ class CommentsViewModel(
     model: AppModel,
     teamId: String,
     taskId: String,
-) : ViewModel()
-{
+) : ViewModel() {
     private val myModel = model
     private val myTeamId = teamId
     private val myTaskId = taskId
@@ -68,7 +75,7 @@ class CommentsViewModel(
                 .map {
                     var imageUri: Uri? = null
 
-                    if (it.second.image.isNotEmpty())
+                    if (it.second.image.isNotEmpty() && isNetworkAvailable(myModel.applicationContext))
                         imageUri =
                             FirebaseStorage.getInstance().reference.child("profileImages/${it.second.image}").downloadUrl.await()
 
@@ -109,9 +116,11 @@ class CommentsViewModel(
                             .map { uriString ->
                                 UriCouple(
                                     try {
-                                        FirebaseStorage.getInstance().reference.child(
-                                            uriString
-                                        ).downloadUrl.await()
+                                        if (isNetworkAvailable(myModel.applicationContext)) {
+                                            FirebaseStorage.getInstance().reference.child(
+                                                uriString
+                                            ).downloadUrl.await()
+                                        } else null
                                     } catch (e: Exception) {
                                         null
                                     },
@@ -121,9 +130,15 @@ class CommentsViewModel(
                     } else null,
                     repliesNumber = comment.second.replies.size,
                     areRepliesOn = comment.second.repliesAllowed,
+                    clientComment = comment.second.senderId == (FirebaseAuth.getInstance().currentUser?.uid
+                        ?: "")
                 )
             }
-        }.stateIn(
+        }
+        .transform {
+            emit(it.sortedBy { comment -> comment.date })
+        }
+        .stateIn(
             scope = viewModelScope,
             initialValue = emptyList(),
             started = SharingStarted.WhileSubscribed(5000L)
@@ -137,12 +152,18 @@ class CommentsViewModel(
         myModel.deleteComment(commentId)
     }
 
-    fun changeAreRepliesOn(commentId: String, value: Boolean) {
-        //todo: change the value of areRepliesOn in the database
+    fun changeAreRepliesOn(commentId: String) {
+        myModel.changeRepliesOnComment(commentId)
     }
 
     fun editComment(comment: SendObject) {
-        //todo: edit comment in the database
+        if (comment.id != null) {
+            myModel.editComment(teamId = myTeamId, taskId = myTaskId, comment = comment)
+        }
+    }
+
+    fun goToReplies(commentId: String, areRepliesOn: Boolean) {
+        Actions.getInstance().goToTaskReplies(myTeamId, myTaskId, commentId, areRepliesOn)
     }
 }
 
@@ -156,7 +177,8 @@ fun Comments(
         factory = ParametricFactory(
             LocalContext.current,
             teamId,
-            taskId
+            taskId,
+            ""
         )
     )
 ) {
@@ -166,7 +188,12 @@ fun Comments(
     val comments by vm.commentsStateFlow.collectAsState()
     val recompose = vm.recomposeParent
 
-    LaunchedEffect(recompose) {
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(comments, recompose) {
+        if (comments.isNotEmpty()) {
+            listState.animateScrollToItem(index = comments.size - 1)
+        }
     }
 
     Scaffold(
@@ -183,6 +210,7 @@ fun Comments(
     ) { innerPadding ->
         if (comments.isNotEmpty()) {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .padding(innerPadding)
                     .padding(start = 16.dp, end = 16.dp, top = 16.dp)
@@ -193,7 +221,8 @@ fun Comments(
                             comment,
                             onDelete = vm::deleteComment,
                             editAreRepliesOn = vm::changeAreRepliesOn,
-                            recomposeParent = vm::setRecomposeParent
+                            recomposeParent = vm::setRecomposeParent,
+                            commentsVM = vm
                         )
                         Spacer(modifier = Modifier.size(16.dp))
                     }
@@ -213,4 +242,14 @@ fun Comments(
             }
         }
     }
+}
+
+fun isNetworkAvailable(context: Context): Boolean {
+    val connectivityManager =
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val network = connectivityManager.activeNetwork ?: return false
+    val networkCapabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+    return networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) || networkCapabilities.hasTransport(
+        NetworkCapabilities.TRANSPORT_CELLULAR
+    )
 }

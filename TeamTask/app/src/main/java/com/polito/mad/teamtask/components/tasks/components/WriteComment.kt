@@ -36,6 +36,7 @@ import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.clickable
@@ -78,7 +79,7 @@ data class SendObject(
     val media: Set<UriCouple>?,
     val repliesAllowed: Boolean?,
     val replies: List<String>?,
-    val commentId: String?
+    var commentId: String?
 )
 
 
@@ -133,7 +134,7 @@ class WTViewModel : ViewModel() {
     }
 
     fun goEditing(editingObject: EditableObject) {
-        attachments.value = editingObject.attachments.mapNotNull { it.firebaseUri }.toSet()
+        attachments.value = editingObject.attachments.mapNotNull { Uri.parse(it.firebaseRelativePath) }.toSet()
         text = TextFieldValue(editingObject.text)
         this.editingObject = editingObject
         isEditing = true
@@ -155,7 +156,6 @@ fun WriteComment(
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
 
-    //var textState by remember { mutableStateOf(TextFieldValue(text = vm.text)) }
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -168,13 +168,6 @@ fun WriteComment(
             focusRequester.requestFocus()
             keyboardController?.show()
         }
-    }
-
-    //reset all when the view change from Comments to Replies and vice versa
-    LaunchedEffect(isComment) {
-        vm.setIsEditing(false)
-        vm.setMyText(TextFieldValue(""))
-        vm.removeAllAttachment()
     }
 
     //get multiple files
@@ -237,87 +230,96 @@ fun WriteComment(
                 "You can upload a maximum of 5 files per message (5MB max for each file)",
                 Toast.LENGTH_SHORT
             ).show()
-        }
+        } else {
 
-        if ((vm.isEditing && isComment && vm.editingObject.id.isBlank()) ||
-            (vm.isEditing && !isComment && vm.editingObject.id.isBlank())
-        ) {
-            throw RuntimeException("Comment/Reply ID cannot be null or empty during editing")
-        }
+            if ((vm.isEditing && isComment && vm.editingObject.id.isBlank()) ||
+                (vm.isEditing && !isComment && vm.editingObject.id.isBlank())
+            ) {
+                throw RuntimeException("Comment/Reply ID cannot be null or empty during editing")
+            }
 
-        if (vm.isEditing) {
-            onEdit(
-                if (isComment) {
-                    SendObject(
-                        id = vm.editingObject.id,
-                        taskId = taskId,
-                        senderId = senderId,
-                        timestamp = vm.editingObject.date,
-                        body = vm.text.text,
-                        media = if (files.isNotEmpty()) files.map { UriCouple(
-                            firebaseUri = it,
-                            firebaseRelativePath = ""
-                        ) }.toSet() else null,
-                        repliesAllowed = true,
-                        replies = emptyList(),
-                        null
-                    )
-                } else {
-                    SendObject(
-                        id = vm.editingObject.id,
-                        taskId = taskId,
-                        senderId = senderId,
-                        timestamp = vm.editingObject.date,
-                        body = vm.text.text,
-                        media = if (files.isNotEmpty()) files.map { UriCouple(
-                            firebaseUri = it,
-                            firebaseRelativePath = ""
-                        ) }.toSet() else null,
-                        repliesAllowed = null,
-                        replies = null,
-                        commentId
-                    )
-                }
-            )
-            //reset editing state
-            vm.setIsEditing(false)
-        } else if(vm.text.text.isNotBlank() || files.isNotEmpty()) {
-            onSend(
-                if (isComment) {
-                    SendObject(
-                        id = null,
-                        taskId = taskId,
-                        senderId = senderId,
-                        timestamp = LocalDateTime.now(),
-                        body = vm.text.text,
-                        media = if (files.isNotEmpty()) files.map { UriCouple(
-                            firebaseUri = it,
-                            firebaseRelativePath = ""
-                        ) }.toSet() else null,
-                        repliesAllowed = true,
-                        replies = emptyList(),
-                        null
-                    )
-                } else {
-                    SendObject(
-                        id = null,
-                        taskId = taskId,
-                        senderId = senderId,
-                        timestamp = LocalDateTime.now(),
-                        body = vm.text.text,
-                        media = if (files.isNotEmpty()) files.map { UriCouple(
-                            firebaseUri = it,
-                            firebaseRelativePath = ""
-                        ) }.toSet() else null,
-                        repliesAllowed = null,
-                        replies = null,
-                        commentId
-                    )
-                }
-            )
+            if (vm.isEditing) {
+                onEdit(
+                    if (isComment) {
+                        SendObject(
+                            id = vm.editingObject.id,
+                            taskId = taskId,
+                            senderId = senderId,
+                            timestamp = vm.editingObject.date,
+                            body = vm.text.text,
+                            media = if (files.isNotEmpty()) files.map {
+                                UriCouple(
+                                    firebaseUri = it,
+                                    firebaseRelativePath = ""
+                                )
+                            }.toSet() else null,
+                            repliesAllowed = true,
+                            replies = emptyList(),
+                            null
+                        )
+                    } else {
+                        SendObject(
+                            id = vm.editingObject.id,
+                            taskId = taskId,
+                            senderId = senderId,
+                            timestamp = vm.editingObject.date,
+                            body = vm.text.text,
+                            media = if (files.isNotEmpty()) files.map {
+                                UriCouple(
+                                    firebaseUri = it,
+                                    firebaseRelativePath = ""
+                                )
+                            }.toSet() else null,
+                            repliesAllowed = null,
+                            replies = null,
+                            commentId
+                        )
+                    }
+                )
+                //reset editing state
+                vm.setIsEditing(false)
+            } else if (vm.text.text.isNotBlank() || files.isNotEmpty()) {
+                onSend(
+                    if (isComment) {
+                        SendObject(
+                            id = null,
+                            taskId = taskId,
+                            senderId = senderId,
+                            timestamp = LocalDateTime.now(),
+                            body = vm.text.text,
+                            media = if (files.isNotEmpty()) files.map {
+                                UriCouple(
+                                    firebaseUri = it,
+                                    firebaseRelativePath = ""
+                                )
+                            }.toSet() else null,
+                            repliesAllowed = true,
+                            replies = emptyList(),
+                            null
+                        )
+                    } else {
+                        SendObject(
+                            id = null,
+                            taskId = taskId,
+                            senderId = senderId,
+                            timestamp = LocalDateTime.now(),
+                            body = vm.text.text,
+                            media = if (files.isNotEmpty()) files.map {
+                                UriCouple(
+                                    firebaseUri = it,
+                                    firebaseRelativePath = ""
+                                )
+                            }.toSet() else null,
+                            repliesAllowed = null,
+                            replies = null,
+                            commentId
+                        )
+                    }
+                )
+            }
+            vm.setMyText(TextFieldValue(""))
+            vm.removeAllAttachment()
         }
-        vm.setMyText(TextFieldValue(""))
-        vm.removeAllAttachment()
     }
 
 
@@ -459,7 +461,7 @@ fun WriteComment(
     }
 }
 
-
+//get the name of the file + extension
 fun getFileNameWithExtension(
     uri: Uri,
     contentResolver: ContentResolver
