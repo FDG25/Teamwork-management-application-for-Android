@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.polito.mad.teamtask.AppFactory
+import com.polito.mad.teamtask.components.tasks.components.WTViewModel
 import com.polito.mad.teamtask.screens.PeopleSection
 import com.polito.mad.teamtask.screens.SpecificTeamViewModel
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
@@ -44,6 +45,7 @@ fun Tab4Screen (
     val animationScope = rememberCoroutineScope()
 
     val keyboardController = LocalSoftwareKeyboardController.current
+
     LaunchedEffect(pagerState.currentPage) {
         descriptionVm.setIsDescriptionEditing(false)
         keyboardController?.hide()

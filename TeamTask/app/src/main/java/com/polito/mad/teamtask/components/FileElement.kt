@@ -114,7 +114,7 @@ fun FileElement(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        tint = palette.onSurface,
+                        tint = palette.surface,
                         painter = painterResource(id = formatToIcon(fileName)),
                         contentDescription = "file",
                         modifier = Modifier.size(38.dp)
@@ -125,7 +125,7 @@ fun FileElement(
                     Text(
                         text = fileName,
                         style = typography.labelSmall.copy(
-                            color = palette.onSurface,
+                            color = palette.surface,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Normal
                         ),
