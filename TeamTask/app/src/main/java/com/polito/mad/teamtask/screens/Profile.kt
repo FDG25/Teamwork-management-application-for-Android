@@ -538,11 +538,9 @@ fun ProfileScreen (
     val auth = FirebaseAuth.getInstance()
 
 
-    LaunchedEffect(userId) {
-        if(vm.nameValue.isEmpty()) {
+    LaunchedEffect(userId, user) {
             vm.fetchProfileImage(userId)
             vm.initialize(user)
-        }
     }
 
     if (vm.showLogoutModal) {
