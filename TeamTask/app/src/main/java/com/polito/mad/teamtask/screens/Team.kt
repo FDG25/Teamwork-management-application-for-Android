@@ -5241,7 +5241,7 @@ private fun PeopleEntry(
     var showOwnerMenu by remember { mutableStateOf(false) }
 
     val backgroundColor = if (isSelected &&
-        (currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people")
+        (currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status")
     ) palette.primaryContainer else palette.surfaceVariant
     val textColor = palette.onSurface
 
@@ -5252,227 +5252,232 @@ private fun PeopleEntry(
         R.drawable.person_4
     )
 
-    // Modal menu
-    if (showMenu) {
-        AlertDialog(
-            onDismissRequest = { showMenu = false },
-            title = {
-                Text(
-                    "${person.name} ${person.surname}",
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center  // Center the title text
-                )
-            },
-            text = {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,  // Align text and buttons to the center
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
-                    Button(
-                        onClick = {
-                            vm.promoteOrDeclassPersonInTeam(
-                                teamId,
-                                person.personId,
-                                person.permission
-                            )
-                            showMenu = false  // Close the dialog after action
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = palette.primary,
-                            contentColor = palette.secondary
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    ) {
-                        Text(
-                            text = if (person.permission == "Admin") "Declass to Member" else "Set as Admin",
-                            style = typography.bodySmall
-                        )
-                    }
-                    // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
-                    Button(
-                        onClick = {
-                            showMenuAssignRole = true
-                            showMenu = false  // Close the dialog after action
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = palette.primary,
-                            contentColor = palette.secondary
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    ) {
-                        Text(
-                            text = if (person.role == "") "Assign Role" else "Edit Role",
-                            style = typography.bodySmall
-                        )
-                    }
-                    Button(
-                        onClick = {
-                            if (isInTeamPeople) {
-                                vm.removePersonFromTeam(teamId, person.personId)
-                            } else {
-                                removePersonFromTask(teamId, person.personId)
-
-                            }
-                            showMenu = false  // Close the dialog after action
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = palette.primary,
-                            contentColor = palette.secondary
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    ) {
-                        Text(
-                            text = if (isInTeamPeople) "Remove from Team" else "Remove from Task",
-                            style = typography.bodySmall
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showMenu = false }) {
+    if(currentRoute != "teams/{teamId}/newTask/status") {
+        // Modal menu
+        if (showMenu) {
+            AlertDialog(
+                onDismissRequest = { showMenu = false },
+                title = {
                     Text(
-                        "Close",
-                        color = palette.secondary
-                    )
-                }
-            }
-        )
-    }
-
-    if (showMenuAssignRole) {
-        LaunchedEffect(showMenuAssignRole) {
-            if (person.role.isNotEmpty()) {
-                vm.setSelectdRole(person.role)
-            } else {
-                vm.setSelectdRole("")
-            }
-        }
-        AlertDialog(
-            onDismissRequest = {
-                showMenuAssignRole = false
-            },
-            title = { Text(text = if (person.role == "") "Assign Role" else "Edit Role") },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        "Assign a role to " + person.name + " " + person.surname + ":"
-                    )
-                    Spacer(modifier = Modifier.height(15.dp))
-                    TextField(
+                        "${person.name} ${person.surname}",
                         modifier = Modifier.fillMaxWidth(),
-                        value = vm.selectedRole,
-                        onValueChange = { if (it.length <= 30) vm.setSelectdRole(it) },
-                        singleLine = true,
-                        label = {
-                            Row {
-                                Text("Role")
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("(${30 - vm.selectedRole.length} characters left)")
-                            }
-                        },
-                        keyboardOptions = KeyboardOptions.Default.copy(
-                            imeAction = ImeAction.Done
-                        ),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = palette.surfaceVariant,
-                            unfocusedContainerColor = palette.surfaceVariant,
-                            disabledContainerColor = palette.surfaceVariant,
-                            cursorColor = palette.secondary,
-                            focusedIndicatorColor = palette.secondary,
-                            unfocusedIndicatorColor = palette.onSurfaceVariant,
-                            errorIndicatorColor = palette.error,
-                            focusedLabelColor = palette.secondary,
-                            unfocusedLabelColor = palette.onSurfaceVariant,
-                            errorLabelColor = palette.error,
-                            selectionColors = TextSelectionColors(palette.primary, palette.surface)
-                        )
+                        textAlign = TextAlign.Center  // Center the title text
                     )
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    vm.validateRole(teamId, person.personId, vm.selectedRole)
-                    showMenuAssignRole = false
-                }) {
-                    Text(
-                        text = "Assign",
-                        style = typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = CaribbeanCurrent
-                    )
-                }
-            },
-            dismissButton = {
-                Button(onClick = {
-                    vm.selectedRoleError = ""
-                    showMenuAssignRole = false
-                }) {
-                    Text(
-                        text = "Cancel",
-                        style = typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = CaribbeanCurrent
-                    )
-                }
-            }
-        )
-    }
-    if (showOwnerMenu) {
-        AlertDialog(
-            onDismissRequest = { showOwnerMenu = false },
-            title = {
-                Text(
-                    "${person.name} ${person.surname}",
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
-            },
-            text = {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
-                    Button(
-                        onClick = {
-                            showMenuAssignRole = true
-                            showOwnerMenu = false  // Close the dialog after action
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = palette.primary,
-                            contentColor = palette.secondary
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
+                },
+                text = {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,  // Align text and buttons to the center
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
+                        // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
+                        Button(
+                            onClick = {
+                                vm.promoteOrDeclassPersonInTeam(
+                                    teamId,
+                                    person.personId,
+                                    person.permission
+                                )
+                                showMenu = false  // Close the dialog after action
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = palette.primary,
+                                contentColor = palette.secondary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                text = if (person.permission == "Admin") "Declass to Member" else "Set as Admin",
+                                style = typography.bodySmall
+                            )
+                        }
+                        // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
+                        Button(
+                            onClick = {
+                                showMenuAssignRole = true
+                                showMenu = false  // Close the dialog after action
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = palette.primary,
+                                contentColor = palette.secondary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                text = if (person.role == "") "Assign Role" else "Edit Role",
+                                style = typography.bodySmall
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                if (isInTeamPeople) {
+                                    vm.removePersonFromTeam(teamId, person.personId)
+                                } else {
+                                    removePersonFromTask(teamId, person.personId)
+
+                                }
+                                showMenu = false  // Close the dialog after action
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = palette.primary,
+                                contentColor = palette.secondary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                text = if (isInTeamPeople) "Remove from Team" else "Remove from Task",
+                                style = typography.bodySmall
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showMenu = false }) {
                         Text(
-                            text = if (person.role == "") "Assign Role" else "Edit Role",
-                            style = typography.bodySmall
+                            "Close",
+                            color = palette.secondary
                         )
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showOwnerMenu = false }) {
-                    Text(
-                        "Close",
-                        color = palette.secondary
-                    )
+            )
+        }
+
+        if (showMenuAssignRole) {
+            LaunchedEffect(showMenuAssignRole) {
+                if (person.role.isNotEmpty()) {
+                    vm.setSelectdRole(person.role)
+                } else {
+                    vm.setSelectdRole("")
                 }
             }
-        )
+            AlertDialog(
+                onDismissRequest = {
+                    showMenuAssignRole = false
+                },
+                title = { Text(text = if (person.role == "") "Assign Role" else "Edit Role") },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "Assign a role to " + person.name + " " + person.surname + ":"
+                        )
+                        Spacer(modifier = Modifier.height(15.dp))
+                        TextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            value = vm.selectedRole,
+                            onValueChange = { if (it.length <= 30) vm.setSelectdRole(it) },
+                            singleLine = true,
+                            label = {
+                                Row {
+                                    Text("Role")
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("(${30 - vm.selectedRole.length} characters left)")
+                                }
+                            },
+                            keyboardOptions = KeyboardOptions.Default.copy(
+                                imeAction = ImeAction.Done
+                            ),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = palette.surfaceVariant,
+                                unfocusedContainerColor = palette.surfaceVariant,
+                                disabledContainerColor = palette.surfaceVariant,
+                                cursorColor = palette.secondary,
+                                focusedIndicatorColor = palette.secondary,
+                                unfocusedIndicatorColor = palette.onSurfaceVariant,
+                                errorIndicatorColor = palette.error,
+                                focusedLabelColor = palette.secondary,
+                                unfocusedLabelColor = palette.onSurfaceVariant,
+                                errorLabelColor = palette.error,
+                                selectionColors = TextSelectionColors(
+                                    palette.primary,
+                                    palette.surface
+                                )
+                            )
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        vm.validateRole(teamId, person.personId, vm.selectedRole)
+                        showMenuAssignRole = false
+                    }) {
+                        Text(
+                            text = "Assign",
+                            style = typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = CaribbeanCurrent
+                        )
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = {
+                        vm.selectedRoleError = ""
+                        showMenuAssignRole = false
+                    }) {
+                        Text(
+                            text = "Cancel",
+                            style = typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = CaribbeanCurrent
+                        )
+                    }
+                }
+            )
+        }
+        if (showOwnerMenu) {
+            AlertDialog(
+                onDismissRequest = { showOwnerMenu = false },
+                title = {
+                    Text(
+                        "${person.name} ${person.surname}",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                },
+                text = {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
+                        Button(
+                            onClick = {
+                                showMenuAssignRole = true
+                                showOwnerMenu = false  // Close the dialog after action
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = palette.primary,
+                                contentColor = palette.secondary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                text = if (person.role == "") "Assign Role" else "Edit Role",
+                                style = typography.bodySmall
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showOwnerMenu = false }) {
+                        Text(
+                            "Close",
+                            color = palette.secondary
+                        )
+                    }
+                }
+            )
+        }
     }
 
 
@@ -5484,7 +5489,7 @@ private fun PeopleEntry(
             .background(backgroundColor, RoundedCornerShape(5.dp))
             .padding(8.dp)
             .then(
-                if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people")
+                if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status")
                     && !isAlreadyInTask
                 ) Modifier.clickable {
                     isSelected = !isSelected
@@ -5495,7 +5500,7 @@ private fun PeopleEntry(
                     } else {
                         removePerson(person)
                     }
-                } else if ((currentRoute != "teams/{teamId}/edit/people" && currentRoute != "teams/{teamId}/filterTasks" && currentRoute != "teams/{teamId}/newTask/people")) Modifier.combinedClickable(
+                } else if ((currentRoute != "teams/{teamId}/edit/people" && currentRoute != "teams/{teamId}/filterTasks" && currentRoute != "teams/{teamId}/newTask/status")) Modifier.combinedClickable(
                     onLongClick = {
                         if (vm.hasHigherPermission(
                                 teamId,
@@ -5518,7 +5523,7 @@ private fun PeopleEntry(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Selected icon
-        if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people")
+        if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status")
             && isSelected && !isAlreadyInTask
         ) {
             Image(
@@ -5530,7 +5535,7 @@ private fun PeopleEntry(
                 colorFilter = ColorFilter.tint(palette.onSurface)
             )
         }
-        if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people")
+        if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status")
             && isAlreadyInTask
         ) {
             Image(
