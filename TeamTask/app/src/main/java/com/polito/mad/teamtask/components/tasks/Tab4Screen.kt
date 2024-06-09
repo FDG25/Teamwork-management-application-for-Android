@@ -159,7 +159,7 @@ fun Tab4Screen (
             when (page) {
                 0 -> Comments(teamId, taskId)
                 1 -> Info(task, creator)
-                2 -> Description(task.description, vm::setTaskDescription, taskId, false)
+                2 -> DescriptionVariant(task.description, vm::setTaskDescription, taskId, false)
                 3 -> PeopleSection(
                     teamId,
                     vm.taskpeople,  vm.teampeople,  vm.selectedPeople, vm::clearSelectedPeople,
