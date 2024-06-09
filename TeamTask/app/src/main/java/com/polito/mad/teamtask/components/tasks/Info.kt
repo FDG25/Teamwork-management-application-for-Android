@@ -36,12 +36,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -66,7 +68,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-class InfoViewModel: ViewModel() {
+class InfoViewModel : ViewModel() {
     val priorityOptions: List<String> = listOf("Priority", "Non priority")
 
     //---Created By---
@@ -88,8 +90,10 @@ class InfoViewModel: ViewModel() {
     fun setDueDateDateTime(value: String) {
         selectedDueDateTime = value
     }
+
     var selectedDueDateTimeError by mutableStateOf("")
         private set
+
     private fun checkSelectedDueDateTimeError() {
         val iso8601Format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.getDefault())
         selectedDueDateTimeError = if (selectedDueDateTime.isBlank()) {
@@ -110,6 +114,7 @@ class InfoViewModel: ViewModel() {
             }
         }
     }
+
     var showDueDatePicker by mutableStateOf(false)
     fun setShowingDueDatePicker(value: Boolean) {
         showDueDatePicker = value
@@ -121,64 +126,210 @@ class InfoViewModel: ViewModel() {
     }
 
     // Hardcoded list of scheduled tasks
-    private val _toDoTasks = mutableStateOf(listOf(
-        ToDoTask("0", "Task 1", "Completed", 1, "Weekly", "2024-04-30T12:53:00+02:00", "2024-04-01T09:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin", ""),
-                PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
-                PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("1", "Task 2", "Expired", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("2", "Task 2.5", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("3", "Task 2.6", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("4", "Task 2.7", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("5", "Task 2.8", "Completed", 0, "Never", "2024-04-20T16:42:00+02:00", "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("6", "Task 3", "Scheduled", 1, "Never", "2024-05-07T13:36:00+02:00", "2024-04-02T11:00:00+02:00",
-            listOf(
-                PersonData("0", "Name1ejwnewjneees", "Surname1fskfsmkfnsk", "username1", "CTO", "Admin", ""),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test4", "#test5")),
-        ToDoTask("7", "Task 4", "Scheduled", 0, "Monthly", "2024-05-30T12:12:00+02:00", "2024-04-02T12:00:00+02:00",
-            listOf(
-                PersonData("0", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")),
-        ToDoTask("8", "Task 5", "Scheduled", 1, "Yearly", "2024-05-07T22:21:00+02:00", "2024-04-03T08:00:00+02:00",
-            listOf(
-                PersonData("0", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test4", "#test5"))
-    ))
+    private val _toDoTasks = mutableStateOf(
+        listOf(
+            ToDoTask(
+                "0",
+                "Task 1",
+                "Completed",
+                1,
+                "Weekly",
+                "2024-04-30T12:53:00+02:00",
+                "2024-04-01T09:00:00+02:00",
+                listOf(
+                    PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                    PersonData(
+                        "1",
+                        "Name1ejwnewjneees",
+                        "Surname1fskfsmkfnsk",
+                        "username1",
+                        "CTO",
+                        "Admin",
+                        ""
+                    ),
+                    PersonData(
+                        "2",
+                        "Sofia",
+                        "Esposito",
+                        "sofia_esposito",
+                        "Marketing Director",
+                        "",
+                        ""
+                    ),
+                    PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
+                ).sortedBy { it.name },
+                listOf("#test1", "#test2")
+            ),
+            ToDoTask(
+                "1",
+                "Task 2",
+                "Expired",
+                0,
+                "Never",
+                "2024-04-20T16:42:00+02:00",
+                "2024-04-01T10:00:00+02:00",
+                listOf(
+                    PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                    PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
+                ).sortedBy { it.name },
+                listOf("#test1", "#test2")
+            ),
+            ToDoTask(
+                "2",
+                "Task 2.5",
+                "Completed",
+                0,
+                "Never",
+                "2024-04-20T16:42:00+02:00",
+                "2024-04-01T10:00:00+02:00",
+                listOf(
+                    PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                    PersonData(
+                        "1",
+                        "Sofia",
+                        "Esposito",
+                        "sofia_esposito",
+                        "Marketing Director",
+                        "",
+                        ""
+                    ),
+                ).sortedBy { it.name },
+                listOf("#test1", "#test2")
+            ),
+            ToDoTask(
+                "3",
+                "Task 2.6",
+                "Completed",
+                0,
+                "Never",
+                "2024-04-20T16:42:00+02:00",
+                "2024-04-01T10:00:00+02:00",
+                listOf(
+                    PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                    PersonData(
+                        "1",
+                        "Sofia",
+                        "Esposito",
+                        "sofia_esposito",
+                        "Marketing Director",
+                        "",
+                        ""
+                    ),
+                ).sortedBy { it.name },
+                listOf("#test1", "#test2")
+            ),
+            ToDoTask(
+                "4",
+                "Task 2.7",
+                "Completed",
+                0,
+                "Never",
+                "2024-04-20T16:42:00+02:00",
+                "2024-04-01T10:00:00+02:00",
+                listOf(
+                    PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                    PersonData(
+                        "1",
+                        "Sofia",
+                        "Esposito",
+                        "sofia_esposito",
+                        "Marketing Director",
+                        "",
+                        ""
+                    ),
+                ).sortedBy { it.name },
+                listOf("#test1", "#test2")
+            ),
+            ToDoTask(
+                "5",
+                "Task 2.8",
+                "Completed",
+                0,
+                "Never",
+                "2024-04-20T16:42:00+02:00",
+                "2024-04-01T10:00:00+02:00",
+                listOf(
+                    PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                    PersonData(
+                        "1",
+                        "Sofia",
+                        "Esposito",
+                        "sofia_esposito",
+                        "Marketing Director",
+                        "",
+                        ""
+                    ),
+                ).sortedBy { it.name },
+                listOf("#test1", "#test2")
+            ),
+            ToDoTask(
+                "6",
+                "Task 3",
+                "Scheduled",
+                1,
+                "Never",
+                "2024-05-07T13:36:00+02:00",
+                "2024-04-02T11:00:00+02:00",
+                listOf(
+                    PersonData(
+                        "0",
+                        "Name1ejwnewjneees",
+                        "Surname1fskfsmkfnsk",
+                        "username1",
+                        "CTO",
+                        "Admin",
+                        ""
+                    ),
+                    PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
+                ).sortedBy { it.name },
+                listOf("#test4", "#test5")
+            ),
+            ToDoTask(
+                "7",
+                "Task 4",
+                "Scheduled",
+                0,
+                "Monthly",
+                "2024-05-30T12:12:00+02:00",
+                "2024-04-02T12:00:00+02:00",
+                listOf(
+                    PersonData(
+                        "0",
+                        "Sofia",
+                        "Esposito",
+                        "sofia_esposito",
+                        "Marketing Director",
+                        "",
+                        ""
+                    ),
+                    PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
+                ).sortedBy { it.name },
+                listOf("#test1", "#test2")
+            ),
+            ToDoTask(
+                "8",
+                "Task 5",
+                "Scheduled",
+                1,
+                "Yearly",
+                "2024-05-07T22:21:00+02:00",
+                "2024-04-03T08:00:00+02:00",
+                listOf(
+                    PersonData(
+                        "0",
+                        "Sofia",
+                        "Esposito",
+                        "sofia_esposito",
+                        "Marketing Director",
+                        "",
+                        ""
+                    ),
+                    PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
+                ).sortedBy { it.name },
+                listOf("#test4", "#test5")
+            )
+        )
+    )
 
     // Provide an immutable view of the messages to the UI
     //val toDoTasks: List<toDoTask> get() = _toDoTasks.value
@@ -189,9 +340,11 @@ class InfoViewModel: ViewModel() {
         private set
     var taskNameError by mutableStateOf("")
         private set
+
     fun setTaskName(n: String) {
         taskNameValue = n
     }
+
     private fun checkTaskName() {
         // Remove leading and trailing spaces
         val trimmedTaskName = taskNameValue.trim()
@@ -200,7 +353,12 @@ class InfoViewModel: ViewModel() {
             "Task name cannot be blank!"
         } else if (!trimmedTaskName.matches(Regex("^(?=.*[a-zA-Z0-9])[a-zA-Z0-9 ]{1,50}\$"))) {
             "Max 50 characters. Only letters, numbers and spaces are allowed!"
-        } else if (_toDoTasks.value.any { it.taskName.equals(trimmedTaskName, ignoreCase = true) }) {
+        } else if (_toDoTasks.value.any {
+                it.taskName.equals(
+                    trimmedTaskName,
+                    ignoreCase = true
+                )
+            }) {
             "A task with this name already exists!"
         } else {
             ""
@@ -213,13 +371,15 @@ class InfoViewModel: ViewModel() {
     }
 
 
-    var taskTagsList by mutableStateOf(listOf(
-        "#test1", "#test2", "#test3", "#test4", "#test5", "#test6",
-        "#test7", "#test8", "#test9"
-    ).sorted())
+    var taskTagsList by mutableStateOf(
+        listOf(
+            "#test1", "#test2", "#test3", "#test4", "#test5", "#test6",
+            "#test7", "#test8", "#test9"
+        ).sorted()
+    )
         private set
 
-    private val _selectedTags = mutableStateListOf<String>()
+    private var _selectedTags = mutableStateListOf<String>()
     val selectedTags: List<String> = _selectedTags
 
     fun addTag(tag: String) {
@@ -227,8 +387,19 @@ class InfoViewModel: ViewModel() {
             _selectedTags.add(tag)
         }
     }
+
     fun removeTag(tag: String) {
         _selectedTags.remove(tag)
+    }
+
+    fun setTagsList(tags: List<String>) {
+        tags.forEach {
+            addTag(it)
+        }
+    }
+
+    fun clearTagsList() {
+        _selectedTags.clear()
     }
 
     //---Priority---
@@ -270,7 +441,7 @@ class InfoViewModel: ViewModel() {
     fun validateCreateTask() {
         checkTaskName()
         checkSelectedDueDateTimeError()
-        if(taskNameError.isBlank() && selectedDueDateTimeError.isBlank()) {
+        if (taskNameError.isBlank() && selectedDueDateTimeError.isBlank()) {
             setIsInfoEditing(false)
         }
     }
@@ -326,7 +497,7 @@ fun ScrollingGrid(
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
 
-    if(tags.isNotEmpty()){
+    if (tags.isNotEmpty()) {
         LazyVerticalGrid(
             columns = GridCells.FixedSize(120.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -413,7 +584,7 @@ fun InfoSection(
     taskRecurrence: String,
     taskStatus: String,
     setIsInfoEditing: (Boolean) -> Unit
-){
+) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
 
@@ -443,7 +614,17 @@ fun InfoSection(
                 }
 
                 item {
-                    InfoRow(labelValue = "Creation Date: ", value =  if (creationDate == "") {""} else {"${creationDate.split('T')[0]}, ${creationDate.split('T')[1].split('+')[0].split(':')[0]}:${creationDate.split('T')[1].split('+')[0].split(':')[1]}"})
+                    InfoRow(
+                        labelValue = "Creation Date: ", value = if (creationDate == "") {
+                            ""
+                        } else {
+                            "${creationDate.split('T')[0]}, ${
+                                creationDate.split('T')[1].split('+')[0].split(
+                                    ':'
+                                )[0]
+                            }:${creationDate.split('T')[1].split('+')[0].split(':')[1]}"
+                        }
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
@@ -453,7 +634,21 @@ fun InfoSection(
                 }
 
                 item {
-                    InfoRow(labelValue = "Due Date: ", value =  if (dueDate == "") {""} else {"${dueDate.split('T')[0]}, ${dueDate.split('T')[1].split('+')[0].split(':')[0]}:${dueDate.split('T')[1].split('+')[0].split(':')[1]}"})
+                    InfoRow(
+                        labelValue = "Due Date: ", value = if (dueDate == "") {
+                            ""
+                        } else {
+                            "${dueDate.split('T')[0]}, ${
+                                dueDate.split('T')[1].split('+')[0].split(
+                                    ':'
+                                )[0]
+                            }:${
+                                dueDate.split(
+                                    'T'
+                                )[1].split('+')[0].split(':')[1]
+                            }"
+                        }
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
@@ -514,9 +709,10 @@ fun InfoSection(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TagsDropdownMenu(tags: List<String>, selectedTags: List<String>,
-                     addTag: (String) -> Unit,
-                     removeTag: (String) -> Unit
+fun TagsDropdownMenu(
+    tags: List<String>, selectedTags: List<String>,
+    addTag: (String) -> Unit,
+    removeTag: (String) -> Unit
 ) {
     var isExpanded by remember {
         mutableStateOf(false)
@@ -536,7 +732,12 @@ fun TagsDropdownMenu(tags: List<String>, selectedTags: List<String>,
             TextField(
                 value = selectedTags.joinToString(", "),
                 onValueChange = {},
-                label = { Text("Tags", color = if(isExpanded) palette.secondary else palette.onSurface) },
+                label = {
+                    Text(
+                        "Tags",
+                        color = if (isExpanded) palette.secondary else palette.onSurface
+                    )
+                },
                 placeholder = {
                     Text(text = "Select some tags")
                 },
@@ -565,7 +766,10 @@ fun TagsDropdownMenu(tags: List<String>, selectedTags: List<String>,
             ExposedDropdownMenu(
                 expanded = isExpanded,
                 onDismissRequest = { isExpanded = false },
-                modifier = Modifier.background(palette.background).heightIn(max = 235.dp).exposedDropdownSize()
+                modifier = Modifier
+                    .background(palette.background)
+                    .heightIn(max = 235.dp)
+                    .exposedDropdownSize()
             ) {
                 tags.forEach { tag ->
                     AnimatedContent(
@@ -603,23 +807,34 @@ fun TagsDropdownMenu(tags: List<String>, selectedTags: List<String>,
         }
     }
 }
+
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun EditInfoSection(
-    taskName: String, setTaskTitle: (String) -> Unit, taskNameError: String,
-    selectedDueDateTime: String, selectedDueDateTimeError: String, setDueDateDateTime: (String) -> Unit,
-    showDueDatePicker: Boolean, setShowingDueDatePicker: (Boolean) -> Unit,
-    showDueTimePicker: Boolean, setShowingDueTimePicker: (Boolean) -> Unit,
+    taskName: String,
+    setTaskTitle: (String) -> Unit,
+    taskNameError: String,
+    selectedDueDateTime: String,
+    selectedDueDateTimeError: String,
+    setDueDateDateTime: (String) -> Unit,
+    showDueDatePicker: Boolean,
+    setShowingDueDatePicker: (Boolean) -> Unit,
+    showDueTimePicker: Boolean,
+    setShowingDueTimePicker: (Boolean) -> Unit,
     taskPriority: Int,
     setPriority: (Int) -> Unit,
-    recurrencyOptions: List<String>, expandedRecurrenceDropdown: Boolean, setExpandedRecurrencDropdown: (Boolean) -> Unit,
-    selectedTextForRecurrence: String, setTaskRecurrency: (String) -> Unit,
+    recurrencyOptions: List<String>,
+    expandedRecurrenceDropdown: Boolean,
+    setExpandedRecurrencDropdown: (Boolean) -> Unit,
+    selectedTextForRecurrence: String,
+    setTaskRecurrency: (String) -> Unit,
     //setIsInfoEditing: (Boolean) -> Unit,
-    taskTagsList: List<String>, selectedTags: List<String>,
+    taskTagsList: List<String>,
+    selectedTags: List<String>,
     addTag: (String) -> Unit,
     removeTag: (String) -> Unit,
     validateCreateTask: () -> Unit
-){
+) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
 
@@ -692,7 +907,8 @@ fun EditInfoSection(
             }
 
             item {
-                TagsDropdownMenu(taskTagsList, selectedTags,
+                TagsDropdownMenu(
+                    taskTagsList, selectedTags,
                     addTag, removeTag
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -741,7 +957,19 @@ fun Info(
     creator: String,
     vm: InfoViewModel = viewModel(),
 ) {
-    if(!vm.isInfoEditing){
+    LaunchedEffect(vm.isInfoEditing) {
+        if (vm.isInfoEditing) {
+            //prepare editing
+            vm.setTaskName(task.title)
+            vm.setPriority(if (task.prioritized) 0 else 1)
+            vm.setDueDateDateTime(task.deadline)
+            vm.setTaskRecurrency(task.recurrence)
+            vm.clearTagsList()
+            vm.setTagsList(task.tags)
+        }
+    }
+
+    if (!vm.isInfoEditing) {
         InfoSection(
             createdBy = creator,
             creationDate = task.creationDate,
@@ -757,20 +985,28 @@ fun Info(
             setIsInfoEditing = vm::setIsInfoEditing
         )
     } else {
+
         EditInfoSection(
             taskName = vm.taskNameValue,
             setTaskTitle = vm::setTaskName,
             taskNameError = vm.taskNameError,
-            vm.selectedDueDateTime, vm.selectedDueDateTimeError, vm::setDueDateDateTime,
-            vm.showDueDatePicker, vm::setShowingDueDatePicker,
-            vm.showDueTimePicker, vm::setShowingDueTimePicker,
+            vm.selectedDueDateTime,
+            vm.selectedDueDateTimeError,
+            vm::setDueDateDateTime,
+            vm.showDueDatePicker,
+            vm::setShowingDueDatePicker,
+            vm.showDueTimePicker,
+            vm::setShowingDueTimePicker,
             taskPriority = vm.taskPriority,
             setPriority = vm::setPriority,
-            recurrencyOptions = vm.recurrencyOptions, expandedRecurrenceDropdown = vm.expandedRecurrenceDropdown,
+            recurrencyOptions = vm.recurrencyOptions,
+            expandedRecurrenceDropdown = vm.expandedRecurrenceDropdown,
             setExpandedRecurrencDropdown = vm::setExpandedRecurrencDropdown,
-            selectedTextForRecurrence = vm.selectedTextForRecurrence, setTaskRecurrency = vm::setTaskRecurrency,
+            selectedTextForRecurrence = vm.selectedTextForRecurrence,
+            setTaskRecurrency = vm::setTaskRecurrency,
             //setIsInfoEditing = vm::setIsInfoEditing,
-            taskTagsList = vm.taskTagsList, selectedTags = vm.selectedTags,
+            taskTagsList = vm.taskTagsList,
+            selectedTags = vm.selectedTags,
             addTag = vm::addTag,
             removeTag = vm::removeTag,
             validateCreateTask = vm::validateCreateTask
