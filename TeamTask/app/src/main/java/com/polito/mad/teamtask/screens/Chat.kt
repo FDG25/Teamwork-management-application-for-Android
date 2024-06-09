@@ -381,13 +381,46 @@ fun ChatScreen(
 
     Column {
         // Search bar
-        CustomSearchBar(
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 10.dp)
-                .fillMaxWidth(),
-            placeholderText = "Search teams or users",
-            vm.searchQuery.value, vm::onSearchQueryChanged
-        )
+        if (chats.isNotEmpty()) {
+            CustomSearchBar(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+                    .fillMaxWidth(),
+                placeholderText = "Search teams or users",
+                vm.searchQuery.value, vm::onSearchQueryChanged
+            )
+        }
+        if(chats.isEmpty()){
+            Spacer(modifier = Modifier.height(26.dp))
+            Column(verticalArrangement = Arrangement.Center) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        "You have no chats right now \uD83D\uDC4B",
+                        style = typography.labelMedium,
+                        color = palette.onSurfaceVariant
+                    )
+                }
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        "Press on the button below to start one!",
+                        style = typography.labelMedium,
+                        color = palette.onSurfaceVariant
+                    )
+                }
+            }
+        }
 
         // List of chats
         LazyColumn {
@@ -403,7 +436,7 @@ fun ChatScreen(
 
             // No messages found
             item {
-                if (vm.filteredMessages.isEmpty()) {
+                if (chats.isNotEmpty() && vm.filteredMessages.isEmpty()) {
                     Row(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,

@@ -360,7 +360,7 @@ fun TeamsScreen(
         if (teams.isEmpty()) {
             // Show this message when there are no teams at all
             item {
-                Spacer(modifier = Modifier.height(230.dp))
+                Spacer(modifier = Modifier.height(20.dp))
             }
             item {
                 Column(verticalArrangement = Arrangement.Center) {
@@ -372,7 +372,7 @@ fun TeamsScreen(
                             .padding(16.dp)
                     ) {
                         Text(
-                            "You have no teams right now",
+                            "You have no teams right now \uD83E\uDE90",
                             style = typography.labelMedium,
                             color = palette.onSurfaceVariant
                         )

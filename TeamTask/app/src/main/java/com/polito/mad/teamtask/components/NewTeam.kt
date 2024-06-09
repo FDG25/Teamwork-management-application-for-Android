@@ -519,7 +519,7 @@ fun NewTeam(
                             horizontalArrangement = Arrangement.Center
                         ) {
                             Text(
-                                text = "collaborate with others.",
+                                text = "collaborate with others. \uD83D\uDCA1",
                                 fontSize = 18.sp,
                                 color = palette.onSurface
                             )
@@ -529,7 +529,7 @@ fun NewTeam(
                             horizontalArrangement = Arrangement.Center
                         ) {
                             Text(
-                                text = "Create one and start!",
+                                text = "Create one and start! \uD83E\uDD16",
                                 fontSize = 18.sp,
                                 color = palette.onSurface
                             )
