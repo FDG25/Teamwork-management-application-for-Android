@@ -809,6 +809,25 @@ fun TopBar(
             }
         }
 
+        "teams/{teamId}/tasks/{taskId}/comments/{commentId}/{areRepliesOn}" -> {
+            CenterAlignedTopAppBar(
+                // Back button
+                navigationIcon = {
+                    BackButton(onClick = { Actions.getInstance().navigateBack() })
+                },
+
+                // Title
+                title = {
+                    Text(
+                        "Replies",
+                        style = typography.titleLarge
+                    )
+                },
+
+                colors = TopAppBarDefaults.topAppBarColors(palette.primary),
+            )
+        }
+
         "teams/{teamId}/edit/status" -> {
             CenterAlignedTopAppBar(
                 // Back button

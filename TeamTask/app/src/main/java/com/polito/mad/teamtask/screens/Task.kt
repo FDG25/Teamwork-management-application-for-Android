@@ -13,36 +13,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.polito.mad.teamtask.components.tasks.Replies
 import com.polito.mad.teamtask.components.tasks.Tab4Screen
 
-
-class TaskViewModel : ViewModel() {
-    var isOverflowExpandedInTask by mutableStateOf(false)
-
-    fun setIsOverflowExpandedInTask(value: Boolean) {
-        isOverflowExpandedInTask = value
-    }
-
-    var isRepliesView by mutableStateOf(false) //Pair<CommentId,isViewingReplies>
-        private set
-
-    fun setIsRepliesView(value: Boolean) {
-        isRepliesView = value
-    }
-
-}
-
-
 @Composable
 fun ShowTaskDetails(
     teamId: String,
-    taskId: String,
-    vm: TaskViewModel = viewModel(),
+    taskId: String
     //task: Task
 ) {
     //val palette = MaterialTheme.colorScheme
     //val typography = TeamTaskTypography
 
     Scaffold {
-        if (!vm.isRepliesView) {
             Box(modifier = Modifier.padding(it)) {
                 Tab4Screen(
                     tabs = listOf("Comments", "Info", "Description", "People"),
@@ -50,13 +30,5 @@ fun ShowTaskDetails(
                     taskId,
                 )
             }
-        } else {
-            Box(
-                modifier = Modifier
-                    .padding(it)
-            ) {
-                //Replies(teamId, taskId)
-            }
-        }
     }
 }

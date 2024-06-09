@@ -4,6 +4,7 @@
 
     <!-- Internet access -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- THE PERMISSIONS SPECIFIED HERE ARE THOSE SHOWED UP WHEN YOU GO IN
     THE SMARTPHONE SETTINGS AND ON THE PERMISSIONS FOR TEAMTASK-->
