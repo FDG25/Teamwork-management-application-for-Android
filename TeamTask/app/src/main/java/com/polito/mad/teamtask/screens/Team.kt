@@ -120,6 +120,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.google.zxing.WriterException
 import com.polito.mad.teamtask.Actions
+import com.polito.mad.teamtask.Comment
 import com.polito.mad.teamtask.Person
 import com.polito.mad.teamtask.R
 import com.polito.mad.teamtask.Task
@@ -1173,6 +1174,8 @@ class SpecificTeamViewModel : ViewModel() {
                 }
             }
 
+            var creationTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+
             // Create a notification (typology 1) for the task
             val notification = mapOf(
                 "body" to "You have a new task",
@@ -1181,7 +1184,7 @@ class SpecificTeamViewModel : ViewModel() {
                 "senderId" to teamId,
                 "taskId" to taskId,
                 "teamId" to "",
-                "timestamp" to ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                "timestamp" to creationTime,
                 "typology" to 1
             )
 
@@ -1203,6 +1206,26 @@ class SpecificTeamViewModel : ViewModel() {
                 }
             }
 
+            val time = LocalDateTime.parse(creationTime, DateTimeFormatter.ISO_DATE_TIME)
+            val formatter = DateTimeFormatter.ofPattern("dd/MM/yy HH:mm")
+
+
+            taskId?.let {
+                Comment(
+                    it,
+                    "",
+                    LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME),
+                    "Task created at ${time.format(formatter)}",
+                    null,
+                    false,
+                    emptyList(),
+                    true
+                )
+            }?.let {
+                db.collection("comments").add(
+                    it
+                )
+            }
 
         } catch (e: Exception) {
             e.printStackTrace()
