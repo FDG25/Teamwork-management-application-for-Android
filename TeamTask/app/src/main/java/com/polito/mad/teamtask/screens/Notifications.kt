@@ -156,7 +156,13 @@ fun NotificationsScreen (
                             notificationsVm.fetchImage(n.senderId, n.fromGroup, n.typology.toInt())
 
                             Button(
-                                onClick = { goToTask(n.senderId, id) },
+                                onClick = {
+                                    if(n.typology.toInt()==2 || n.typology.toInt()==3) {
+                                        goToTask(n.teamId, n.taskId)
+                                    } else {
+                                        goToTask(n.senderId, n.taskId)
+                                    }
+                                },
                                 shape = RoundedCornerShape(5.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     contentColor = Color.Transparent,
