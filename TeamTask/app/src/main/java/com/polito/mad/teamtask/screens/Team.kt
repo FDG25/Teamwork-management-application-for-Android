@@ -1129,7 +1129,6 @@ class SpecificTeamViewModel : ViewModel() {
                     }
                 }
             }
-            Log.e("ciaoarrivo", "ciaoarrivo")
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -4690,18 +4689,10 @@ fun EventList(
 
                             when (Actions.getInstance().getCurrentRoute()) {
                                 "homeCalendar" -> {
-                                    Button(
-                                        onClick = {
-                                            Actions.getInstance()
-                                                .goToTaskComments(pair.second.teamId, pair.first)
-                                        },
-                                        shape = RoundedCornerShape(5.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            contentColor = Color.Transparent,
-                                            containerColor = Color.Transparent
-                                        ),
-                                        contentPadding = PaddingValues(0.dp),
-                                        modifier = Modifier.padding(horizontal = 15.dp)
+                                    Box(
+                                        modifier = Modifier.clickable(
+                                                onClick = { Actions.getInstance().goToTaskComments(pair.second.teamId, pair.first) },
+                                            )
                                     ) {
                                         val imageUri =
                                             homeViewModel.teamImages.collectAsState().value[team?.first]
@@ -4709,10 +4700,7 @@ fun EventList(
                                         //Log.e("imageuriCalendar", imageUri.toString()) --> TODO: IMAGEURI IS EMPTY HERE
                                         homeViewModel.fetchTeamImage(pair.first)
 
-                                        Log.e("mese", chosenDate)
                                         TaskEntry(pair.second, team?.second, imageUri)
-                                        Spacer(Modifier.height(5.dp))
-
                                     }
                                 }
 
