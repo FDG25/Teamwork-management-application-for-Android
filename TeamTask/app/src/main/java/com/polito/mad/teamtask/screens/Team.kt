@@ -1113,12 +1113,17 @@ class SpecificTeamViewModel : ViewModel() {
         val taskRef = db.collection("tasks").document(taskId)
         val taskSnapshot = taskRef.get().await()
 
+        Log.e("testaia", "ciao1")
         if (taskSnapshot.exists()) {
+            Log.e("testaia", "ciao2")
             val task = taskSnapshot.toObject(Task::class.java)
             val currentStatus = task?.status
-
+            Log.e("testaia", currentStatus.toString())
             if (currentStatus == "Scheduled") {
+                Log.e("testaia", "ciao3")
                 taskRef.update("status", "Completed").await()
+
+                val completionTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
                 // Create a notification (typology 1) for the task
                 val notification = mapOf(
@@ -1128,7 +1133,7 @@ class SpecificTeamViewModel : ViewModel() {
                     "senderId" to teamId,
                     "taskId" to taskId,
                     "teamId" to "",
-                    "timestamp" to ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                    "timestamp" to completionTime,
                     "typology" to 4
                 )
 
@@ -1148,6 +1153,27 @@ class SpecificTeamViewModel : ViewModel() {
                             db.collection("user_notifications").add(userNotification).await()
                         //}
                     }
+                }
+
+                val time = LocalDateTime.parse(completionTime, DateTimeFormatter.ISO_DATE_TIME)
+                val formatter = DateTimeFormatter.ofPattern("dd/MM/yy HH:mm")
+
+
+                taskId?.let {
+                    Comment(
+                        it,
+                        "",
+                        LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME),
+                        "Task completed at ${time.format(formatter)}",
+                        null,
+                        false,
+                        emptyList(),
+                        true
+                    )
+                }?.let {
+                    db.collection("comments").add(
+                        it
+                    )
                 }
             } else {
                 taskRef.update("status", "Scheduled").await()
@@ -1174,7 +1200,7 @@ class SpecificTeamViewModel : ViewModel() {
                 }
             }
 
-            var creationTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+            val creationTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
             // Create a notification (typology 1) for the task
             val notification = mapOf(
@@ -2954,6 +2980,7 @@ fun PeopleStep(
 @Composable
 private fun TaskList(
     teamId: String,
+    teamDocument: Team,
     toDoTasks: List<ToDoTask>,
     showingCreateTask: Boolean,
     createTask: () -> Unit,
@@ -3003,6 +3030,7 @@ private fun TaskList(
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
+    val auth = FirebaseAuth.getInstance()
 
     val groupedtoDoTasks = if (sortByCreationDate == 1) {
         filteredTasks.groupBy { it.creationTimestamp.split("T")[0] }
@@ -3239,13 +3267,13 @@ private fun TaskList(
             }
 
 
-
-            CustomFloatingButton(
-                modifier = Modifier.align(Alignment.BottomEnd),
-                "New Task",
-                {}, createTask, {}, clearSelectedPeople, {}, setTaskDescription, teamId
-            )
-
+            if(teamDocument.ownerId == auth.uid || teamDocument.admins.contains(auth.uid)) {
+                CustomFloatingButton(
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                    "New Task",
+                    {}, createTask, {}, clearSelectedPeople, {}, setTaskDescription, teamId
+                )
+            }
         }
     } else {
         /*CalendarWithEvents(
@@ -3997,6 +4025,7 @@ fun InviteConfirmationScreen(
 @Composable
 fun Tab3Screen(
     teamId: String,
+    teamDocument: Team,
     showFilterMemberInFilters: Boolean,
     setShowingFilterMemberInFilters: (Boolean) -> Unit,
     toDoTasks: List<ToDoTask>,
@@ -4140,6 +4169,7 @@ fun Tab3Screen(
         when (page) {
             0 -> TaskList(
                 teamId,
+                teamDocument,
                 toDoTasks,
                 showingCreateTask, createTask,
                 sortByCreationDate, setSortModality,
@@ -5078,6 +5108,7 @@ fun ToDoTaskEntry(
 @Composable
 fun SpecificTeamScreen(
     teamId: String,
+    teamDocument: Team,
     teamDescription: String,
     rawToDoTasks: List<Pair<String, Task>>,
     rawTeamParticipants: List<Pair<String, PersonData>>,
@@ -5271,6 +5302,7 @@ fun SpecificTeamScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         Tab3Screen(
             teamId,
+            teamDocument,
             vm.showFilterMemberInFilters,
             vm::setShowingFilterMemberInFilters,
             vm.toDoTasks,

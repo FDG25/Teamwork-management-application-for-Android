@@ -118,17 +118,17 @@ data class Person(
 }
 
 data class Task(
-    val teamId: String,
-    val title: String,
-    val description: String,
-    val creatorId: String,
-    val creationDate: String,
-    val deadline: String,
-    val prioritized: Boolean,
-    val status: String,
-    val tags: List<String>,
-    val recurrence: String,
-    val people: List<String>
+    val teamId: String = "",
+    val title: String = "",
+    val description: String = "",
+    val creatorId: String = "",
+    val creationDate: String = "",
+    val deadline: String = "",
+    val prioritized: Boolean = false,
+    val status: String = "",
+    val tags: List<String> = emptyList(),
+    val recurrence: String = "",
+    val people: List<String> = emptyList()
 )
 
 data class Comment(
@@ -2649,14 +2649,17 @@ fun AppMainScreen(
                                     }
                             }
                         if (teamId != null) {
-                            SpecificTeamScreen(
-                                teamId = teamId,
-                                teamDescription = teamDocument?.second?.description ?: "",
-                                rawToDoTasks = filteredTasks,
-                                rawTeamParticipants = filteredTeamMembers,
-                                rawPeople = people,
-                                vm = teamVM
-                            )
+                            if (teamDocument != null) {
+                                SpecificTeamScreen(
+                                    teamId = teamId,
+                                    teamDocument = teamDocument.second,
+                                    teamDescription = teamDocument?.second?.description ?: "",
+                                    rawToDoTasks = filteredTasks,
+                                    rawTeamParticipants = filteredTeamMembers,
+                                    rawPeople = people,
+                                    vm = teamVM
+                                )
+                            }
                         }
                     }
 

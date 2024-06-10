@@ -1,6 +1,7 @@
 package com.polito.mad.teamtask.components
 
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -59,7 +60,10 @@ fun NotificationEntry (
     Row (
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .background(if (!read) palette.surfaceVariant else palette.background, RoundedCornerShape(5.dp))
+            .background(
+                if (!read) palette.surfaceVariant else palette.background,
+                RoundedCornerShape(5.dp)
+            )
             .border(1.dp, palette.secondary, RoundedCornerShape(5.dp))
             .padding(8.dp)
     ) {
@@ -152,34 +156,128 @@ fun NotificationEntry (
             Spacer(Modifier.height(5.dp))
 
             // Notification body
+            // Notification body
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row (
-                    modifier = Modifier.padding(end = 10.dp)
-                ) {
-                    val parts = notification.body.split("*")
-                    parts.forEachIndexed { index, part ->
-                        if (index == 1) {
+                if (notification.typology.toInt() == 3) {
+                    Column(
+                        modifier = Modifier.padding(end = 10.dp)
+                    ) {
+                        Row {
+                            val parts = notification.body.split("*")
+                            parts.forEachIndexed { index, part ->
+                                if (index == 1) {
+                                    Text(
+                                        text = part,
+                                        style = typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                if (index == 2) {
+                                    Text(
+                                        text = part,
+                                        style = typography.bodySmall,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                        val parts = notification.body.split("*")
+                        if (parts.size > 3) {
                             Text(
-                                text = part,
+                                text = parts[3],
                                 style = typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        } else {
-                            Text(
-                                text = part,
-                                style = typography.bodySmall,
-                                maxLines = 1,
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
+                }  else if(notification.typology.toInt() == 2) {
+                    Row (
+                        modifier = Modifier.padding(end = 10.dp)
+                    ) {
+                        val parts = notification.body.split("*")
+                        parts.forEachIndexed { index, part ->
+                            if (index == 1) {
+                                Text(
+                                    text = part,
+                                    style = typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            if(index == 2) {
+                                Text(
+                                    text = part,
+                                    style = typography.bodySmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            if(index == 3){
+                                Text(
+                                    text = part,
+                                    style = typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+                else if(notification.typology.toInt() == 4) {
+                    Column(
+                    ) {
+                        val parts = notification.body.split("*")
+                        parts.forEachIndexed { index, part ->
+                            if (index == 1) {
+                                Text(
+                                    text = part,
+                                    style = typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                    maxLines = Int.MAX_VALUE, // Allow wrapping to multiple lines
+                                )
+                            }
+                            if (index == 2){
+                                Text(
+                                    text = part.trim(),
+                                    style = typography.bodySmall,
+                                    maxLines = Int.MAX_VALUE, // Allow wrapping to multiple lines
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.padding(end = 10.dp)
+                    ) {
+                        val parts = notification.body.split("*")
+                        parts.forEachIndexed { index, part ->
+                            if (index == 1) {
+                                Text(
+                                    text = part,
+                                    style = typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            } else {
+                                Text(
+                                    text = part,
+                                    style = typography.bodySmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
                 }
             }
+
+
 
             // Hour
             Row (
