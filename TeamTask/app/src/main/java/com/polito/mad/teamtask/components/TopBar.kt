@@ -985,10 +985,27 @@ fun TopBar(
                                     setShowMen(false)
                                 },
                                 leadingIcon = {
-                                    Image(
-                                        painter = painterResource(id = R.drawable.outline_edit_24),
-                                        contentDescription = "Mark as Completed"
-                                    )
+                                    if (task != null) {
+                                        if(task.status=="Scheduled"){
+                                            Image(
+                                                painter = painterResource(id = R.drawable.outline_done_24),
+                                                contentDescription = "Status",
+                                                modifier = Modifier
+                                                    .background(palette.inversePrimary, shape = CircleShape)
+                                                    .scale(0.8f),
+                                                colorFilter = ColorFilter.tint(palette.background)
+                                            )
+                                        } else {
+                                            Image(
+                                                painter = painterResource(id = R.drawable.outline_access_time_24),
+                                                contentDescription = "Status",
+                                                modifier = Modifier
+                                                    .background(palette.inverseSurface, shape = CircleShape)
+                                                    .scale(0.8f),
+                                                colorFilter = ColorFilter.tint(palette.background)
+                                            )
+                                        }
+                                    }
                                 }
                             )
                             DropdownMenuItem(

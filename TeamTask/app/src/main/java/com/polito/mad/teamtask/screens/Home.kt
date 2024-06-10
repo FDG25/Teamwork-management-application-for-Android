@@ -81,7 +81,7 @@ fun HomeScreen(
             taskDeadline.isAfter(currentDateTime)
         }
         .sortedBy { it.second.deadline }
-        .take(10)
+        //.take(10)
 
     //Log.d("localTasks", localTasks.toString())
 
