@@ -4855,7 +4855,7 @@ fun EventList(
                                             homeViewModel.teamImages.collectAsState().value[team?.first]
 
                                         //Log.e("imageuriCalendar", imageUri.toString()) --> TODO: IMAGEURI IS EMPTY HERE
-                                        homeViewModel.fetchTeamImage(pair.first)
+                                        homeViewModel.fetchTeamImage(team?.second?.image ?: "", pair.first)
 
                                         TaskEntry(pair.second, team?.second, imageUri)
                                     }
