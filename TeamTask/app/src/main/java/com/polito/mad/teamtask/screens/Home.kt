@@ -39,16 +39,14 @@ class HomeViewModel : ViewModel() {
     private val _teamImages = MutableStateFlow<Map<String, Uri?>>(emptyMap())
     val teamImages: StateFlow<Map<String, Uri?>> = _teamImages
 
-    fun fetchTeamImage(teamId: String) {
+    fun fetchTeamImage(imageName: String, teamId: String) {
         viewModelScope.launch {
             try {
-                val imageRef = storage.reference.child("teamImages")
-                val result: ListResult = imageRef.listAll().await()
-                val matchingItem = result.items.firstOrNull { it.name.startsWith(teamId) }
+                val imageRef = storage.reference.child("teamImages/$imageName").downloadUrl.await()
 
-                if (matchingItem != null) {
-                    val uri = matchingItem.downloadUrl.await()
-                    _teamImages.value = _teamImages.value.toMutableMap().apply { put(teamId, uri) }
+                if (imageRef != null) {
+                    _teamImages.value =
+                        _teamImages.value.toMutableMap().apply { put(teamId, imageRef) }
                 } else {
                     _teamImages.value = _teamImages.value.toMutableMap().apply { put(teamId, null) }
                 }
@@ -128,7 +126,7 @@ fun HomeScreen(
                             val team = pair.second
                             val imageUri = homeViewModel.teamImages.collectAsState().value[pair.first]
 
-                            homeViewModel.fetchTeamImage(pair.first)
+                            homeViewModel.fetchTeamImage(pair.second.image, pair.first)
 
                             TeamCard(team, imageUri = imageUri, teamId = pair.first)
 
@@ -213,7 +211,7 @@ fun HomeScreen(
                             ) {
                                 val imageUri = homeViewModel.teamImages.collectAsState().value[team?.first]
 
-                                homeViewModel.fetchTeamImage(pair.first)
+                                homeViewModel.fetchTeamImage(team?.second?.image ?: "" ,pair.second.teamId)
 
                                 TaskEntry(pair.second, team?.second, imageUri )
                             }
