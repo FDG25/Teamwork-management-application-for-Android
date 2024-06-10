@@ -438,7 +438,8 @@ fun Comment(
                         style = typography.labelSmall.copy(
                             color = palette.onSurface,
                             fontSize = 14.sp,
-                            fontWeight = FontWeight.Normal
+                            fontWeight = FontWeight.Normal,
+                            lineHeight = 20.sp
                         )
                     )
                 }

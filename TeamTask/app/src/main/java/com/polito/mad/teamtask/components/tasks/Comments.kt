@@ -101,7 +101,7 @@ class CommentsViewModel(
                 )
 
                 val user: MemberTag? = if (members.isNotEmpty())
-                    members.first { member -> member.memberId == comment.second.senderId }
+                    members.firstOrNull { member -> member.memberId == comment.second.senderId }
                 else null
 
                 CommentObject(
@@ -132,7 +132,7 @@ class CommentsViewModel(
                     areRepliesOn = comment.second.repliesAllowed,
                     clientComment = comment.second.senderId == (FirebaseAuth.getInstance().currentUser?.uid
                         ?: ""),
-                    isInformation = comment.second.isInformation,
+                    isInformation = comment.second.information,
                 )
             }
         }

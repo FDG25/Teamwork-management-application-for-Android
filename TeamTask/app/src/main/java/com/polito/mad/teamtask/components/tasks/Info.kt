@@ -16,9 +16,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.TextSelectionColors
@@ -46,8 +48,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -56,6 +60,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.polito.mad.teamtask.AppFactory
+import com.polito.mad.teamtask.AppModel
 import com.polito.mad.teamtask.R
 import com.polito.mad.teamtask.Task
 import com.polito.mad.teamtask.screens.CustomToggle
@@ -68,7 +74,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-class InfoViewModel : ViewModel() {
+class InfoViewModel(val model: AppModel) : ViewModel() {
     val priorityOptions: List<String> = listOf("Priority", "Non priority")
 
     //---Created By---
@@ -445,6 +451,32 @@ class InfoViewModel : ViewModel() {
             setIsInfoEditing(false)
         }
     }
+
+    fun validateAndPersistTask(taskId: String) {
+        checkTaskName()
+        checkSelectedDueDateTimeError()
+        if (taskNameError.isBlank() && selectedDueDateTimeError.isBlank()) {
+            val task = Task(
+                "",
+                taskNameValue,
+                "",
+                "",
+                "",
+                deadline = selectedDueDateTime,
+                prioritized = taskPriority == 0,
+                status = "",
+                tags = selectedTags,
+                recurrence = selectedTextForRecurrence,
+                emptyList()
+            )
+
+            model.updateTaskStatus(
+                taskId, task
+            )
+
+            setIsInfoEditing(false)
+        }
+    }
 }
 
 /*
@@ -562,7 +594,50 @@ fun InfoRow(
             maxLines = 1
         )
     }
-    Row {
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (labelValue == "Status: ") {
+            when (value) {
+                "Completed" -> {
+                    Image(
+                        painter = painterResource(id = R.drawable.outline_done_24),
+                        contentDescription = "Status",
+                        modifier = Modifier
+                            .size(25.dp)
+                            .background(palette.inversePrimary, shape = CircleShape)
+                            .scale(0.8f),
+                        colorFilter = ColorFilter.tint(palette.background)
+                    )
+                }
+
+                "Expired" -> {
+                    Image(
+                        painter = painterResource(id = R.drawable.outline_calendar_month_24),
+                        contentDescription = "Status",
+                        modifier = Modifier
+                            .size(25.dp)
+                            .background(palette.error, shape = CircleShape)
+                            .scale(0.8f),
+                        colorFilter = ColorFilter.tint(palette.background)
+                    )
+                }
+
+                else -> {
+                    Image(
+                        painter = painterResource(id = R.drawable.outline_access_time_24),
+                        contentDescription = "Status",
+                        modifier = Modifier
+                            .size(25.dp)
+                            .background(palette.inverseSurface, shape = CircleShape)
+                            .scale(0.8f),
+                        colorFilter = ColorFilter.tint(palette.background)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(5.dp))
+        }
+
         Text(
             value,
             style = typography.bodySmall
@@ -833,7 +908,9 @@ fun EditInfoSection(
     selectedTags: List<String>,
     addTag: (String) -> Unit,
     removeTag: (String) -> Unit,
-    validateCreateTask: () -> Unit
+    validateCreateTask: () -> Unit,
+    taskId: String? = null,
+    updateTaskOnDB: (String) -> Unit = {}
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
@@ -935,7 +1012,10 @@ fun EditInfoSection(
             // Floating Action Button at the bottom end
             FloatingActionButton(
                 onClick = {
-                    validateCreateTask()
+                    if (taskId == null)
+                        validateCreateTask()
+                    else
+                        updateTaskOnDB(taskId)
                 },
                 containerColor = palette.secondary,
                 modifier = Modifier.padding(25.dp)
@@ -955,7 +1035,8 @@ fun EditInfoSection(
 fun Info(
     task: Task,
     creator: String,
-    vm: InfoViewModel = viewModel(),
+    taskId: String,
+    vm: InfoViewModel = viewModel(factory = AppFactory(LocalContext.current)),
 ) {
     LaunchedEffect(vm.isInfoEditing) {
         if (vm.isInfoEditing) {
@@ -1009,7 +1090,9 @@ fun Info(
             selectedTags = vm.selectedTags,
             addTag = vm::addTag,
             removeTag = vm::removeTag,
-            validateCreateTask = vm::validateCreateTask
+            validateCreateTask = vm::validateCreateTask,
+            taskId = taskId,
+            updateTaskOnDB = vm::validateAndPersistTask
         )
     }
 }
