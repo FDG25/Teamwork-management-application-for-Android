@@ -120,6 +120,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.google.zxing.WriterException
 import com.polito.mad.teamtask.Actions
+import com.polito.mad.teamtask.Comment
 import com.polito.mad.teamtask.Person
 import com.polito.mad.teamtask.R
 import com.polito.mad.teamtask.Task
@@ -892,12 +893,18 @@ class SpecificTeamViewModel : ViewModel() {
         private set
 
     private fun checkPeople() {
-        peopleError = if (selectedPeople.size == 0) {
-            "Add at least one person!"
+        val hasOwnerOrAdmin = selectedPeople.any { person ->
+            person.permission == "Owner" || person.permission == "Admin"
+        }
+
+        peopleError = if (!hasOwnerOrAdmin) {
+            "Add at least one person who is either the owner or an admin!"
         } else {
             ""
         }
     }
+
+
 
     var selectedDateTime by mutableStateOf("")
     fun setDueDateDateTime(value: String) {
@@ -1167,6 +1174,8 @@ class SpecificTeamViewModel : ViewModel() {
                 }
             }
 
+            var creationTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+
             // Create a notification (typology 1) for the task
             val notification = mapOf(
                 "body" to "You have a new task",
@@ -1175,7 +1184,7 @@ class SpecificTeamViewModel : ViewModel() {
                 "senderId" to teamId,
                 "taskId" to taskId,
                 "teamId" to "",
-                "timestamp" to ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                "timestamp" to creationTime,
                 "typology" to 1
             )
 
@@ -1196,10 +1205,34 @@ class SpecificTeamViewModel : ViewModel() {
                     }
                 }
             }
+
+            val time = LocalDateTime.parse(creationTime, DateTimeFormatter.ISO_DATE_TIME)
+            val formatter = DateTimeFormatter.ofPattern("dd/MM/yy HH:mm")
+
+
+            taskId?.let {
+                Comment(
+                    it,
+                    "",
+                    LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME),
+                    "Task created at ${time.format(formatter)}",
+                    null,
+                    false,
+                    emptyList(),
+                    true
+                )
+            }?.let {
+                db.collection("comments").add(
+                    it
+                )
+            }
+
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
+
+    var isLoadingTaskCreation = mutableStateOf(false)
 
     fun validateCreateTask(teamId: String) {
         when (currentStep) {
@@ -1209,6 +1242,9 @@ class SpecificTeamViewModel : ViewModel() {
                     checkSelectedDateTimeError()
                     if (taskNameError.isBlank() && selectedDateTimeError.isBlank()) {
                         currentStep = TaskCreationStep.Description
+                        if(peopleError == "A task with this name already exists in this team. Go back and insert another name!") {
+                            peopleError = ""
+                        }
                     }
                 }
             }
@@ -1223,37 +1259,44 @@ class SpecificTeamViewModel : ViewModel() {
                 checkPeople()
                 if(peopleError.isBlank()) {
                     viewModelScope.launch {
-                        /*val newTask = ToDoTask(
-                        "hardcoded", //TODO: HARDCODED
-                        taskNameValue, "Scheduled", notPriorityValue,
-                        selectedTextForRecurrence, selectedDateTime,
-                        ZonedDateTime.now().format(
-                            DateTimeFormatter.ISO_OFFSET_DATE_TIME
-                        ), selectedPeople,
-                        selectedTagsForNewTask
-                    )*/
-                        val newTask = auth.uid?.let {
-                            Task(
-                                teamId = teamId,
-                                title = taskNameValue,
-                                description = taskDescriptionValue,
-                                creatorId = it,
-                                creationDate = ZonedDateTime.now()
-                                    .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
-                                deadline = selectedDateTime,
-                                prioritized = notPriorityValue == 0,
-                                status = "Scheduled",
-                                tags = selectedTagsForNewTask,
-                                recurrence = selectedTextForRecurrence,
-                                people = selectedPeople.map { it.personId }
-                            )
-                        }
+                        checkTaskName(teamId)
+                        if (taskNameError.isBlank()) {
+                            isLoadingTaskCreation.value = true
+                            /*val newTask = ToDoTask(
+                               "hardcoded", //TODO: HARDCODED
+                               taskNameValue, "Scheduled", notPriorityValue,
+                               selectedTextForRecurrence, selectedDateTime,
+                               ZonedDateTime.now().format(
+                                   DateTimeFormatter.ISO_OFFSET_DATE_TIME
+                               ), selectedPeople,
+                               selectedTagsForNewTask
+                           )*/
+                            val newTask = auth.uid?.let {
+                                Task(
+                                    teamId = teamId,
+                                    title = taskNameValue,
+                                    description = taskDescriptionValue,
+                                    creatorId = it,
+                                    creationDate = ZonedDateTime.now()
+                                        .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                                    deadline = selectedDateTime,
+                                    prioritized = notPriorityValue == 0,
+                                    status = "Scheduled",
+                                    tags = selectedTagsForNewTask,
+                                    recurrence = selectedTextForRecurrence,
+                                    people = selectedPeople.map { it.personId }
+                                )
+                            }
 
-                        addTaskToFirestore(newTask, teamId)
-                        cancelCreateTask()
-                        Actions.getInstance().goToTeamTasks(teamId)
-                        onSearchQueryChanged("")
-                        currentStep = TaskCreationStep.Status
+                            addTaskToFirestore(newTask, teamId)
+                            cancelCreateTask()
+                            Actions.getInstance().goToTeamTasks(teamId)
+                            onSearchQueryChanged("")
+                            currentStep = TaskCreationStep.Status
+                        } else {
+                            peopleError = "A task with this name already exists in this team. Go back and insert another name!"
+                        }
+                        isLoadingTaskCreation.value = false
                     }
                 }
             }
@@ -2067,6 +2110,9 @@ fun NewTask(
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
 
+    if(vm.isLoadingTaskCreation.value){
+        LoadingScreen()
+    }
     Scaffold(
         bottomBar = {
             BottomAppBar(
@@ -2866,6 +2912,7 @@ fun PeopleStep(
     onSearchQueryChangedForNewTask: (String) -> Unit,
     peopleError: String
 ) {
+    val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
 
     BackHandler {
@@ -2880,6 +2927,17 @@ fun PeopleStep(
     }
 
     Text("People", style = typography.titleMedium)
+
+    Text(
+        text = "If you are interested in monitoring the work, add yourself " +
+                "to the list of people for this task. \uD83D\uDC40\uD83D\uDC40",
+        color = palette.onSurface,
+        style = typography.bodySmall,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        maxLines = 3
+    )
 
     PeopleSection(
         teamId,
@@ -5942,14 +6000,14 @@ fun PeopleSection(
                         onSearchQueryChanged
                     )
                 }
-                if(peopleError.isNotEmpty()){
+                if(currentRoute == "teams/{teamId}/newTask/status" && peopleError.isNotEmpty()){
                     Text(
                         text = peopleError,
                         color = palette.error,
                         style = typography.bodySmall,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = 16.dp, vertical = 5.dp),
                         maxLines = 3
                     )
                 }
