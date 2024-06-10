@@ -1113,19 +1113,15 @@ class SpecificTeamViewModel : ViewModel() {
         val taskRef = db.collection("tasks").document(taskId)
         val taskSnapshot = taskRef.get().await()
 
-        Log.e("testaia", "ciao1")
         if (taskSnapshot.exists()) {
-            Log.e("testaia", "ciao2")
             val task = taskSnapshot.toObject(Task::class.java)
             val currentStatus = task?.status
-            Log.e("testaia", currentStatus.toString())
             if (currentStatus == "Scheduled") {
-                Log.e("testaia", "ciao3")
                 taskRef.update("status", "Completed").await()
 
                 val completionTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
-                // Create a notification (typology 1) for the task
+                // Create a notification (typology 4) for the task
                 val notification = mapOf(
                     "body" to "*${task?.title}* has been completed successfully",
                     "fromGroup" to true,
