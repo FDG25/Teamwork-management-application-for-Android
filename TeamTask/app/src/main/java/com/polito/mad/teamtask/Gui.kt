@@ -1852,6 +1852,38 @@ class AppModel(
                         }
                     }
                 }
+
+                //send notifications to all task members
+                val taskPeople = db.collection("tasks").document(taskId).get().await()
+                    .get("people") as List<String>? ?: emptyList()
+                if (taskPeople.isNotEmpty()) {
+                    val myName = db.collection("people").document(auth.currentUser?.uid ?: "").get()
+                        .await().getString("name") ?: "ErrorName"
+                    val taskName = db.collection("tasks").document(taskId).get().await()
+                        .getString("title") ?: "ErrorTaskName"
+
+                    val notification = Notification(
+                        auth.currentUser?.uid ?: "",
+                        taskId = taskId,
+                        "*$myName* posted in *$taskName*",
+                        LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME),
+                        2L,
+                        teamId = teamId,
+                        false,
+                        taskPeople.filter { p -> p != auth.currentUser?.uid }
+                    )
+                    val newNotification = db.collection("notifications").add(notification).await()
+
+                    taskPeople.filter { p -> p != auth.currentUser?.uid }.forEach {
+                        db.collection("user_notifications").add(
+                            UserNotification(
+                                newNotification.id,
+                                it,
+                                false
+                            )
+                        )
+                    }
+                }
             }
         }
     }
@@ -2019,6 +2051,36 @@ class AppModel(
                             .show()
                     }
                 }
+            }
+
+            //send notifications to comment creator
+            val commentPerson = comment.senderId
+            if (comment.senderId.isNotEmpty()) {
+                val myName = db.collection("people").document(auth.currentUser?.uid ?: "").get()
+                    .await().getString("name") ?: "ErrorName"
+                val taskName = db.collection("tasks").document(taskId).get().await()
+                    .getString("title") ?: "ErrorTaskName"
+
+                val notification = Notification(
+                    auth.currentUser?.uid ?: "",
+                    taskId = taskId,
+                    "*$myName* replies to your comment in *$taskName*",
+                    LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME),
+                    3L,
+                    teamId = teamId,
+                    false,
+                    listOf(commentPerson)
+                )
+                val newNotification = db.collection("notifications").add(notification).await()
+
+                db.collection("user_notifications").add(
+                    UserNotification(
+                        newNotification.id,
+                        commentPerson,
+                        false
+                    )
+                )
+
             }
         }
     }
