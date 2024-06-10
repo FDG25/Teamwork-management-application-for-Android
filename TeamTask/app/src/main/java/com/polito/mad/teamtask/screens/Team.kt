@@ -854,23 +854,31 @@ class SpecificTeamViewModel : ViewModel() {
         taskNameValue = n
     }
 
-    private fun checkTaskName() {
+    private suspend fun checkTaskName(teamId: String) {
         // Remove leading and trailing spaces
         val trimmedTaskName = taskNameValue.trim()
 
-        taskNameError = if (trimmedTaskName.isBlank()) {
-            "Task name cannot be blank!"
-        } else if (!trimmedTaskName.matches(Regex("^(?=.*[a-zA-Z0-9])[a-zA-Z0-9 ]{1,50}\$"))) {
-            "Max 50 characters. Only letters, numbers and spaces are allowed!"
-        } else if (_toDoTasks.value.any {
-                it.taskName.equals(
-                    trimmedTaskName,
-                    ignoreCase = true
-                )
-            }) {
-            "A task with this name already exists!"
-        } else {
-            ""
+        // Check if a task with the same name exists in the specified team
+        val taskExistsInTeam = db.collection("tasks")
+            .whereEqualTo("teamId", teamId)
+            .whereEqualTo("title", trimmedTaskName)
+            .get()
+            .await()
+            .isEmpty
+
+        taskNameError = when {
+            trimmedTaskName.isBlank() -> {
+                "Task name cannot be blank!"
+            }
+            !trimmedTaskName.matches(Regex("^(?=.*[a-zA-Z0-9])[a-zA-Z0-9 ]{1,50}\$")) -> {
+                "Max 50 characters. Only letters, numbers and spaces are allowed!"
+            }
+            !taskExistsInTeam -> {
+                "A task with this name already exists in this team!"
+            }
+            else -> {
+                ""
+            }
         }
 
         // Update the taskNameValue with the trimmed version if there are no errors
@@ -878,6 +886,7 @@ class SpecificTeamViewModel : ViewModel() {
             taskNameValue = trimmedTaskName
         }
     }
+
 
     var peopleError by mutableStateOf("")
         private set
@@ -1082,6 +1091,64 @@ class SpecificTeamViewModel : ViewModel() {
         }
     }
 
+    fun markAsCompletedOrScheduled(teamId: String, taskId: String) {
+        viewModelScope.launch {
+            try {
+                updateTaskStatusToCompletedOrScheduled(teamId, taskId)
+            } catch (e: Exception) {
+                // Handle any exceptions that occur during the Firestore operations
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private suspend fun updateTaskStatusToCompletedOrScheduled(teamId: String, taskId: String) {
+        val taskRef = db.collection("tasks").document(taskId)
+        val taskSnapshot = taskRef.get().await()
+
+        if (taskSnapshot.exists()) {
+            val task = taskSnapshot.toObject(Task::class.java)
+            val currentStatus = task?.status
+
+            if (currentStatus == "Scheduled") {
+                taskRef.update("status", "Completed").await()
+
+                // Create a notification (typology 1) for the task
+                val notification = mapOf(
+                    "body" to "*${task?.title}* has been completed successfully",
+                    "fromGroup" to true,
+                    "receivers" to (task?.people ?: ""),
+                    "senderId" to teamId,
+                    "taskId" to taskId,
+                    "teamId" to "",
+                    "timestamp" to ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                    "typology" to 4
+                )
+
+                // Add the notification to the 'notifications' collection
+                val notificationRef = db.collection("notifications").add(notification).await()
+                val notificationId = notificationRef.id
+
+                // Add a document in the 'user_notifications' collection for each task member
+                if (task != null) {
+                    for (personId in task.people) {
+                        //if (personId != auth.uid) {
+                            val userNotification = mapOf(
+                                "notificationId" to notificationId,
+                                "read" to false,
+                                "userId" to personId
+                            )
+                            db.collection("user_notifications").add(userNotification).await()
+                        //}
+                    }
+                }
+            } else {
+                taskRef.update("status", "Scheduled").await()
+            }
+        } else {
+            // Handle the case where the task does not exist
+        }
+    }
     private suspend fun addTaskToFirestore(task: Task?, teamId: String) {
         try {
             // Add the task to the 'tasks' collection
@@ -1137,10 +1204,12 @@ class SpecificTeamViewModel : ViewModel() {
     fun validateCreateTask(teamId: String) {
         when (currentStep) {
             TaskCreationStep.Status -> {
-                checkTaskName()
-                checkSelectedDateTimeError()
-                if(taskNameError.isBlank() && selectedDateTimeError.isBlank()) {
-                    currentStep = TaskCreationStep.Description
+                viewModelScope.launch {
+                    checkTaskName(teamId)
+                    checkSelectedDateTimeError()
+                    if (taskNameError.isBlank() && selectedDateTimeError.isBlank()) {
+                        currentStep = TaskCreationStep.Description
+                    }
                 }
             }
             TaskCreationStep.Description -> {

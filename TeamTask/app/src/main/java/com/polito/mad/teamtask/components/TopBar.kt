@@ -58,6 +58,7 @@ fun TopBar(
     setShwExitFromTeamModal: (Boolean) -> Unit,
     exitFromTeam: (String) -> Unit,
     addOrRemoveTeamToFavourites: (String, Boolean) -> Unit,
+    markAsCompletedOrScheduled: (String, String) -> Unit,
     showMenu: Boolean,
     setShowMen: (Boolean) -> Unit,
     showBackButtonModal: Boolean,
@@ -922,8 +923,8 @@ fun TopBar(
             val teamId = Actions.getInstance().getStringParameter("teamId")
             val taskId = Actions.getInstance().getStringParameter("taskId")
 
-            val teamName = teams.find { it.first == teamId }?.second?.name
-            val taskName = tasks.find { it.first == taskId }?.second?.title
+            val team = teams.find { it.first == teamId }?.second
+            val task = tasks.find { it.first == taskId }?.second
 
             CenterAlignedTopAppBar(
                 // Back button
@@ -946,9 +947,9 @@ fun TopBar(
 
                         //Spacer(Modifier.width(10.dp))
 
-                        if (taskName != null) {
+                       if (task != null) {
                             Text(
-                                taskName,
+                                task.title,
                                 style = typography.titleLarge
                             )
                         }
@@ -970,10 +971,18 @@ fun TopBar(
                         ) {
                             // Edit profile
                             DropdownMenuItem(
-                                text = { Text("Mark as Completed", style = typography.headlineSmall) },
+                                text = {
+                                    if (task != null) {
+                                        Text(if(task.status=="Scheduled"){"Mark as Completed"}else{"Mark as Scheduled"}, style = typography.headlineSmall)
+                                    }
+                                },
                                 onClick = {
+                                    if (teamId != null) {
+                                        if (taskId != null) {
+                                            markAsCompletedOrScheduled(teamId, taskId)
+                                        }
+                                    }
                                     setShowMen(false)
-
                                 },
                                 leadingIcon = {
                                     Image(

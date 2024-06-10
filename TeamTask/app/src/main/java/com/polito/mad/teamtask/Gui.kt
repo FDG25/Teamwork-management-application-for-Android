@@ -2334,6 +2334,7 @@ fun AppMainScreen(
                         teamVM::setShwExitFromTeamModal,
                         teamVM::exitFromTeam,
                         teamVM::addOrRemoveTeamToFavourites,
+                        teamVM::markAsCompletedOrScheduled,
                         profileVM.showMenu,
                         profileVM::setShowMen,
                         profileVM.showBackButtonModal,
@@ -2424,7 +2425,7 @@ fun AppMainScreen(
 
                         // Tasks
                         val filteredTasks = personal.second.tasks
-                            .flatMap { taskId -> tasks.filter { it.first == taskId } }
+                            .flatMap { taskId -> tasks.filter { it.first == taskId && it.second.status == "Scheduled" } }
 
 
                         //Log.d("FilteredTasks", filteredTasks.toString())
@@ -2438,7 +2439,7 @@ fun AppMainScreen(
                     composable("homeCalendar") {
                         // Tasks
                         val filteredTasks = personal.second.tasks
-                            .flatMap { taskId -> tasks.filter { it.first == taskId } }
+                            .flatMap { taskId -> tasks.filter { it.first == taskId && it.second.status == "Scheduled" } }
 
                         val filteredTeams = teamParticipants
                             .filter { tp -> tp.frequentlyAccessed }
