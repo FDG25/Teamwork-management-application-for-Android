@@ -131,7 +131,8 @@ class CommentsViewModel(
                     repliesNumber = comment.second.replies.size,
                     areRepliesOn = comment.second.repliesAllowed,
                     clientComment = comment.second.senderId == (FirebaseAuth.getInstance().currentUser?.uid
-                        ?: "")
+                        ?: ""),
+                    isInformation = comment.second.isInformation,
                 )
             }
         }

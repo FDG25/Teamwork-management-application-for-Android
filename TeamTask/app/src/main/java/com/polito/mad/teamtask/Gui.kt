@@ -151,7 +151,8 @@ data class Comment(
     val body: String?,
     val media: String?,
     val repliesAllowed: Boolean,
-    val replies: List<String>
+    val replies: List<String>,
+    val isInformation: Boolean = false
 ) {
     constructor() : this(
         "Jolly task 1",
@@ -475,6 +476,7 @@ class AppModel(
                         val media = obj.getString("media") ?: ""
                         val repliesAllowed = obj.getBoolean("repliesAllowed") ?: false
                         val replies = obj.get("replies") as List<String>
+                        val isInformation = obj.getBoolean("isInformation") ?: false
 
                         val comment = Comment(
                             myTaskId, senderId, timestamp, body,
