@@ -6,7 +6,6 @@ import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Bitmap
-import android.net.Uri
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import android.util.Log
@@ -138,7 +137,6 @@ import com.polito.mad.teamtask.ui.theme.CaribbeanCurrent
 import com.polito.mad.teamtask.ui.theme.Jet
 import com.polito.mad.teamtask.ui.theme.Mulish
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -856,28 +854,48 @@ class SpecificTeamViewModel : ViewModel() {
         taskNameValue = n
     }
 
-    private fun checkTaskName() {
+    private suspend fun checkTaskName(teamId: String) {
         // Remove leading and trailing spaces
         val trimmedTaskName = taskNameValue.trim()
 
-        taskNameError = if (trimmedTaskName.isBlank()) {
-            "Task name cannot be blank!"
-        } else if (!trimmedTaskName.matches(Regex("^(?=.*[a-zA-Z0-9])[a-zA-Z0-9 ]{1,50}\$"))) {
-            "Max 50 characters. Only letters, numbers and spaces are allowed!"
-        } else if (_toDoTasks.value.any {
-                it.taskName.equals(
-                    trimmedTaskName,
-                    ignoreCase = true
-                )
-            }) {
-            "A task with this name already exists!"
-        } else {
-            ""
+        // Check if a task with the same name exists in the specified team
+        val taskExistsInTeam = db.collection("tasks")
+            .whereEqualTo("teamId", teamId)
+            .whereEqualTo("title", trimmedTaskName)
+            .get()
+            .await()
+            .isEmpty
+
+        taskNameError = when {
+            trimmedTaskName.isBlank() -> {
+                "Task name cannot be blank!"
+            }
+            !trimmedTaskName.matches(Regex("^(?=.*[a-zA-Z0-9])[a-zA-Z0-9 ]{1,50}\$")) -> {
+                "Max 50 characters. Only letters, numbers and spaces are allowed!"
+            }
+            !taskExistsInTeam -> {
+                "A task with this name already exists in this team!"
+            }
+            else -> {
+                ""
+            }
         }
 
         // Update the taskNameValue with the trimmed version if there are no errors
         if (taskNameError.isBlank()) {
             taskNameValue = trimmedTaskName
+        }
+    }
+
+
+    var peopleError by mutableStateOf("")
+        private set
+
+    private fun checkPeople() {
+        peopleError = if (selectedPeople.size == 0) {
+            "Add at least one person!"
+        } else {
+            ""
         }
     }
 
@@ -1073,13 +1091,125 @@ class SpecificTeamViewModel : ViewModel() {
         }
     }
 
+    fun markAsCompletedOrScheduled(teamId: String, taskId: String) {
+        viewModelScope.launch {
+            try {
+                updateTaskStatusToCompletedOrScheduled(teamId, taskId)
+            } catch (e: Exception) {
+                // Handle any exceptions that occur during the Firestore operations
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private suspend fun updateTaskStatusToCompletedOrScheduled(teamId: String, taskId: String) {
+        val taskRef = db.collection("tasks").document(taskId)
+        val taskSnapshot = taskRef.get().await()
+
+        if (taskSnapshot.exists()) {
+            val task = taskSnapshot.toObject(Task::class.java)
+            val currentStatus = task?.status
+
+            if (currentStatus == "Scheduled") {
+                taskRef.update("status", "Completed").await()
+
+                // Create a notification (typology 1) for the task
+                val notification = mapOf(
+                    "body" to "*${task?.title}* has been completed successfully",
+                    "fromGroup" to true,
+                    "receivers" to (task?.people ?: ""),
+                    "senderId" to teamId,
+                    "taskId" to taskId,
+                    "teamId" to "",
+                    "timestamp" to ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                    "typology" to 4
+                )
+
+                // Add the notification to the 'notifications' collection
+                val notificationRef = db.collection("notifications").add(notification).await()
+                val notificationId = notificationRef.id
+
+                // Add a document in the 'user_notifications' collection for each task member
+                if (task != null) {
+                    for (personId in task.people) {
+                        //if (personId != auth.uid) {
+                            val userNotification = mapOf(
+                                "notificationId" to notificationId,
+                                "read" to false,
+                                "userId" to personId
+                            )
+                            db.collection("user_notifications").add(userNotification).await()
+                        //}
+                    }
+                }
+            } else {
+                taskRef.update("status", "Scheduled").await()
+            }
+        } else {
+            // Handle the case where the task does not exist
+        }
+    }
+    private suspend fun addTaskToFirestore(task: Task?, teamId: String) {
+        try {
+            // Add the task to the 'tasks' collection
+            val taskRef = task?.let { db.collection("tasks").add(it).await() }
+            val taskId = taskRef?.id
+
+            // Add the task ID to the 'tasks' field in the corresponding team document
+            db.collection("teams").document(teamId)
+                .update("tasks", FieldValue.arrayUnion(taskId)).await()
+
+            // Add the task ID to the 'tasks' field in each person document
+            if (task != null) {
+                for (personId in task.people) {
+                    db.collection("people").document(personId)
+                        .update("tasks", FieldValue.arrayUnion(taskId)).await()
+                }
+            }
+
+            // Create a notification (typology 1) for the task
+            val notification = mapOf(
+                "body" to "You have a new task",
+                "fromGroup" to true,
+                "receivers" to (task?.people ?: ""),
+                "senderId" to teamId,
+                "taskId" to taskId,
+                "teamId" to "",
+                "timestamp" to ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                "typology" to 1
+            )
+
+            // Add the notification to the 'notifications' collection
+            val notificationRef = db.collection("notifications").add(notification).await()
+            val notificationId = notificationRef.id
+
+            // Add a document in the 'user_notifications' collection for each task member except the task creator
+            if (task != null) {
+                for (personId in task.people) {
+                    if (personId != auth.uid) {
+                        val userNotification = mapOf(
+                            "notificationId" to notificationId,
+                            "read" to false,
+                            "userId" to personId
+                        )
+                        db.collection("user_notifications").add(userNotification).await()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     fun validateCreateTask(teamId: String) {
         when (currentStep) {
             TaskCreationStep.Status -> {
-                checkTaskName()
-                checkSelectedDateTimeError()
-                if(taskNameError.isBlank() && selectedDateTimeError.isBlank()) {
-                    currentStep = TaskCreationStep.Description
+                viewModelScope.launch {
+                    checkTaskName(teamId)
+                    checkSelectedDateTimeError()
+                    if (taskNameError.isBlank() && selectedDateTimeError.isBlank()) {
+                        currentStep = TaskCreationStep.Description
+                    }
                 }
             }
             TaskCreationStep.Description -> {
@@ -1090,8 +1220,10 @@ class SpecificTeamViewModel : ViewModel() {
             }
 
             TaskCreationStep.People -> {
-                addTask(
-                    ToDoTask(
+                checkPeople()
+                if(peopleError.isBlank()) {
+                    viewModelScope.launch {
+                        /*val newTask = ToDoTask(
                         "hardcoded", //TODO: HARDCODED
                         taskNameValue, "Scheduled", notPriorityValue,
                         selectedTextForRecurrence, selectedDateTime,
@@ -1099,12 +1231,31 @@ class SpecificTeamViewModel : ViewModel() {
                             DateTimeFormatter.ISO_OFFSET_DATE_TIME
                         ), selectedPeople,
                         selectedTagsForNewTask
-                    )
-                )
-                cancelCreateTask()
-                Actions.getInstance().goToTeamTasks(teamId)
-                onSearchQueryChanged("")
-                currentStep = TaskCreationStep.Status
+                    )*/
+                        val newTask = auth.uid?.let {
+                            Task(
+                                teamId = teamId,
+                                title = taskNameValue,
+                                description = taskDescriptionValue,
+                                creatorId = it,
+                                creationDate = ZonedDateTime.now()
+                                    .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                                deadline = selectedDateTime,
+                                prioritized = notPriorityValue == 0,
+                                status = "Scheduled",
+                                tags = selectedTagsForNewTask,
+                                recurrence = selectedTextForRecurrence,
+                                people = selectedPeople.map { it.personId }
+                            )
+                        }
+
+                        addTaskToFirestore(newTask, teamId)
+                        cancelCreateTask()
+                        Actions.getInstance().goToTeamTasks(teamId)
+                        onSearchQueryChanged("")
+                        currentStep = TaskCreationStep.Status
+                    }
+                }
             }
         }
     }
@@ -2002,7 +2153,8 @@ fun NewTask(
                     vm::addSelectedTeamPeopleToTask, vm::removePersonFromTask,
                     vm.filteredPeople,
                     //isInAddMode, setAddMode,
-                    vm.searchQueryForNewTask.value, vm::onSearchQueryForNewTaskChanged
+                    vm.searchQueryForNewTask.value, vm::onSearchQueryForNewTaskChanged,
+                    vm.peopleError
                 )
             }
             Spacer(modifier = Modifier.height(20.dp))
@@ -2711,7 +2863,8 @@ fun PeopleStep(
     filteredPeople: List<PersonData>,
     //isInAddMode: Boolean, setAddMode: (Boolean) -> Unit,
     searchQueryForNewTask: String,
-    onSearchQueryChangedForNewTask: (String) -> Unit
+    onSearchQueryChangedForNewTask: (String) -> Unit,
+    peopleError: String
 ) {
     val typography = TeamTaskTypography
 
@@ -2734,7 +2887,8 @@ fun PeopleStep(
         addPerson, removePerson,
         addSelectedTeamPeopleToTask, removePersonFromTask,
         filteredPeople,
-        searchQueryForNewTask, onSearchQueryChangedForNewTask, {}, isInTeamPeople = false
+        searchQueryForNewTask, onSearchQueryChangedForNewTask, {}, isInTeamPeople = false,
+        peopleError
     )
 }
 
@@ -3962,7 +4116,7 @@ fun Tab3Screen(
                 addPerson, removePerson,
                 addSelectedTeamPeopleToTask, removePersonFromTeam,
                 filteredPeople,
-                searchQuery, onSearchQueryChanged, setShowTeamLinkOrQrCode, isInTeamPeople = true
+                searchQuery, onSearchQueryChanged, setShowTeamLinkOrQrCode, isInTeamPeople = true, peopleError = ""
             )
         }
     }
@@ -4326,23 +4480,41 @@ fun CalendarWithEvents(
         // Display events for selected date at the bottom
         if (selectedDay != null) {
             if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
+                var selectedDateTextual = "${
+                    currentMonth.getDisplayName(
+                        Calendar.MONTH,
+                        Calendar.LONG,
+                        Locale.getDefault()
+                    )
+                } ${selectedDay.toString()}, ${currentMonth.get(Calendar.YEAR)}"
                 Column {
                     Text(
-                        "${
-                            currentMonth.getDisplayName(
-                                Calendar.MONTH,
-                                Calendar.LONG,
-                                Locale.getDefault()
-                            )
-                        } ${selectedDay.toString()}, ${currentMonth.get(Calendar.YEAR)}",
+                        selectedDateTextual,
                         modifier = Modifier.padding(top = 10.dp, start = 10.dp)
                     )
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    EventList(selectedDateEvents.value, groupedTasks, teams)
+                    // Define the input format
+                    val inputFormat = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault())
+                    // Define the output format
+                    val outputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+                    val date = inputFormat.parse(selectedDateTextual)
+                    val finalDate = date?.let { outputFormat.format(it) }
+
+                    if (finalDate != null) {
+                        EventList(selectedDateEvents.value, groupedTasks, teams, finalDate)
+                    }
                 }
             } else {
                 if (showCalendarEventsDialog) {
+                    var selectedDateTextual = "${
+                        currentMonth.getDisplayName(
+                            Calendar.MONTH,
+                            Calendar.LONG,
+                            Locale.getDefault()
+                        )
+                    } ${selectedDay.toString()}, ${currentMonth.get(Calendar.YEAR)}"
                     Dialog(onDismissRequest = { showCalendarEventsDialog = false }) {
                         Column(
                             modifier = Modifier
@@ -4350,19 +4522,23 @@ fun CalendarWithEvents(
                                 .padding(10.dp)
                                 .background(Color.White)
                         ) {
-                            Text(
-                                "${
-                                    currentMonth.getDisplayName(
-                                        Calendar.MONTH,
-                                        Calendar.LONG,
-                                        Locale.getDefault()
-                                    )
-                                } ${selectedDay.toString()}, ${currentMonth.get(Calendar.YEAR)}",
+                            Text(selectedDateTextual,
                                 modifier = Modifier.padding(top = 10.dp, start = 10.dp)
                             )
                             Spacer(modifier = Modifier.height(10.dp))
-                            EventList(selectedDateEvents.value, groupedTasks, teams)
-                            Spacer(modifier = Modifier.height(30.dp))
+
+                            // Define the input format
+                            val inputFormat = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault())
+                            // Define the output format
+                            val outputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+                            val date = inputFormat.parse(selectedDateTextual)
+                            val finalDate = date?.let { outputFormat.format(it) }
+
+                            if (finalDate != null) {
+                                EventList(selectedDateEvents.value, groupedTasks, teams, finalDate)
+                                Spacer(modifier = Modifier.height(30.dp))
+                            }
                         }
                     }
                 }
@@ -4535,6 +4711,7 @@ fun EventList(
     events: List<ToDoTask>,
     groupedTasks: Map<String, List<Pair<String, Task>>>,
     teams: List<Pair<String, Team>>,
+    chosenDate: String,
     homeViewModel: HomeViewModel = viewModel()
 ) {
     val typography = TeamTaskTypography
@@ -4559,26 +4736,32 @@ fun EventList(
             modifier = Modifier
                 .fillMaxWidth(),
         ) {
-            items(events.sortedBy { it.expirationTimestamp }) {
-                when (Actions.getInstance().getCurrentRoute()) {
-                    "homeCalendar" -> {
-                        Column {
-                            groupedTasks.forEach { (date, tasks) ->
-                                tasks.forEach { pair ->
-                                    val team = teams.firstOrNull { it.first == pair.second.teamId }
+            groupedTasks.forEach { (date, tasks) ->
+                item {
+                    Column {
+                        /*
+                        Text(
+                            text = date,
+                            style = typography.bodySmall,
+                            color = palette.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 15.dp, vertical = 5.dp)
+                        )
+                        */
 
-                                    Button(
-                                        onClick = {
-                                            Actions.getInstance()
-                                                .goToTaskComments(pair.second.teamId, pair.first)
-                                        },
-                                        shape = RoundedCornerShape(5.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            contentColor = Color.Transparent,
-                                            containerColor = Color.Transparent
-                                        ),
-                                        contentPadding = PaddingValues(0.dp),
-                                        modifier = Modifier.padding(horizontal = 15.dp)
+                        tasks.filter { taskPair ->
+                            // Filter tasks based on the specific date
+                            val expirationDate = taskPair.second.deadline.split("T").first() // Assuming ISO date format
+                            expirationDate == date
+                            taskPair.second.deadline.split("T")[0] == chosenDate
+                        }.forEach { pair ->
+                            val team = teams.firstOrNull { it.first == pair.second.teamId }
+
+                            when (Actions.getInstance().getCurrentRoute()) {
+                                "homeCalendar" -> {
+                                    Box(
+                                        modifier = Modifier.clickable(
+                                                onClick = { Actions.getInstance().goToTaskComments(pair.second.teamId, pair.first) },
+                                            )
                                     ) {
                                         val imageUri =
                                             homeViewModel.teamImages.collectAsState().value[team?.first]
@@ -4588,39 +4771,48 @@ fun EventList(
 
                                         TaskEntry(pair.second, team?.second, imageUri)
                                     }
+                                }
 
-                                    Spacer(Modifier.height(5.dp))
+                                "teams/{teamId}/tasksCalendar" -> {
+                                    val teamId = Actions.getInstance().getStringParameter("teamId")
+
+                                    if(pair.second.teamId == teamId) {
+                                        val tempToDoTask = ToDoTask(
+                                            taskId = pair.first,
+                                            taskName = pair.second.title,
+                                            status = pair.second.status,
+                                            isNotPriority = if (pair.second.prioritized) 0 else 1,
+                                            recurrence = pair.second.recurrence,
+                                            expirationTimestamp = pair.second.deadline,
+                                            creationTimestamp = pair.second.creationDate,
+                                            taskpeople = emptyList(), // Replace with actual people data if available
+                                            tags = pair.second.tags
+                                        )
+                                        ToDoTaskEntry(
+                                            scheduledtask = tempToDoTask,
+                                            viewOnlyMode = false,
+                                            teamId = pair.second.teamId,
+                                            taskId = pair.first
+                                        )
+
+                                        Spacer(Modifier.height(5.dp))
+                                    }
+                                }
+
+                                else -> {
+                                    // Handle other routes if necessary
                                 }
                             }
                         }
-                        Spacer(modifier = Modifier.height(5.dp))
                     }
-
-                    "teams/{teamId}/tasksCalendar" -> {
-                        groupedTasks.forEach { (date, tasks) ->
-                            tasks.forEach { pair ->
-                                val team = teams.firstOrNull { it.first == pair.second.teamId }
-
-                                ToDoTaskEntry(
-                                    scheduledtask = it,
-                                    viewOnlyMode = false,
-                                    teamId = pair.second.teamId,
-                                    taskId = pair.first
-                                )
-
-                                Spacer(Modifier.height(5.dp))
-                            }
-                        }
-                    }
-
-                    else -> {
-
-                    }
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
             }
         }
     }
 }
+
+
 
 @Composable
 fun ToDoTaskEntry(
@@ -5241,7 +5433,7 @@ private fun PeopleEntry(
     var showOwnerMenu by remember { mutableStateOf(false) }
 
     val backgroundColor = if (isSelected &&
-        (currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people")
+        (currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status")
     ) palette.primaryContainer else palette.surfaceVariant
     val textColor = palette.onSurface
 
@@ -5252,227 +5444,232 @@ private fun PeopleEntry(
         R.drawable.person_4
     )
 
-    // Modal menu
-    if (showMenu) {
-        AlertDialog(
-            onDismissRequest = { showMenu = false },
-            title = {
-                Text(
-                    "${person.name} ${person.surname}",
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center  // Center the title text
-                )
-            },
-            text = {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,  // Align text and buttons to the center
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
-                    Button(
-                        onClick = {
-                            vm.promoteOrDeclassPersonInTeam(
-                                teamId,
-                                person.personId,
-                                person.permission
-                            )
-                            showMenu = false  // Close the dialog after action
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = palette.primary,
-                            contentColor = palette.secondary
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    ) {
-                        Text(
-                            text = if (person.permission == "Admin") "Declass to Member" else "Set as Admin",
-                            style = typography.bodySmall
-                        )
-                    }
-                    // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
-                    Button(
-                        onClick = {
-                            showMenuAssignRole = true
-                            showMenu = false  // Close the dialog after action
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = palette.primary,
-                            contentColor = palette.secondary
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    ) {
-                        Text(
-                            text = if (person.role == "") "Assign Role" else "Edit Role",
-                            style = typography.bodySmall
-                        )
-                    }
-                    Button(
-                        onClick = {
-                            if (isInTeamPeople) {
-                                vm.removePersonFromTeam(teamId, person.personId)
-                            } else {
-                                removePersonFromTask(teamId, person.personId)
-
-                            }
-                            showMenu = false  // Close the dialog after action
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = palette.primary,
-                            contentColor = palette.secondary
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    ) {
-                        Text(
-                            text = if (isInTeamPeople) "Remove from Team" else "Remove from Task",
-                            style = typography.bodySmall
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showMenu = false }) {
+    if(currentRoute != "teams/{teamId}/newTask/status") {
+        // Modal menu
+        if (showMenu) {
+            AlertDialog(
+                onDismissRequest = { showMenu = false },
+                title = {
                     Text(
-                        "Close",
-                        color = palette.secondary
-                    )
-                }
-            }
-        )
-    }
-
-    if (showMenuAssignRole) {
-        LaunchedEffect(showMenuAssignRole) {
-            if (person.role.isNotEmpty()) {
-                vm.setSelectdRole(person.role)
-            } else {
-                vm.setSelectdRole("")
-            }
-        }
-        AlertDialog(
-            onDismissRequest = {
-                showMenuAssignRole = false
-            },
-            title = { Text(text = if (person.role == "") "Assign Role" else "Edit Role") },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        "Assign a role to " + person.name + " " + person.surname + ":"
-                    )
-                    Spacer(modifier = Modifier.height(15.dp))
-                    TextField(
+                        "${person.name} ${person.surname}",
                         modifier = Modifier.fillMaxWidth(),
-                        value = vm.selectedRole,
-                        onValueChange = { if (it.length <= 30) vm.setSelectdRole(it) },
-                        singleLine = true,
-                        label = {
-                            Row {
-                                Text("Role")
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("(${30 - vm.selectedRole.length} characters left)")
-                            }
-                        },
-                        keyboardOptions = KeyboardOptions.Default.copy(
-                            imeAction = ImeAction.Done
-                        ),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = palette.surfaceVariant,
-                            unfocusedContainerColor = palette.surfaceVariant,
-                            disabledContainerColor = palette.surfaceVariant,
-                            cursorColor = palette.secondary,
-                            focusedIndicatorColor = palette.secondary,
-                            unfocusedIndicatorColor = palette.onSurfaceVariant,
-                            errorIndicatorColor = palette.error,
-                            focusedLabelColor = palette.secondary,
-                            unfocusedLabelColor = palette.onSurfaceVariant,
-                            errorLabelColor = palette.error,
-                            selectionColors = TextSelectionColors(palette.primary, palette.surface)
-                        )
+                        textAlign = TextAlign.Center  // Center the title text
                     )
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    vm.validateRole(teamId, person.personId, vm.selectedRole)
-                    showMenuAssignRole = false
-                }) {
-                    Text(
-                        text = "Assign",
-                        style = typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = CaribbeanCurrent
-                    )
-                }
-            },
-            dismissButton = {
-                Button(onClick = {
-                    vm.selectedRoleError = ""
-                    showMenuAssignRole = false
-                }) {
-                    Text(
-                        text = "Cancel",
-                        style = typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = CaribbeanCurrent
-                    )
-                }
-            }
-        )
-    }
-    if (showOwnerMenu) {
-        AlertDialog(
-            onDismissRequest = { showOwnerMenu = false },
-            title = {
-                Text(
-                    "${person.name} ${person.surname}",
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
-            },
-            text = {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
-                    Button(
-                        onClick = {
-                            showMenuAssignRole = true
-                            showOwnerMenu = false  // Close the dialog after action
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = palette.primary,
-                            contentColor = palette.secondary
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
+                },
+                text = {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,  // Align text and buttons to the center
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
+                        // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
+                        Button(
+                            onClick = {
+                                vm.promoteOrDeclassPersonInTeam(
+                                    teamId,
+                                    person.personId,
+                                    person.permission
+                                )
+                                showMenu = false  // Close the dialog after action
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = palette.primary,
+                                contentColor = palette.secondary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                text = if (person.permission == "Admin") "Declass to Member" else "Set as Admin",
+                                style = typography.bodySmall
+                            )
+                        }
+                        // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
+                        Button(
+                            onClick = {
+                                showMenuAssignRole = true
+                                showMenu = false  // Close the dialog after action
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = palette.primary,
+                                contentColor = palette.secondary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                text = if (person.role == "") "Assign Role" else "Edit Role",
+                                style = typography.bodySmall
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                if (isInTeamPeople) {
+                                    vm.removePersonFromTeam(teamId, person.personId)
+                                } else {
+                                    removePersonFromTask(teamId, person.personId)
+
+                                }
+                                showMenu = false  // Close the dialog after action
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = palette.primary,
+                                contentColor = palette.secondary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                text = if (isInTeamPeople) "Remove from Team" else "Remove from Task",
+                                style = typography.bodySmall
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showMenu = false }) {
                         Text(
-                            text = if (person.role == "") "Assign Role" else "Edit Role",
-                            style = typography.bodySmall
+                            "Close",
+                            color = palette.secondary
                         )
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showOwnerMenu = false }) {
-                    Text(
-                        "Close",
-                        color = palette.secondary
-                    )
+            )
+        }
+
+        if (showMenuAssignRole) {
+            LaunchedEffect(showMenuAssignRole) {
+                if (person.role.isNotEmpty()) {
+                    vm.setSelectdRole(person.role)
+                } else {
+                    vm.setSelectdRole("")
                 }
             }
-        )
+            AlertDialog(
+                onDismissRequest = {
+                    showMenuAssignRole = false
+                },
+                title = { Text(text = if (person.role == "") "Assign Role" else "Edit Role") },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "Assign a role to " + person.name + " " + person.surname + ":"
+                        )
+                        Spacer(modifier = Modifier.height(15.dp))
+                        TextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            value = vm.selectedRole,
+                            onValueChange = { if (it.length <= 30) vm.setSelectdRole(it) },
+                            singleLine = true,
+                            label = {
+                                Row {
+                                    Text("Role")
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("(${30 - vm.selectedRole.length} characters left)")
+                                }
+                            },
+                            keyboardOptions = KeyboardOptions.Default.copy(
+                                imeAction = ImeAction.Done
+                            ),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = palette.surfaceVariant,
+                                unfocusedContainerColor = palette.surfaceVariant,
+                                disabledContainerColor = palette.surfaceVariant,
+                                cursorColor = palette.secondary,
+                                focusedIndicatorColor = palette.secondary,
+                                unfocusedIndicatorColor = palette.onSurfaceVariant,
+                                errorIndicatorColor = palette.error,
+                                focusedLabelColor = palette.secondary,
+                                unfocusedLabelColor = palette.onSurfaceVariant,
+                                errorLabelColor = palette.error,
+                                selectionColors = TextSelectionColors(
+                                    palette.primary,
+                                    palette.surface
+                                )
+                            )
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        vm.validateRole(teamId, person.personId, vm.selectedRole)
+                        showMenuAssignRole = false
+                    }) {
+                        Text(
+                            text = "Assign",
+                            style = typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = CaribbeanCurrent
+                        )
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = {
+                        vm.selectedRoleError = ""
+                        showMenuAssignRole = false
+                    }) {
+                        Text(
+                            text = "Cancel",
+                            style = typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = CaribbeanCurrent
+                        )
+                    }
+                }
+            )
+        }
+        if (showOwnerMenu) {
+            AlertDialog(
+                onDismissRequest = { showOwnerMenu = false },
+                title = {
+                    Text(
+                        "${person.name} ${person.surname}",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                },
+                text = {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
+                        Button(
+                            onClick = {
+                                showMenuAssignRole = true
+                                showOwnerMenu = false  // Close the dialog after action
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = palette.primary,
+                                contentColor = palette.secondary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                text = if (person.role == "") "Assign Role" else "Edit Role",
+                                style = typography.bodySmall
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showOwnerMenu = false }) {
+                        Text(
+                            "Close",
+                            color = palette.secondary
+                        )
+                    }
+                }
+            )
+        }
     }
 
 
@@ -5484,7 +5681,7 @@ private fun PeopleEntry(
             .background(backgroundColor, RoundedCornerShape(5.dp))
             .padding(8.dp)
             .then(
-                if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people")
+                if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status")
                     && !isAlreadyInTask
                 ) Modifier.clickable {
                     isSelected = !isSelected
@@ -5495,7 +5692,7 @@ private fun PeopleEntry(
                     } else {
                         removePerson(person)
                     }
-                } else if ((currentRoute != "teams/{teamId}/edit/people" && currentRoute != "teams/{teamId}/filterTasks" && currentRoute != "teams/{teamId}/newTask/people")) Modifier.combinedClickable(
+                } else if ((currentRoute != "teams/{teamId}/edit/people" && currentRoute != "teams/{teamId}/filterTasks" && currentRoute != "teams/{teamId}/newTask/status")) Modifier.combinedClickable(
                     onLongClick = {
                         if (vm.hasHigherPermission(
                                 teamId,
@@ -5518,7 +5715,7 @@ private fun PeopleEntry(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Selected icon
-        if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people")
+        if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status")
             && isSelected && !isAlreadyInTask
         ) {
             Image(
@@ -5530,7 +5727,7 @@ private fun PeopleEntry(
                 colorFilter = ColorFilter.tint(palette.onSurface)
             )
         }
-        if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/people")
+        if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status")
             && isAlreadyInTask
         ) {
             Image(
@@ -5722,7 +5919,8 @@ fun PeopleSection(
     searchQuery: String,
     onSearchQueryChanged: (String) -> Unit,
     setShowTeamLinkOrQrCode: (Boolean) -> Unit,
-    isInTeamPeople: Boolean
+    isInTeamPeople: Boolean,
+    peopleError: String
 ) {
     val typography = TeamTaskTypography
     val palette = MaterialTheme.colorScheme
@@ -5742,6 +5940,17 @@ fun PeopleSection(
                         placeholderText = "Who would you like to add?",
                         searchQuery,
                         onSearchQueryChanged
+                    )
+                }
+                if(peopleError.isNotEmpty()){
+                    Text(
+                        text = peopleError,
+                        color = palette.error,
+                        style = typography.bodySmall,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        maxLines = 3
                     )
                 }
 
