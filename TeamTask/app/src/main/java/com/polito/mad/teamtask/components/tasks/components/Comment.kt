@@ -67,7 +67,8 @@ data class CommentObject(
     val attachments: Set<UriCouple>?,
     val repliesNumber: Int,
     val areRepliesOn: Boolean,
-    val clientComment: Boolean = false
+    val clientComment: Boolean = false,
+    val isInformation: Boolean = false
 ) : TaskInteraction
 
 
@@ -103,59 +104,60 @@ fun Comment(
             .clip(RoundedCornerShape(5.dp))
             .fillMaxWidth()
     ) {
-        Column {
-            // Comment header
-            Box(
-                modifier = Modifier
-                    .height(55.dp)
-                    .fillMaxWidth()
-                    .background(
-                        color = palette.primaryContainer
-                    )
-                    .padding(9.dp),
-                contentAlignment = Alignment.CenterStart
-            )
-            {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(comment.profilePic)
-                            .error(R.drawable.avatar)
-                            .crossfade(true)
-                            .build(),
-                        placeholder = painterResource(R.drawable.avatar),
-                        contentDescription = "Team Image",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .aspectRatio(1f)
-                            .clip(CircleShape)
-                            .fillMaxHeight()
-                    )
+        if (!comment.isInformation) {
+            Column {
+                // Comment header
+                Box(
+                    modifier = Modifier
+                        .height(55.dp)
+                        .fillMaxWidth()
+                        .background(
+                            color = palette.primaryContainer
+                        )
+                        .padding(9.dp),
+                    contentAlignment = Alignment.CenterStart
+                )
+                {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(comment.profilePic)
+                                .error(R.drawable.avatar)
+                                .crossfade(true)
+                                .build(),
+                            placeholder = painterResource(R.drawable.avatar),
+                            contentDescription = "Team Image",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .aspectRatio(1f)
+                                .clip(CircleShape)
+                                .fillMaxHeight()
+                        )
 
-                    Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
 
-                    Column {
-                        // Author
-                        Row {
-                            Text(
-                                modifier = Modifier
-                                    .wrapContentWidth(Alignment.Start, unbounded = false)
-                                    .widthIn(max = 100.dp, min = 0.dp),
-                                text = comment.username,
-                                style = typography.labelSmall.copy(
-                                    color = palette.onSurface,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Normal
-                                ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                        Column {
+                            // Author
+                            Row {
+                                Text(
+                                    modifier = Modifier
+                                        .wrapContentWidth(Alignment.Start, unbounded = false)
+                                        .widthIn(max = 100.dp, min = 0.dp),
+                                    text = comment.username,
+                                    style = typography.labelSmall.copy(
+                                        color = palette.onSurface,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Normal
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
 
-                            Spacer(modifier = Modifier.width(5.dp))
+                                Spacer(modifier = Modifier.width(5.dp))
 
-                            // Role
+                                // Role
 //                            Text(
 //                                text = "(${comment.role})",
 //                                style = typography.labelSmall.copy(
@@ -166,175 +168,268 @@ fun Comment(
 //                                maxLines = 1,
 //                                overflow = TextOverflow.Ellipsis
 //                            )
+                            }
+
+                            //Date
+                            Text(
+                                text = comment.date.format(
+                                    DateTimeFormatter.ofPattern(
+                                        if (isMessageDateDifferentFromToday(
+                                                comment.date
+                                            )
+                                        ) "dd/MM/yyyy HH:mm" else "HH:mm"
+                                    )
+                                ),
+                                style = typography.labelSmall.copy(
+                                    color = palette.onSurfaceVariant,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Light
+                                )
+                            )
                         }
 
-                        //Date
-                        Text(
-                            text = comment.date.format(
-                                DateTimeFormatter.ofPattern(
-                                    if (isMessageDateDifferentFromToday(
-                                            comment.date
-                                        )
-                                    ) "dd/MM/yyyy HH:mm" else "HH:mm"
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        // Forward button
+                        IconButton(modifier = Modifier.size(30.dp),
+                            onClick = { /*TODO*/ }) {
+                            Icon(
+                                tint = palette.onSurface,
+                                painter = painterResource(id = R.drawable.baseline_arrow_forward_24),
+                                contentDescription = "options",
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(5.dp))
+
+                        // Options button
+                        if (comment.clientComment)
+                            IconButton(modifier = Modifier.size(30.dp),
+                                onClick = { expanded = true }) {
+                                Icon(
+                                    tint = palette.onSurface,
+                                    painter = painterResource(id = R.drawable.outline_more_vert_24),
+                                    contentDescription = "options",
+                                    modifier = Modifier.size(24.dp)
                                 )
-                            ),
+
+                                // Dropdown menu
+                                DropdownMenu(
+                                    modifier = Modifier.background(palette.background),
+                                    expanded = expanded,
+                                    onDismissRequest = { expanded = false },
+                                ) {
+                                    // Edit
+                                    DropdownMenuItem(onClick = {
+                                        expanded = false
+                                        writeCommentVM.goEditing(
+                                            EditableObject(
+                                                comment.id,
+                                                null,
+                                                comment.profilePic,
+                                                comment.username,
+                                                comment.role,
+                                                comment.text,
+                                                comment.date,
+                                                comment.attachments ?: emptySet(),
+                                                comment.repliesNumber
+                                            )
+                                        )
+                                    },
+                                        text = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    tint = palette.onSurface,
+                                                    painter = painterResource(id = R.drawable.outline_edit_24),
+                                                    contentDescription = "edit",
+                                                    modifier = Modifier.size(25.dp)
+                                                )
+                                                Spacer(modifier = Modifier.size(5.dp))
+                                                Text(
+                                                    "Edit",
+                                                    style = typography.labelSmall.copy(
+                                                        fontSize = 15.sp
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    )
+
+                                    // Turn Off/On Replies
+                                    DropdownMenuItem(onClick = {
+                                        expanded = false
+                                        editAreRepliesOn(comment.id)
+                                    },
+                                        text = {
+                                            if (comment.areRepliesOn) {
+                                                // Turn off replies
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(
+                                                        tint = palette.onSurface,
+                                                        painter = painterResource(id = R.drawable.baseline_near_me_disabled_24),
+                                                        contentDescription = "Turn off replies",
+                                                        modifier = Modifier.size(25.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.size(5.dp))
+                                                    Text(
+                                                        "Turn Off Replies",
+                                                        style = typography.labelSmall.copy(
+                                                            fontSize = 15.sp
+                                                        )
+                                                    )
+                                                }
+                                            } else {
+                                                // Turn on replies
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(
+                                                        tint = palette.onSurface,
+                                                        painter = painterResource(id = R.drawable.baseline_reply_24),
+                                                        contentDescription = "Turn on replies",
+                                                        modifier = Modifier.size(25.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.size(5.dp))
+                                                    Text(
+                                                        "Turn On Replies",
+                                                        style = typography.labelSmall.copy(
+                                                            fontSize = 15.sp
+                                                        )
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    )
+
+                                    // Delete
+                                    DropdownMenuItem(onClick = {
+                                        onDelete(comment.id)
+                                        expanded = false
+                                    },
+                                        text = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    tint = palette.error,
+                                                    painter = painterResource(id = R.drawable.outline_delete_outline_24),
+                                                    contentDescription = "delete",
+                                                    modifier = Modifier.size(25.dp)
+                                                )
+
+                                                Spacer(modifier = Modifier.size(5.dp))
+
+                                                Text(
+                                                    "Delete",
+                                                    style = typography.labelSmall.copy(
+                                                        fontSize = 15.sp
+                                                    ),
+                                                    color = palette.error
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                    }
+                }
+
+                // Comment body
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(color = palette.surfaceVariant)
+                        .padding(10.dp)
+                ) {
+                    // Comment body
+                    if (comment.text.isNotEmpty()) {
+                        Text(
+                            text = comment.text,
                             style = typography.labelSmall.copy(
-                                color = palette.onSurfaceVariant,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Light
+                                color = palette.onSurface,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Normal
                             )
                         )
                     }
 
-                    Spacer(modifier = Modifier.weight(1f))
+                    if (!comment.attachments.isNullOrEmpty() && comment.text.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(20.dp))
+                    }
 
-                    // Forward button
+                    //Files
+                    if (comment.attachments != null) {
+                        //Spacer
+                        Spacer(modifier = Modifier.height(5.dp))
+                        //File
+                        comment.attachments.forEachIndexed { index, uri ->
+                            val isThereUri =
+                                isFileAlreadyDownloaded(
+                                    uri.firebaseRelativePath,
+                                    LocalContext.current
+                                )
+                            if (isThereUri != null) {
+                                //File is already downloaded
+                                FileElement(isThereUri, recomposeParent)
+                                if (index != (comment.attachments.size - 1)) {
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                }
+                            } else {
+                                //File should be downloaded
+                                FileToDownload(uri.firebaseRelativePath, recomposeParent)
+
+                                if (index != (comment.attachments.size - 1)) {
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Comment footer
+            Box(
+                modifier = Modifier
+                    .height(50.dp)
+                    .fillMaxWidth()
+                    .background(color = palette.primaryContainer)
+                    .padding(9.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "${comment.repliesNumber} Replies",
+                        style = typography.labelSmall.copy(
+                            color = palette.onSurface,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Normal
+                        ),
+                    )
+
+                    //Reply button
                     IconButton(modifier = Modifier.size(30.dp),
-                        onClick = { /*TODO*/ }) {
+                        onClick = {
+                            commentsVM.goToReplies(comment.id, comment.areRepliesOn)
+                        }
+                    ) {
                         Icon(
                             tint = palette.onSurface,
-                            painter = painterResource(id = R.drawable.baseline_arrow_forward_24),
+                            painter = painterResource(id = R.drawable.baseline_reply_24),
                             contentDescription = "options",
                             modifier = Modifier.size(24.dp)
                         )
                     }
-
-                    Spacer(modifier = Modifier.width(5.dp))
-
-                    // Options button
-                    if (comment.clientComment)
-                        IconButton(modifier = Modifier.size(30.dp),
-                            onClick = { expanded = true }) {
-                            Icon(
-                                tint = palette.onSurface,
-                                painter = painterResource(id = R.drawable.outline_more_vert_24),
-                                contentDescription = "options",
-                                modifier = Modifier.size(24.dp)
-                            )
-
-                            // Dropdown menu
-                            DropdownMenu(
-                                modifier = Modifier.background(palette.background),
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false },
-                            ) {
-                                // Edit
-                                DropdownMenuItem(onClick = {
-                                    expanded = false
-                                    writeCommentVM.goEditing(
-                                        EditableObject(
-                                            comment.id,
-                                            null,
-                                            comment.profilePic,
-                                            comment.username,
-                                            comment.role,
-                                            comment.text,
-                                            comment.date,
-                                            comment.attachments ?: emptySet(),
-                                            comment.repliesNumber
-                                        )
-                                    )
-                                },
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                tint = palette.onSurface,
-                                                painter = painterResource(id = R.drawable.outline_edit_24),
-                                                contentDescription = "edit",
-                                                modifier = Modifier.size(25.dp)
-                                            )
-                                            Spacer(modifier = Modifier.size(5.dp))
-                                            Text(
-                                                "Edit",
-                                                style = typography.labelSmall.copy(
-                                                    fontSize = 15.sp
-                                                )
-                                            )
-                                        }
-                                    }
-                                )
-
-                                // Turn Off/On Replies
-                                DropdownMenuItem(onClick = {
-                                    expanded = false
-                                    editAreRepliesOn(comment.id)
-                                },
-                                    text = {
-                                        if (comment.areRepliesOn) {
-                                            // Turn off replies
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(
-                                                    tint = palette.onSurface,
-                                                    painter = painterResource(id = R.drawable.baseline_near_me_disabled_24),
-                                                    contentDescription = "Turn off replies",
-                                                    modifier = Modifier.size(25.dp)
-                                                )
-                                                Spacer(modifier = Modifier.size(5.dp))
-                                                Text(
-                                                    "Turn Off Replies",
-                                                    style = typography.labelSmall.copy(
-                                                        fontSize = 15.sp
-                                                    )
-                                                )
-                                            }
-                                        } else {
-                                            // Turn on replies
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(
-                                                    tint = palette.onSurface,
-                                                    painter = painterResource(id = R.drawable.baseline_reply_24),
-                                                    contentDescription = "Turn on replies",
-                                                    modifier = Modifier.size(25.dp)
-                                                )
-                                                Spacer(modifier = Modifier.size(5.dp))
-                                                Text(
-                                                    "Turn On Replies",
-                                                    style = typography.labelSmall.copy(
-                                                        fontSize = 15.sp
-                                                    )
-                                                )
-                                            }
-                                        }
-                                    }
-                                )
-
-                                // Delete
-                                DropdownMenuItem(onClick = {
-                                    onDelete(comment.id)
-                                    expanded = false
-                                },
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                tint = palette.error,
-                                                painter = painterResource(id = R.drawable.outline_delete_outline_24),
-                                                contentDescription = "delete",
-                                                modifier = Modifier.size(25.dp)
-                                            )
-
-                                            Spacer(modifier = Modifier.size(5.dp))
-
-                                            Text(
-                                                "Delete",
-                                                style = typography.labelSmall.copy(
-                                                    fontSize = 15.sp
-                                                ),
-                                                color = palette.error
-                                            )
-                                        }
-                                    }
-                                )
-                            }
-                        }
                 }
             }
-
-            // Comment body
-            Column(
+        } else {
+            // Comment information body
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(color = palette.surfaceVariant)
-                    .padding(10.dp)
+                    .padding(10.dp),
+                contentAlignment = Alignment.Center,
             ) {
                 // Comment body
                 if (comment.text.isNotEmpty()) {
@@ -343,76 +438,9 @@ fun Comment(
                         style = typography.labelSmall.copy(
                             color = palette.onSurface,
                             fontSize = 14.sp,
-                            fontWeight = FontWeight.Normal
+                            fontWeight = FontWeight.Normal,
+                            lineHeight = 20.sp
                         )
-                    )
-                }
-
-                if (!comment.attachments.isNullOrEmpty() && comment.text.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(20.dp))
-                }
-
-                //Files
-                if (comment.attachments != null) {
-                    //Spacer
-                    Spacer(modifier = Modifier.height(5.dp))
-                    //File
-                    comment.attachments.forEachIndexed { index, uri ->
-                        val isThereUri =
-                            isFileAlreadyDownloaded(uri.firebaseRelativePath, LocalContext.current)
-                        if (isThereUri != null) {
-                            //File is already downloaded
-                            FileElement(isThereUri, recomposeParent)
-                            if (index != (comment.attachments.size - 1)) {
-                                Spacer(modifier = Modifier.height(6.dp))
-                            }
-                        } else {
-                            //File should be downloaded
-                            FileToDownload(uri.firebaseRelativePath, recomposeParent)
-
-                            if (index != (comment.attachments.size - 1)) {
-                                Spacer(modifier = Modifier.height(6.dp))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Comment footer
-        Box(
-            modifier = Modifier
-                .height(50.dp)
-                .fillMaxWidth()
-                .background(color = palette.primaryContainer)
-                .padding(9.dp),
-            contentAlignment = Alignment.CenterStart
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "${comment.repliesNumber} Replies",
-                    style = typography.labelSmall.copy(
-                        color = palette.onSurface,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Normal
-                    ),
-                )
-
-                //Reply button
-                IconButton(modifier = Modifier.size(30.dp),
-                    onClick = {
-                        commentsVM.goToReplies(comment.id, comment.areRepliesOn)
-                    }
-                ) {
-                    Icon(
-                        tint = palette.onSurface,
-                        painter = painterResource(id = R.drawable.baseline_reply_24),
-                        contentDescription = "options",
-                        modifier = Modifier.size(24.dp)
                     )
                 }
             }

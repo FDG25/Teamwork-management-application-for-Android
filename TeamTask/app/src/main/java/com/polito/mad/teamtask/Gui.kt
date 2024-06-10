@@ -57,28 +57,29 @@ import com.polito.mad.teamtask.components.TopBar
 import com.polito.mad.teamtask.components.tasks.CommentsViewModel
 import com.polito.mad.teamtask.components.tasks.DescriptionViewModel
 import com.polito.mad.teamtask.components.tasks.EditTeamDescription
+import com.polito.mad.teamtask.components.tasks.InfoViewModel
 import com.polito.mad.teamtask.components.tasks.Replies
 import com.polito.mad.teamtask.components.tasks.RepliesViewModel
 import com.polito.mad.teamtask.components.tasks.components.SendObject
 import com.polito.mad.teamtask.screens.AddMemberToTeamScreen
 import com.polito.mad.teamtask.screens.CalendarWithEvents
 import com.polito.mad.teamtask.screens.ChatScreen
-import com.polito.mad.teamtask.screens.HomeScreen
-import com.polito.mad.teamtask.screens.NotificationsScreen
-import com.polito.mad.teamtask.screens.ProfileFormViewModel
-import com.polito.mad.teamtask.screens.ProfileScreen
 import com.polito.mad.teamtask.screens.EditProfilePane
 import com.polito.mad.teamtask.screens.FilterTasksScreen
+import com.polito.mad.teamtask.screens.HomeScreen
 import com.polito.mad.teamtask.screens.InviteConfirmationScreen
 import com.polito.mad.teamtask.screens.NewTask
+import com.polito.mad.teamtask.screens.NotificationsScreen
 import com.polito.mad.teamtask.screens.PersonData
+import com.polito.mad.teamtask.screens.ProfileFormViewModel
+import com.polito.mad.teamtask.screens.ProfileScreen
 import com.polito.mad.teamtask.screens.ShowProfile
+import com.polito.mad.teamtask.screens.ShowTaskDetails
 import com.polito.mad.teamtask.screens.SpecificTeamScreen
 import com.polito.mad.teamtask.screens.SpecificTeamViewModel
 import com.polito.mad.teamtask.screens.TeamsScreen
 import com.polito.mad.teamtask.screens.TeamsViewModel
 import com.polito.mad.teamtask.screens.generateHash
-import com.polito.mad.teamtask.screens.ShowTaskDetails
 import com.polito.mad.teamtask.ui.theme.CaribbeanCurrent
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 import com.polito.mad.teamtask.utils.deleteFilesFromFirebaseStorage
@@ -128,21 +129,7 @@ data class Task(
     val tags: List<String>,
     val recurrence: String,
     val people: List<String>
-) {
-    constructor() : this(
-        "Jolly team 1",
-        "",
-        "",
-        "Jolly person 1",
-        "1970-01-01T00:00:00+00:00",
-        "1970-01-01T00:00:00+00:00",
-        false,
-        "",
-        emptyList(),
-        "",
-        emptyList()
-    )
-}
+)
 
 data class Comment(
     val taskId: String,
@@ -151,7 +138,8 @@ data class Comment(
     val body: String?,
     val media: String?,
     val repliesAllowed: Boolean,
-    val replies: List<String>
+    val replies: List<String>,
+    val information: Boolean = false
 ) {
     constructor() : this(
         "Jolly task 1",
@@ -475,10 +463,11 @@ class AppModel(
                         val media = obj.getString("media") ?: ""
                         val repliesAllowed = obj.getBoolean("repliesAllowed") ?: false
                         val replies = obj.get("replies") as List<String>
+                        val information = obj.getBoolean("information") ?: false
 
                         val comment = Comment(
                             myTaskId, senderId, timestamp, body,
-                            media, repliesAllowed, replies
+                            media, repliesAllowed, replies, information
                         )
 
                         l.add(Pair(id, comment))
@@ -707,20 +696,21 @@ class AppModel(
         awaitClose { listener.remove() }
     }
 
-    fun getRealTeamParticipantsByTeamId(teamId: String): Flow<List<TeamParticipant>> = callbackFlow {
-        val listener = db.collection("team_participants")
-            .where(Filter.equalTo("teamId", teamId))
-            .addSnapshotListener { r, e ->
-                if (r != null) {
-                    val tps = r.toObjects(TeamParticipant::class.java)
-                    trySend(tps)
-                } else {
-                    Log.e("ERROR", e.toString())
-                    trySend(emptyList())
+    fun getRealTeamParticipantsByTeamId(teamId: String): Flow<List<TeamParticipant>> =
+        callbackFlow {
+            val listener = db.collection("team_participants")
+                .where(Filter.equalTo("teamId", teamId))
+                .addSnapshotListener { r, e ->
+                    if (r != null) {
+                        val tps = r.toObjects(TeamParticipant::class.java)
+                        trySend(tps)
+                    } else {
+                        Log.e("ERROR", e.toString())
+                        trySend(emptyList())
+                    }
                 }
-            }
-        awaitClose { listener.remove() }
-    }
+            awaitClose { listener.remove() }
+        }
 
     // User notifications
     fun getUserNotifications(): Flow<List<UserNotification>> = callbackFlow {
@@ -2155,6 +2145,48 @@ class AppModel(
                 }
             awaitClose { listener.remove() }
         }
+
+    fun updateTaskStatus(taskId: String, task: Task) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val taskRef = db.collection("tasks").document(taskId).get().await()
+            val oldDeadline = taskRef.get("deadline") as String?
+
+            db.collection("tasks").document(taskId).update(
+                mapOf(
+                    "title" to task.title,
+                    "deadline" to task.deadline,
+                    "prioritized" to task.prioritized,
+                    "recurrence" to task.recurrence,
+                    "tags" to task.tags
+                )
+            )
+
+            if (oldDeadline != null && oldDeadline != task.deadline) {
+                val oldDateTime = LocalDateTime.parse(oldDeadline, DateTimeFormatter.ISO_DATE_TIME)
+                val newDateTime =
+                    LocalDateTime.parse(task.deadline, DateTimeFormatter.ISO_DATE_TIME)
+                val formatter = DateTimeFormatter.ofPattern("dd/MM/yy HH:mm")
+
+
+                db.collection("comments").add(
+                    Comment(
+                        taskId,
+                        "",
+                        LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME),
+                        "The deadline has been changed from ${oldDateTime.format(formatter)} to ${
+                            newDateTime.format(
+                                formatter
+                            )
+                        }",
+                        null,
+                        false,
+                        emptyList(),
+                        true
+                    )
+                )
+            }
+        }
+    }
 }
 
 class AppFactory(
@@ -2180,6 +2212,10 @@ class AppFactory(
             // model.generateData()
             @Suppress("UNCHECKED_CAST")
             return DescriptionViewModel(model) as T
+        } else if (modelClass.isAssignableFrom(InfoViewModel::class.java)) {
+            // model.generateData()
+            @Suppress("UNCHECKED_CAST")
+            return InfoViewModel(model) as T
         } else throw IllegalArgumentException("Unexpected ViewModel class")
     }
 }
@@ -2479,7 +2515,7 @@ fun AppMainScreen(
 
                         // Tasks
                         val filteredTasks = personal.second.tasks
-                            .flatMap { taskId -> tasks.filter { it.first == taskId && it.second.teamId == teamId} }
+                            .flatMap { taskId -> tasks.filter { it.first == taskId && it.second.teamId == teamId } }
 
                         val filteredTeams = teamParticipants
                             .filter { tp -> tp.frequentlyAccessed }
