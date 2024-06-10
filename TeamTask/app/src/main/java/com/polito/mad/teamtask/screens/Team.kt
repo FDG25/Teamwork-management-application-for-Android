@@ -6,7 +6,6 @@ import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Bitmap
-import android.net.Uri
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import android.util.Log
@@ -138,7 +137,6 @@ import com.polito.mad.teamtask.ui.theme.CaribbeanCurrent
 import com.polito.mad.teamtask.ui.theme.Jet
 import com.polito.mad.teamtask.ui.theme.Mulish
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -881,6 +879,17 @@ class SpecificTeamViewModel : ViewModel() {
         }
     }
 
+    var peopleError by mutableStateOf("")
+        private set
+
+    private fun checkPeople() {
+        peopleError = if (selectedPeople.size == 0) {
+            "Add at least one person!"
+        } else {
+            ""
+        }
+    }
+
     var selectedDateTime by mutableStateOf("")
     fun setDueDateDateTime(value: String) {
         selectedDateTime = value
@@ -1073,6 +1082,59 @@ class SpecificTeamViewModel : ViewModel() {
         }
     }
 
+    private suspend fun addTaskToFirestore(task: Task?, teamId: String) {
+        try {
+            // Add the task to the 'tasks' collection
+            val taskRef = task?.let { db.collection("tasks").add(it).await() }
+            val taskId = taskRef?.id
+
+            // Add the task ID to the 'tasks' field in the corresponding team document
+            db.collection("teams").document(teamId)
+                .update("tasks", FieldValue.arrayUnion(taskId)).await()
+
+            // Add the task ID to the 'tasks' field in each person document
+            if (task != null) {
+                for (personId in task.people) {
+                    db.collection("people").document(personId)
+                        .update("tasks", FieldValue.arrayUnion(taskId)).await()
+                }
+            }
+
+            // Create a notification (typology 1) for the task
+            val notification = mapOf(
+                "body" to "You have a new task",
+                "fromGroup" to true,
+                "receivers" to (task?.people ?: ""),
+                "senderId" to teamId,
+                "taskId" to taskId,
+                "teamId" to "",
+                "timestamp" to ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                "typology" to 1
+            )
+
+            // Add the notification to the 'notifications' collection
+            val notificationRef = db.collection("notifications").add(notification).await()
+            val notificationId = notificationRef.id
+
+            // Add a document in the 'user_notifications' collection for each task member except the task creator
+            if (task != null) {
+                for (personId in task.people) {
+                    if (personId != auth.uid) {
+                        val userNotification = mapOf(
+                            "notificationId" to notificationId,
+                            "read" to false,
+                            "userId" to personId
+                        )
+                        db.collection("user_notifications").add(userNotification).await()
+                    }
+                }
+            }
+            Log.e("ciaoarrivo", "ciaoarrivo")
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     fun validateCreateTask(teamId: String) {
         when (currentStep) {
             TaskCreationStep.Status -> {
@@ -1090,8 +1152,10 @@ class SpecificTeamViewModel : ViewModel() {
             }
 
             TaskCreationStep.People -> {
-                addTask(
-                    ToDoTask(
+                checkPeople()
+                if(peopleError.isBlank()) {
+                    viewModelScope.launch {
+                        /*val newTask = ToDoTask(
                         "hardcoded", //TODO: HARDCODED
                         taskNameValue, "Scheduled", notPriorityValue,
                         selectedTextForRecurrence, selectedDateTime,
@@ -1099,12 +1163,31 @@ class SpecificTeamViewModel : ViewModel() {
                             DateTimeFormatter.ISO_OFFSET_DATE_TIME
                         ), selectedPeople,
                         selectedTagsForNewTask
-                    )
-                )
-                cancelCreateTask()
-                Actions.getInstance().goToTeamTasks(teamId)
-                onSearchQueryChanged("")
-                currentStep = TaskCreationStep.Status
+                    )*/
+                        val newTask = auth.uid?.let {
+                            Task(
+                                teamId = teamId,
+                                title = taskNameValue,
+                                description = taskDescriptionValue,
+                                creatorId = it,
+                                creationDate = ZonedDateTime.now()
+                                    .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                                deadline = selectedDateTime,
+                                prioritized = notPriorityValue == 0,
+                                status = "Scheduled",
+                                tags = selectedTagsForNewTask,
+                                recurrence = selectedTextForRecurrence,
+                                people = selectedPeople.map { it.personId }
+                            )
+                        }
+
+                        addTaskToFirestore(newTask, teamId)
+                        cancelCreateTask()
+                        Actions.getInstance().goToTeamTasks(teamId)
+                        onSearchQueryChanged("")
+                        currentStep = TaskCreationStep.Status
+                    }
+                }
             }
         }
     }
@@ -2002,7 +2085,8 @@ fun NewTask(
                     vm::addSelectedTeamPeopleToTask, vm::removePersonFromTask,
                     vm.filteredPeople,
                     //isInAddMode, setAddMode,
-                    vm.searchQueryForNewTask.value, vm::onSearchQueryForNewTaskChanged
+                    vm.searchQueryForNewTask.value, vm::onSearchQueryForNewTaskChanged,
+                    vm.peopleError
                 )
             }
             Spacer(modifier = Modifier.height(20.dp))
@@ -2711,7 +2795,8 @@ fun PeopleStep(
     filteredPeople: List<PersonData>,
     //isInAddMode: Boolean, setAddMode: (Boolean) -> Unit,
     searchQueryForNewTask: String,
-    onSearchQueryChangedForNewTask: (String) -> Unit
+    onSearchQueryChangedForNewTask: (String) -> Unit,
+    peopleError: String
 ) {
     val typography = TeamTaskTypography
 
@@ -2734,7 +2819,8 @@ fun PeopleStep(
         addPerson, removePerson,
         addSelectedTeamPeopleToTask, removePersonFromTask,
         filteredPeople,
-        searchQueryForNewTask, onSearchQueryChangedForNewTask, {}, isInTeamPeople = false
+        searchQueryForNewTask, onSearchQueryChangedForNewTask, {}, isInTeamPeople = false,
+        peopleError
     )
 }
 
@@ -3962,7 +4048,7 @@ fun Tab3Screen(
                 addPerson, removePerson,
                 addSelectedTeamPeopleToTask, removePersonFromTeam,
                 filteredPeople,
-                searchQuery, onSearchQueryChanged, setShowTeamLinkOrQrCode, isInTeamPeople = true
+                searchQuery, onSearchQueryChanged, setShowTeamLinkOrQrCode, isInTeamPeople = true, peopleError = ""
             )
         }
     }
@@ -4326,23 +4412,41 @@ fun CalendarWithEvents(
         // Display events for selected date at the bottom
         if (selectedDay != null) {
             if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
+                var selectedDateTextual = "${
+                    currentMonth.getDisplayName(
+                        Calendar.MONTH,
+                        Calendar.LONG,
+                        Locale.getDefault()
+                    )
+                } ${selectedDay.toString()}, ${currentMonth.get(Calendar.YEAR)}"
                 Column {
                     Text(
-                        "${
-                            currentMonth.getDisplayName(
-                                Calendar.MONTH,
-                                Calendar.LONG,
-                                Locale.getDefault()
-                            )
-                        } ${selectedDay.toString()}, ${currentMonth.get(Calendar.YEAR)}",
+                        selectedDateTextual,
                         modifier = Modifier.padding(top = 10.dp, start = 10.dp)
                     )
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    EventList(selectedDateEvents.value, groupedTasks, teams)
+                    // Define the input format
+                    val inputFormat = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault())
+                    // Define the output format
+                    val outputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+                    val date = inputFormat.parse(selectedDateTextual)
+                    val finalDate = date?.let { outputFormat.format(it) }
+
+                    if (finalDate != null) {
+                        EventList(selectedDateEvents.value, groupedTasks, teams, finalDate)
+                    }
                 }
             } else {
                 if (showCalendarEventsDialog) {
+                    var selectedDateTextual = "${
+                        currentMonth.getDisplayName(
+                            Calendar.MONTH,
+                            Calendar.LONG,
+                            Locale.getDefault()
+                        )
+                    } ${selectedDay.toString()}, ${currentMonth.get(Calendar.YEAR)}"
                     Dialog(onDismissRequest = { showCalendarEventsDialog = false }) {
                         Column(
                             modifier = Modifier
@@ -4350,19 +4454,23 @@ fun CalendarWithEvents(
                                 .padding(10.dp)
                                 .background(Color.White)
                         ) {
-                            Text(
-                                "${
-                                    currentMonth.getDisplayName(
-                                        Calendar.MONTH,
-                                        Calendar.LONG,
-                                        Locale.getDefault()
-                                    )
-                                } ${selectedDay.toString()}, ${currentMonth.get(Calendar.YEAR)}",
+                            Text(selectedDateTextual,
                                 modifier = Modifier.padding(top = 10.dp, start = 10.dp)
                             )
                             Spacer(modifier = Modifier.height(10.dp))
-                            EventList(selectedDateEvents.value, groupedTasks, teams)
-                            Spacer(modifier = Modifier.height(30.dp))
+
+                            // Define the input format
+                            val inputFormat = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault())
+                            // Define the output format
+                            val outputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+                            val date = inputFormat.parse(selectedDateTextual)
+                            val finalDate = date?.let { outputFormat.format(it) }
+
+                            if (finalDate != null) {
+                                EventList(selectedDateEvents.value, groupedTasks, teams, finalDate)
+                                Spacer(modifier = Modifier.height(30.dp))
+                            }
                         }
                     }
                 }
@@ -4535,6 +4643,7 @@ fun EventList(
     events: List<ToDoTask>,
     groupedTasks: Map<String, List<Pair<String, Task>>>,
     teams: List<Pair<String, Team>>,
+    chosenDate: String,
     homeViewModel: HomeViewModel = viewModel()
 ) {
     val typography = TeamTaskTypography
@@ -4559,14 +4668,28 @@ fun EventList(
             modifier = Modifier
                 .fillMaxWidth(),
         ) {
-            items(events.sortedBy { it.expirationTimestamp }) {
-                when (Actions.getInstance().getCurrentRoute()) {
-                    "homeCalendar" -> {
-                        Column {
-                            groupedTasks.forEach { (date, tasks) ->
-                                tasks.forEach { pair ->
-                                    val team = teams.firstOrNull { it.first == pair.second.teamId }
+            groupedTasks.forEach { (date, tasks) ->
+                item {
+                    Column {
+                        /*
+                        Text(
+                            text = date,
+                            style = typography.bodySmall,
+                            color = palette.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 15.dp, vertical = 5.dp)
+                        )
+                        */
 
+                        tasks.filter { taskPair ->
+                            // Filter tasks based on the specific date
+                            val expirationDate = taskPair.second.deadline.split("T").first() // Assuming ISO date format
+                            expirationDate == date
+                            taskPair.second.deadline.split("T")[0] == chosenDate
+                        }.forEach { pair ->
+                            val team = teams.firstOrNull { it.first == pair.second.teamId }
+
+                            when (Actions.getInstance().getCurrentRoute()) {
+                                "homeCalendar" -> {
                                     Button(
                                         onClick = {
                                             Actions.getInstance()
@@ -4586,41 +4709,53 @@ fun EventList(
                                         //Log.e("imageuriCalendar", imageUri.toString()) --> TODO: IMAGEURI IS EMPTY HERE
                                         homeViewModel.fetchTeamImage(pair.first)
 
+                                        Log.e("mese", chosenDate)
                                         TaskEntry(pair.second, team?.second, imageUri)
-                                    }
+                                        Spacer(Modifier.height(5.dp))
 
-                                    Spacer(Modifier.height(5.dp))
+                                    }
+                                }
+
+                                "teams/{teamId}/tasksCalendar" -> {
+                                    val teamId = Actions.getInstance().getStringParameter("teamId")
+
+                                    if(pair.second.teamId == teamId) {
+                                        val tempToDoTask = ToDoTask(
+                                            taskId = pair.first,
+                                            taskName = pair.second.title,
+                                            status = pair.second.status,
+                                            isNotPriority = if (pair.second.prioritized) 0 else 1,
+                                            recurrence = pair.second.recurrence,
+                                            expirationTimestamp = pair.second.deadline,
+                                            creationTimestamp = pair.second.creationDate,
+                                            taskpeople = emptyList(), // Replace with actual people data if available
+                                            tags = pair.second.tags
+                                        )
+                                        ToDoTaskEntry(
+                                            scheduledtask = tempToDoTask,
+                                            viewOnlyMode = false,
+                                            teamId = pair.second.teamId,
+                                            taskId = pair.first
+                                        )
+
+                                        Spacer(Modifier.height(5.dp))
+                                    }
+                                }
+
+                                else -> {
+                                    // Handle other routes if necessary
                                 }
                             }
                         }
-                        Spacer(modifier = Modifier.height(5.dp))
                     }
-
-                    "teams/{teamId}/tasksCalendar" -> {
-                        groupedTasks.forEach { (date, tasks) ->
-                            tasks.forEach { pair ->
-                                val team = teams.firstOrNull { it.first == pair.second.teamId }
-
-                                ToDoTaskEntry(
-                                    scheduledtask = it,
-                                    viewOnlyMode = false,
-                                    teamId = pair.second.teamId,
-                                    taskId = pair.first
-                                )
-
-                                Spacer(Modifier.height(5.dp))
-                            }
-                        }
-                    }
-
-                    else -> {
-
-                    }
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
             }
         }
     }
 }
+
+
 
 @Composable
 fun ToDoTaskEntry(
@@ -5727,7 +5862,8 @@ fun PeopleSection(
     searchQuery: String,
     onSearchQueryChanged: (String) -> Unit,
     setShowTeamLinkOrQrCode: (Boolean) -> Unit,
-    isInTeamPeople: Boolean
+    isInTeamPeople: Boolean,
+    peopleError: String
 ) {
     val typography = TeamTaskTypography
     val palette = MaterialTheme.colorScheme
@@ -5747,6 +5883,17 @@ fun PeopleSection(
                         placeholderText = "Who would you like to add?",
                         searchQuery,
                         onSearchQueryChanged
+                    )
+                }
+                if(peopleError.isNotEmpty()){
+                    Text(
+                        text = peopleError,
+                        color = palette.error,
+                        style = typography.bodySmall,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        maxLines = 3
                     )
                 }
 

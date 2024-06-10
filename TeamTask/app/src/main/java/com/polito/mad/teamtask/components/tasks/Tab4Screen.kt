@@ -168,7 +168,8 @@ fun Tab4Screen (
                     vm.filteredPeople,
                     vm.searchQuery.value, vm::onSearchQueryChanged,
                     {},
-                    isInTeamPeople = false
+                    isInTeamPeople = false,
+                    peopleError = ""
                 )
             }
         }

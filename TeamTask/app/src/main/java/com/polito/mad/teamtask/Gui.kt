@@ -2473,10 +2473,12 @@ fun AppMainScreen(
                         CategoryFilterScreen(teamsVM)
                     }
 
-                    composable("teams/{teamId}/tasksCalendar") {
+                    composable("teams/{teamId}/tasksCalendar") { backStackEntry ->
+                        val teamId = backStackEntry.arguments?.getString("teamId")
+
                         // Tasks
                         val filteredTasks = personal.second.tasks
-                            .flatMap { taskId -> tasks.filter { it.first == taskId } }
+                            .flatMap { taskId -> tasks.filter { it.first == taskId && it.second.teamId == teamId} }
 
                         val filteredTeams = teamParticipants
                             .filter { tp -> tp.frequentlyAccessed }
