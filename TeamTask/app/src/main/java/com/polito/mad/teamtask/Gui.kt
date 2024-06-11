@@ -2722,13 +2722,17 @@ fun AppMainScreen(
                         val teamId = backStackEntry.arguments?.getString("teamId")
                         val taskId = backStackEntry.arguments?.getString("taskId")
 
+                        // Filter tasks that belong to the specified team
+                        val filteredTasks = tasks.filter { it.second.teamId == teamId }
+
                         val task = tasks.find { it.first == taskId }
                         val person = people.find { it.first == task?.second?.creatorId }
                         val creatorName = person?.second?.name + " " + person?.second?.surname
 
                         if (teamId != null && task != null) {
                             if (taskId != null) {
-                                ShowTaskDetails(teamId, taskId, task.second, creatorName, teamVM)
+                                ShowTaskDetails(teamId, taskId, task.second, creatorName,
+                                    filteredTasks, people, teamVM)
                             }
                         }
 

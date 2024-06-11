@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.polito.mad.teamtask.Person
 import com.polito.mad.teamtask.Task
 import com.polito.mad.teamtask.components.tasks.Replies
 import com.polito.mad.teamtask.components.tasks.Tab4Screen
@@ -20,6 +21,8 @@ fun ShowTaskDetails(
     taskId: String,
     task: Task,
     creator: String,
+    rawToDoTasks: List<Pair<String, Task>>,
+    rawPeople: List<Pair<String, Person>>,
     vm: SpecificTeamViewModel = viewModel(),
     ) {
     //val palette = MaterialTheme.colorScheme
@@ -33,6 +36,8 @@ fun ShowTaskDetails(
                     taskId,
                     task,
                     creator,
+                    rawToDoTasks,
+                    rawPeople,
                     vm
                 )
             }
