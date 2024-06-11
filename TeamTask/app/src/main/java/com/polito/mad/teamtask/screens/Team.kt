@@ -7684,8 +7684,11 @@ fun ExpandableContainer(
 
 @Composable
 fun ShowProfile(
-    filteredTeamParticipant: Pair<String, Person>
+    filteredTeamParticipant: Pair<String, Person>,
+    accountId: String
 ) {
+    val auth = FirebaseAuth.getInstance()
+
     // Hardcoded list of scheduled tasks
     var toDoTasks = listOf(
         ToDoTask(
@@ -7936,20 +7939,22 @@ fun ShowProfile(
 
                 item { Spacer(modifier = Modifier.height(40.dp)) }
 
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 5.dp),
-                        horizontalAlignment = Alignment.Start,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text("Teams and Tasks in common")
+                if(auth.uid != accountId) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 5.dp),
+                            horizontalAlignment = Alignment.Start,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text("Teams and Tasks in common")
+                        }
                     }
-                }
-                items(teamList) {
-                    ExpandableContainer(groupedtoDoTasks)
-                    Spacer(modifier = Modifier.height(2.dp))
+                    items(teamList) {
+                        ExpandableContainer(groupedtoDoTasks)
+                        Spacer(modifier = Modifier.height(2.dp))
+                    }
                 }
 
                 item {
@@ -8000,11 +8005,12 @@ fun ShowProfile(
 
                     item { Spacer(modifier = Modifier.height(20.dp)) }
 
-                    items(teamList) {
-                        ExpandableContainer(groupedtoDoTasks)
-                        Spacer(modifier = Modifier.height(2.dp))
+                    if(auth.uid != accountId) {
+                        items(teamList) {
+                            ExpandableContainer(groupedtoDoTasks)
+                            Spacer(modifier = Modifier.height(2.dp))
+                        }
                     }
-
                     item { Spacer(modifier = Modifier.height(20.dp)) }
                 }
             }

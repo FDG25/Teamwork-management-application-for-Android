@@ -2589,7 +2589,16 @@ fun AppMainScreen(
                         CalendarWithEvents(filteredTasks, filteredTeams, teams)
                     }
 
-                    composable("teams/{teamId}/statistics") { TeamPerformances() }
+                    composable("teams/{teamId}/statistics") { backStackEntry ->
+                        val teamId = backStackEntry.arguments?.getString("teamId")
+
+                        val tps = realTeamParticipants
+                            .filter { tp -> tp.teamId.equals(teamId) }
+                        val filteredTasks = tasks
+                            .filter { t -> t.second.teamId.equals(teamId) }
+
+                        TeamPerformances(tps, people, filteredTasks)
+                    }
 
                     composable("teams/newTeam/info") {
                         NewTeam(
@@ -2844,7 +2853,9 @@ fun AppMainScreen(
                         val accountId = backStackEntry.arguments?.getString("accountId")
 
                         val filteredTeamParticipant = people.first { it.first == accountId }
-                        ShowProfile(filteredTeamParticipant)
+                        if (accountId != null) {
+                            ShowProfile(filteredTeamParticipant, accountId)
+                        }
                     } // TODO: Implement
 
                     composable("profile") {
