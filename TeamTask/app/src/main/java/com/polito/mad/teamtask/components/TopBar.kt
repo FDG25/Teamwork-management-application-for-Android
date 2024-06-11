@@ -57,6 +57,8 @@ fun TopBar(
     deleteTeam: (String) -> Unit,
     setShwExitFromTeamModal: (Boolean) -> Unit,
     exitFromTeam: (String) -> Unit,
+    setShwDeleteTaskModal: (Boolean) -> Unit,
+    setShwExitFromTaskModal: (Boolean) -> Unit,
     addOrRemoveTeamToFavourites: (String, Boolean) -> Unit,
     markAsCompletedOrScheduled: (String, String) -> Unit,
     showMenu: Boolean,
@@ -1021,7 +1023,7 @@ fun TopBar(
                                     )
                                 },
                                 onClick = {
-                                    //
+                                    setShwExitFromTaskModal(true)
                                     setShowMen(false)
                                 },
                                 leadingIcon = {
@@ -1043,7 +1045,7 @@ fun TopBar(
                                             )
                                         },
                                         onClick = {
-                                            //
+                                            setShwDeleteTaskModal(true)
                                             setShowMen(false)
                                         },
                                         leadingIcon = {

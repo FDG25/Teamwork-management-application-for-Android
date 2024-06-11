@@ -580,6 +580,7 @@ fun ProfileScreen (
     if (vm.showDeleteAccountModal) {
         AlertDialog(
             onDismissRequest = {
+                vm.setEmailAddresValueForDelete("")
                 vm.setShwDeleteAccountModal(false)
             },
             title = { Text(text = "Delete Account", color = palette.error) },

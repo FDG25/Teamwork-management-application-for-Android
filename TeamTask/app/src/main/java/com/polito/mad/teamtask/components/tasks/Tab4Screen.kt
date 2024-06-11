@@ -3,14 +3,24 @@ package com.polito.mad.teamtask.components.tasks
 import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -21,10 +31,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
 import com.polito.mad.teamtask.AppFactory
 import com.polito.mad.teamtask.AppModel
@@ -34,6 +48,7 @@ import com.polito.mad.teamtask.components.tasks.components.WTViewModel
 import com.polito.mad.teamtask.screens.PeopleSection
 import com.polito.mad.teamtask.screens.PersonData
 import com.polito.mad.teamtask.screens.SpecificTeamViewModel
+import com.polito.mad.teamtask.ui.theme.CaribbeanCurrent
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -108,6 +123,7 @@ fun Tab4Screen (
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
+    val auth = FirebaseAuth.getInstance()
 
     val pagerState = rememberPagerState {tabs.size}
     val animationScope = rememberCoroutineScope()
@@ -117,6 +133,120 @@ fun Tab4Screen (
     LaunchedEffect(pagerState.currentPage) {
         descriptionVm.setIsDescriptionEditing(false)
         keyboardController?.hide()
+    }
+
+    if(vm.showExitFromTaskModal) {
+        AlertDialog(
+            onDismissRequest = {
+                vm.setShwExitFromTeamModal(false)
+            },
+            title = { Text(text = "Exit From Task") },
+            text = { Text(text = "Are you sure that you want to exit from this task?") },
+            confirmButton = {
+                Button(onClick = {
+                    vm.exitFromTask(teamId, taskId)
+                    vm.setShwExitFromTaskModal(false)
+                }) {
+                    Text(
+                        text = "Yes",
+                        style = typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CaribbeanCurrent
+                    )
+                }
+            },
+            dismissButton = {
+                Button(onClick = {
+                    vm.setShwExitFromTaskModal(false)
+                }) {
+                    Text(
+                        text = "Cancel",
+                        style = typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CaribbeanCurrent
+                    )
+                }
+            }
+        )
+    }
+    if(vm.showDeleteTaskModal) {
+        AlertDialog(
+            onDismissRequest = {
+                vm.setStrinValueForDelete("")
+                vm.setShwDeleteTeamModal(false)
+            },
+            title = { Text(text = "Delete Task", color = palette.error) },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "Write \"" + (auth.currentUser?.email
+                            ?: "your email") + "\" and press \"Delete\" to permanently delete this task:"
+                    )
+                    Spacer(modifier = Modifier.height(15.dp))
+                    TextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = vm.stringValueForDelete,
+                        onValueChange = vm::setStrinValueForDelete,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            imeAction = ImeAction.Done
+                        ),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = palette.surfaceVariant,
+                            unfocusedContainerColor = palette.surfaceVariant,
+                            disabledContainerColor = palette.surfaceVariant,
+                            cursorColor = palette.secondary,
+                            focusedIndicatorColor = palette.secondary,
+                            unfocusedIndicatorColor = palette.onSurfaceVariant,
+                            errorIndicatorColor = palette.error,
+                            focusedLabelColor = palette.secondary,
+                            unfocusedLabelColor = palette.onSurfaceVariant,
+                            errorLabelColor = palette.error,
+                            selectionColors = TextSelectionColors(palette.primary, palette.surface)
+                        ),
+                        isError = vm.stringErrorForDelete.isNotBlank()
+                    )
+                    if (vm.stringErrorForDelete.isNotBlank()) {
+                        Text(
+                            text = vm.stringErrorForDelete,
+                            color = palette.error,
+                            style = typography.bodySmall,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            maxLines = 3
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    vm.validateStringForDeleteTask(teamId, taskId)
+                }) {
+                    Text(
+                        text = "Delete",
+                        style = typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CaribbeanCurrent
+                    )
+                }
+            },
+            dismissButton = {
+                Button(onClick = {
+                    vm.setStrinValueForDelete("")
+                    vm.setShwDeleteTaskModal(false)
+                }) {
+                    Text(
+                        text = "Cancel",
+                        style = typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CaribbeanCurrent
+                    )
+                }
+            }
+        )
     }
 
     Column {

@@ -524,10 +524,107 @@ class SpecificTeamViewModel : ViewModel() {
         }
     }
 
+    // Function to remove the current logged-in user from a task and navigate if successful
+    fun exitFromTask(teamId: String, taskId: String) {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            return
+        }
+
+        val userId = currentUser.uid
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                removeUserFromTask(teamId, taskId, userId)
+
+                withContext(Dispatchers.Main) {
+                    Actions.getInstance().navigateBack()
+                }
+            } catch (e: Exception) {
+                Log.e("SpecificTeamViewModel", "Error exiting task", e)
+            }
+        }
+    }
+
+
+    private suspend fun removeUserFromTask(teamId: String, taskId: String, userId: String) {
+        // Reference to the task document
+        val taskRef = db.collection("tasks").document(taskId)
+        val taskSnapshot = taskRef.get().await()
+
+        if (taskSnapshot.exists()) {
+            // Remove the user from the task's people field
+            taskRef.update("people", FieldValue.arrayRemove(userId)).await()
+        }
+
+        // Reference to the user document
+        val userRef = db.collection("people").document(userId)
+        val userSnapshot = userRef.get().await()
+
+        if (userSnapshot.exists()) {
+            // Remove the task from the user's tasks field
+            userRef.update("tasks", FieldValue.arrayRemove(taskId)).await()
+        }
+    }
+
+
+    fun validateStringForDeleteTask(teamId: String, taskId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (stringValueForDelete == auth.currentUser?.email) {
+                deleteTask(teamId, taskId)
+                setShwDeleteTaskModal(false)
+                setStrinValueForDelete("")
+                stringErrorForDelete = ""
+                //updateAccountBeenDeletedStatus(true)
+            } else {
+                stringErrorForDelete = "Inserted email is not correct!"
+            }
+        }
+    }
+
+    private suspend fun deleteTask(teamId: String, taskId: String) {
+        val taskRef = db.collection("tasks").document(taskId)
+        val taskSnapshot = taskRef.get().await()
+
+        if (taskSnapshot.exists()) {
+            // list of people assigned to the task
+            val peopleIds = taskSnapshot.get("people") as? List<String> ?: emptyList()
+
+            // Remove the taskId from each person's tasks field
+            peopleIds.forEach { personId ->
+                val personRef = db.collection("people").document(personId)
+                personRef.update("tasks", FieldValue.arrayRemove(taskId)).await()
+            }
+
+            // Remove the taskId from the team's tasks field
+            val teamRef = db.collection("teams").document(teamId)
+            teamRef.update("tasks", FieldValue.arrayRemove(taskId)).await()
+
+            // Delete the task document
+            taskRef.delete().await()
+
+            withContext(Dispatchers.Main) {
+                Actions.getInstance().navigateBack()
+            }
+        } else {
+            // case where the task document does not exist
+        }
+    }
+
+
+
 
     var showDeleteTeamModal by mutableStateOf(false)
     fun setShwDeleteTeamModal(bool: Boolean) {
         showDeleteTeamModal = bool
+    }
+
+    var showDeleteTaskModal by mutableStateOf(false)
+    fun setShwDeleteTaskModal(bool: Boolean) {
+        showDeleteTaskModal = bool
+    }
+    var showExitFromTaskModal by mutableStateOf(false)
+    fun setShwExitFromTaskModal(bool: Boolean) {
+        showExitFromTaskModal = bool
     }
 
     // Function to delete a team and navigate to the home screen if successful
@@ -5219,6 +5316,7 @@ fun SpecificTeamScreen(
     if (vm.showDeleteTeamModal) {
         AlertDialog(
             onDismissRequest = {
+                vm.setStrinValueForDelete("")
                 vm.setShwDeleteTeamModal(false)
             },
             title = { Text(text = "Delete Team", color = palette.error) },

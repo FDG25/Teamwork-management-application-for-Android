@@ -19,8 +19,9 @@ fun ShowTaskDetails(
     teamId: String,
     taskId: String,
     task: Task,
-    creator: String
-) {
+    creator: String,
+    vm: SpecificTeamViewModel = viewModel(),
+    ) {
     //val palette = MaterialTheme.colorScheme
     //val typography = TeamTaskTypography
 
@@ -31,7 +32,8 @@ fun ShowTaskDetails(
                     teamId,
                     taskId,
                     task,
-                    creator
+                    creator,
+                    vm
                 )
             }
     }

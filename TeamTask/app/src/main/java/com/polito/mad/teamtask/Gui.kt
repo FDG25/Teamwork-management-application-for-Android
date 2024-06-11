@@ -2431,6 +2431,8 @@ fun AppMainScreen(
                         teamVM::deleteTeam,
                         teamVM::setShwExitFromTeamModal,
                         teamVM::exitFromTeam,
+                        teamVM::setShwDeleteTaskModal,
+                        teamVM::setShwExitFromTaskModal,
                         teamVM::addOrRemoveTeamToFavourites,
                         teamVM::markAsCompletedOrScheduled,
                         profileVM.showMenu,
@@ -2725,7 +2727,7 @@ fun AppMainScreen(
 
                         if (teamId != null && task != null) {
                             if (taskId != null) {
-                                ShowTaskDetails(teamId, taskId, task.second, creatorName)
+                                ShowTaskDetails(teamId, taskId, task.second, creatorName, teamVM)
                             }
                         }
 
