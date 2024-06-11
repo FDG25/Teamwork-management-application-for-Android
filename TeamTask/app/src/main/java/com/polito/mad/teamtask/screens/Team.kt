@@ -6041,7 +6041,7 @@ private fun PeopleEntryForTask(
 
     var isSelected = selectedPeople.any { it.username == person.username }
     val isAlreadyInTask =
-        remember(taskpeople) { taskpeople.any { it.username == person.username } && !showingCreateTask }
+        remember(taskpeople) { taskpeople.any { it.username == person.username }}
     var showMenu by remember { mutableStateOf(false) }
     var showMenuAssignRole by remember { mutableStateOf(false) }
     var showOwnerMenu by remember { mutableStateOf(false) }
