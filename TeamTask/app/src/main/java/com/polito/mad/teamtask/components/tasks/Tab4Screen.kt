@@ -45,6 +45,7 @@ import com.polito.mad.teamtask.AppModel
 import com.polito.mad.teamtask.Task
 import com.polito.mad.teamtask.chat.visualization.MemberTag
 import com.polito.mad.teamtask.components.tasks.components.WTViewModel
+import com.polito.mad.teamtask.screens.AddPeopleInTaskSection
 import com.polito.mad.teamtask.screens.PeopleSection
 import com.polito.mad.teamtask.screens.PersonData
 import com.polito.mad.teamtask.screens.SpecificTeamViewModel
@@ -292,6 +293,7 @@ fun Tab4Screen (
                 2 -> DescriptionVariant(task.description, vm::setTaskDescription, taskId, false)
                 3 -> PeopleSection(
                     teamId,
+                    taskId,
                     vm.taskpeople,  vm.teampeople,  vm.selectedPeople, vm::clearSelectedPeople,
                     vm::addPerson,  vm::removePerson,
                     vm::addSelectedTeamPeopleToTask, vm::removePersonFromTask,
@@ -304,4 +306,26 @@ fun Tab4Screen (
             }
         }
     }
+}
+
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun AddMembersInTask (
+    teamId: String,
+    taskId: String,
+    vm: SpecificTeamViewModel = viewModel(),
+) {
+    AddPeopleInTaskSection(
+        teamId,
+        taskId,
+        vm.taskpeople,  vm.teampeople,  vm.selectedPeople, vm::clearSelectedPeople,
+        vm::addPerson,  vm::removePerson,
+        vm::addSelectedTeamPeopleToTask, vm::removePersonFromTask,
+        vm.filteredPeople,
+        vm.searchQuery.value, vm::onSearchQueryChanged,
+        {},
+        isInTeamPeople = false,
+        peopleOrTaskNameError = ""
+    )
 }

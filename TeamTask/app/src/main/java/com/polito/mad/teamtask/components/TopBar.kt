@@ -1068,13 +1068,13 @@ fun TopBar(
             CenterAlignedTopAppBar(
                 // Back button
                 navigationIcon = {
-                    BackButton(onClick = { /* TODO: Handle back */ })
+                    BackButton(onClick = { Actions.getInstance().navigateBack() })
                 },
 
                 // Title
                 title = {
                     Text(
-                        "Edit Task",
+                        "Add People to Task",
                         style = typography.titleLarge
                     )
                 },
