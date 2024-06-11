@@ -135,11 +135,6 @@ fun Tab4Screen (
 
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    LaunchedEffect(pagerState.currentPage) {
-        descriptionVm.setIsDescriptionEditing(false)
-        keyboardController?.hide()
-    }
-
     // Convert raw data to required types
     val toDoTasks = rawToDoTasks.map { (id, task) ->
         ToDoTask(
@@ -165,6 +160,16 @@ fun Tab4Screen (
             tags = task.tags
         )
     }
+
+    LaunchedEffect(pagerState.currentPage) {
+        descriptionVm.setIsDescriptionEditing(false)
+        keyboardController?.hide()
+    }
+
+    /*LaunchedEffect(Unit) {
+        vm.init(toDoTasks)
+    }*/
+
 
     LaunchedEffect(taskId) {
         vm.init(toDoTasks.filter { it.taskId == taskId })
@@ -360,6 +365,8 @@ fun AddMembersInTask (
         vm.searchQuery.value, vm::onSearchQueryChanged,
         {},
         isInTeamPeople = false,
-        peopleOrTaskNameError = ""
+        peopleOrTaskNameError = "",
+        vm::addPersonToTask,
+        vm.isLoadingTaskAddMembers.value
     )
 }

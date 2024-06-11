@@ -1549,6 +1549,70 @@ class SpecificTeamViewModel : ViewModel() {
     // Provide an immutable view of the taskpeople to the UI
     val taskpeople: List<PersonData> get() = _taskpeople.value
 
+    var isLoadingTaskAddMembers = mutableStateOf(false)
+
+    // Method to add selected people to a task
+    fun addPersonToTask(teamId: String, taskId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                isLoadingTaskAddMembers.value = true
+                val selectedPeople = selectedPeople.toList()
+
+                // Update local state
+                val updatedTaskPeople = _taskpeople.value.toMutableList()
+                val updatedTasks = _toDoTasks.value.map { task ->
+                    if (task.taskId == taskId) {
+                        task.copy(taskpeople = task.taskpeople + selectedPeople.filter { newPerson ->
+                            task.taskpeople.none { it.personId == newPerson.personId }
+                        })
+                    } else {
+                        task
+                    }
+                }
+
+                _taskpeople.value = (updatedTaskPeople + selectedPeople).distinctBy { it.personId }
+                _toDoTasks.value = updatedTasks
+
+                // Update Firestore tasks collection
+                val taskRef = db.collection("tasks").document(taskId)
+                val taskSnapshot = taskRef.get().await()
+                val taskPeople = taskSnapshot.get("people") as? MutableList<String> ?: mutableListOf()
+
+                selectedPeople.forEach { selectedPerson ->
+                    if (!taskPeople.contains(selectedPerson.personId)) {
+                        taskPeople.add(selectedPerson.personId)
+                    }
+                }
+                taskRef.update("people", taskPeople).await()
+
+                // Update Firestore people collection
+                selectedPeople.forEach { selectedPerson ->
+                    val personRef = db.collection("people").document(selectedPerson.personId)
+                    val personSnapshot = personRef.get().await()
+                    val personTasks = personSnapshot.get("tasks") as? MutableList<String> ?: mutableListOf()
+
+                    if (!personTasks.contains(taskId)) {
+                        personTasks.add(taskId)
+                    }
+                    personRef.update("tasks", personTasks).await()
+                }
+
+                // Update the filters --> IT HAS TO BE DONE ONLY FOR REMOVE, BECAUSE OTHERWISE MAY REMAIN A FILTER BY PERSON APPLIED, EVEN IF THAT PERSON IS NOT IN THE TEAM/TASK ANYMORE!
+                //listOfMembersForFilter = (listOfMembersForFilter + selectedPeople).distinctBy { it.personId }
+                //tempListOfMembersForFilter = (tempListOfMembersForFilter + selectedPeople).distinctBy { it.personId }
+
+                // Call init with the updated list of tasks
+                init(_toDoTasks.value)
+            } catch (e: Exception) {
+                // Handle any errors that occur during the database operation
+                e.printStackTrace()
+            }
+            isLoadingTaskAddMembers.value = false
+        }
+    }
+
+
+
     // Method to remove a person from taskpeople
     fun removePersonFromTask(teamId: String, personId: String) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -6931,13 +6995,18 @@ fun AddPeopleInTaskSection(
     onSearchQueryChanged: (String) -> Unit,
     setShowTeamLinkOrQrCode: (Boolean) -> Unit,
     isInTeamPeople: Boolean,
-    peopleOrTaskNameError: String
+    peopleOrTaskNameError: String,
+    addPersonToTask: (String, String) -> Unit,
+    isLoadingTaskAddMembers: Boolean
 ){
     val typography = TeamTaskTypography
     val palette = MaterialTheme.colorScheme
 
     val currentRoute = Actions.getInstance().getCurrentRoute()
 
+    if(isLoadingTaskAddMembers){
+        LoadingScreen()
+    }
     BoxWithConstraints {
         val maxHeight = this.maxHeight
         val maxWidth = this.maxWidth
@@ -7007,9 +7076,10 @@ fun AddPeopleInTaskSection(
         }
         FloatingActionButton(
             onClick = {
-
-                clearSelectedPeople()
+                addPersonToTask(teamId, taskId)
                 Actions.getInstance().navigateBack()
+                clearSelectedPeople()
+
 
                 //onSearchQueryChanged("")
                 //addSelectedTeamPeopleToTask()
