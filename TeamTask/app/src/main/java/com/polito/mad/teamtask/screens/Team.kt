@@ -5847,53 +5847,6 @@ private fun PeopleEntry(
                 }
             )
         }
-        if (showOwnerMenu) {
-            AlertDialog(
-                onDismissRequest = { showOwnerMenu = false },
-                title = {
-                    Text(
-                        "${person.name} ${person.surname}",
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
-                },
-                text = {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
-                        Button(
-                            onClick = {
-                                showMenuAssignRole = true
-                                showOwnerMenu = false  // Close the dialog after action
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = palette.primary,
-                                contentColor = palette.secondary
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp)
-                        ) {
-                            Text(
-                                text = if (person.role == "") "Assign Role" else "Edit Role",
-                                style = typography.bodySmall
-                            )
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showOwnerMenu = false }) {
-                        Text(
-                            "Close",
-                            color = palette.secondary
-                        )
-                    }
-                }
-            )
-        }
     }
 
 
@@ -5924,7 +5877,7 @@ private fun PeopleEntry(
                                 person.permission
                             )
                         ) if (person.permission == "Owner") {
-                            showOwnerMenu = true
+
                         } else {
                             showMenu = true
                         }
