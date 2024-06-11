@@ -201,7 +201,6 @@ class SpecificTeamViewModel : ViewModel() {
             }
             _teampeople.value = updatedTeamPeople
         }
-        // Assuming filteredPeople is used to initialize some other state, if necessary
     }
 
     var stringValueForDelete by mutableStateOf("")
@@ -986,7 +985,7 @@ class SpecificTeamViewModel : ViewModel() {
     }
 
 
-    var peopleError by mutableStateOf("")
+    var peopleOrTaskNameError by mutableStateOf("")
         private set
 
     private fun checkPeople() {
@@ -994,7 +993,7 @@ class SpecificTeamViewModel : ViewModel() {
             person.permission == "Owner" || person.permission == "Admin"
         }
 
-        peopleError = if (!hasOwnerOrAdmin) {
+        peopleOrTaskNameError = if (!hasOwnerOrAdmin) {
             "Add at least one person who is either the owner or an admin!"
         } else {
             ""
@@ -1361,8 +1360,8 @@ class SpecificTeamViewModel : ViewModel() {
                     checkSelectedDateTimeError()
                     if (taskNameError.isBlank() && selectedDateTimeError.isBlank()) {
                         currentStep = TaskCreationStep.Description
-                        if(peopleError == "A task with this name already exists in this team. Go back and insert another name!") {
-                            peopleError = ""
+                        if(peopleOrTaskNameError == "A task with this name already exists in this team. Go back and insert another name!") {
+                            peopleOrTaskNameError = ""
                         }
                     }
                 }
@@ -1376,7 +1375,7 @@ class SpecificTeamViewModel : ViewModel() {
 
             TaskCreationStep.People -> {
                 checkPeople()
-                if(peopleError.isBlank()) {
+                if(peopleOrTaskNameError.isBlank()) {
                     viewModelScope.launch {
                         checkTaskName(teamId)
                         if (taskNameError.isBlank()) {
@@ -1413,7 +1412,7 @@ class SpecificTeamViewModel : ViewModel() {
                             onSearchQueryChanged("")
                             currentStep = TaskCreationStep.Status
                         } else {
-                            peopleError = "A task with this name already exists in this team. Go back and insert another name!"
+                            peopleOrTaskNameError = "A task with this name already exists in this team. Go back and insert another name!"
                         }
                         isLoadingTaskCreation.value = false
                     }
@@ -1666,6 +1665,7 @@ class SpecificTeamViewModel : ViewModel() {
     fun onSearchQueryChanged(query: String) {
         searchQuery.value = query
     }
+
 
     var searchQueryForNewTask = mutableStateOf("")
     fun onSearchQueryForNewTaskChanged(query: String) {
@@ -2310,7 +2310,7 @@ fun NewTask(
                     vm::setTaskDescription
                 )
 
-                TaskCreationStep.People -> PeopleStep(
+                TaskCreationStep.People -> PeopleStepCreation(
                     teamId,
                     vm::goToPreviousStep,
                     vm.taskpeople, vm.teampeople, vm.selectedPeople, vm::clearSelectedPeople,
@@ -2319,7 +2319,7 @@ fun NewTask(
                     vm.filteredPeople,
                     //isInAddMode, setAddMode,
                     vm.searchQueryForNewTask.value, vm::onSearchQueryForNewTaskChanged,
-                    vm.peopleError
+                    vm.peopleOrTaskNameError
                 )
             }
             Spacer(modifier = Modifier.height(20.dp))
@@ -3029,7 +3029,7 @@ fun PeopleStep(
     //isInAddMode: Boolean, setAddMode: (Boolean) -> Unit,
     searchQueryForNewTask: String,
     onSearchQueryChangedForNewTask: (String) -> Unit,
-    peopleError: String
+    peopleOrTaskNameError: String
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
@@ -3065,7 +3065,63 @@ fun PeopleStep(
         addSelectedTeamPeopleToTask, removePersonFromTask,
         filteredPeople,
         searchQueryForNewTask, onSearchQueryChangedForNewTask, {}, isInTeamPeople = false,
-        peopleError
+        peopleOrTaskNameError
+    )
+}
+
+@Composable
+fun PeopleStepCreation(
+    teamId: String,
+    goToPreviousStep: () -> Unit,
+    taskpeople: List<PersonData>,
+    teampeople: List<PersonData>,
+    selectedPeople: List<PersonData>,
+    clearSelectedPeople: () -> Unit,
+    addPerson: (PersonData) -> Unit,
+    removePerson: (PersonData) -> Unit,
+    addSelectedTeamPeopleToTask: () -> Unit,
+    removePersonFromTask: (String, String) -> Unit,
+    filteredPeople: List<PersonData>,
+    //isInAddMode: Boolean, setAddMode: (Boolean) -> Unit,
+    searchQueryForNewTask: String,
+    onSearchQueryChangedForNewTask: (String) -> Unit,
+    peopleOrTaskNameError: String
+) {
+    val palette = MaterialTheme.colorScheme
+    val typography = TeamTaskTypography
+
+    BackHandler {
+        goToPreviousStep()
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 5.dp, horizontal = 16.dp)
+    ) {
+        ProgressBar(3, 3)
+    }
+
+    Text("People", style = typography.titleMedium)
+
+    Text(
+        text = "If you are interested in monitoring the work, add yourself " +
+                "to the list of people for this task. \uD83D\uDC40\uD83D\uDC40",
+        color = palette.onSurface,
+        style = typography.bodySmall,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        maxLines = 3
+    )
+
+    PeopleSectionCreation(
+        teamId,
+        taskpeople, teampeople, selectedPeople, clearSelectedPeople,
+        addPerson, removePerson,
+        addSelectedTeamPeopleToTask, removePersonFromTask,
+        filteredPeople,
+        searchQueryForNewTask, onSearchQueryChangedForNewTask, {}, isInTeamPeople = false,
+        peopleOrTaskNameError
     )
 }
 
@@ -4297,7 +4353,7 @@ fun Tab3Screen(
                 addPerson, removePerson,
                 addSelectedTeamPeopleToTask, removePersonFromTeam,
                 filteredPeople,
-                searchQuery, onSearchQueryChanged, setShowTeamLinkOrQrCode, isInTeamPeople = true, peopleError = ""
+                searchQuery, onSearchQueryChanged, setShowTeamLinkOrQrCode, isInTeamPeople = true, peopleOrTaskNameError = ""
             )
         }
     }
@@ -6064,7 +6120,7 @@ fun PersonBadge(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .background(color = palette.surfaceVariant, shape = CircleShape)
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(horizontal = 8.dp, vertical = 3.dp)
     ) {
         Image(
             painter = painterResource(id = R.drawable.outline_close_24),
@@ -6104,7 +6160,7 @@ fun PeopleSection(
     onSearchQueryChanged: (String) -> Unit,
     setShowTeamLinkOrQrCode: (Boolean) -> Unit,
     isInTeamPeople: Boolean,
-    peopleError: String
+    peopleOrTaskNameError: String
 ) {
     val typography = TeamTaskTypography
     val palette = MaterialTheme.colorScheme
@@ -6126,9 +6182,9 @@ fun PeopleSection(
                         onSearchQueryChanged
                     )
                 }
-                if(currentRoute == "teams/{teamId}/newTask/status" && peopleError.isNotEmpty()){
+                if(currentRoute == "teams/{teamId}/newTask/status" && peopleOrTaskNameError.isNotEmpty()){
                     Text(
-                        text = peopleError,
+                        text = peopleOrTaskNameError,
                         color = palette.error,
                         style = typography.bodySmall,
                         modifier = Modifier
@@ -6316,6 +6372,129 @@ fun PeopleSection(
                     contentDescription = "Add",
                     colorFilter = ColorFilter.tint(palette.background)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun PeopleSectionCreation(
+    teamId: String,
+    taskpeople: List<PersonData>,
+    teampeople: List<PersonData>,
+    selectedPeople: List<PersonData>,
+    clearSelectedPeople: () -> Unit,
+    addPerson: (PersonData) -> Unit,
+    removePerson: (PersonData) -> Unit,
+    addSelectedTeamPeopleToTask: () -> Unit,
+    removePersonFromTask: (String, String) -> Unit,
+    filteredPeople: List<PersonData>,
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit,
+    setShowTeamLinkOrQrCode: (Boolean) -> Unit,
+    isInTeamPeople: Boolean,
+    peopleOrTaskNameError: String
+) {
+    val typography = TeamTaskTypography
+    val palette = MaterialTheme.colorScheme
+
+    val currentRoute = Actions.getInstance().getCurrentRoute()
+
+    BoxWithConstraints {
+        val maxHeight = this.maxHeight
+        val maxWidth = this.maxWidth
+
+        Column {
+            if (teampeople.isNotEmpty() || !isInTeamPeople && taskpeople.isNotEmpty()) {
+                // Search bar
+                CustomSearchBar(
+                    modifier = Modifier.padding(horizontal = 15.dp, vertical = 10.dp),
+                    placeholderText = "Who would you like to add?",
+                    searchQuery,
+                    onSearchQueryChanged
+                )
+                Log.e("testinho", searchQuery)
+            }
+            if(peopleOrTaskNameError.isNotEmpty()){
+                Text(
+                    text = peopleOrTaskNameError,
+                    color = palette.error,
+                    style = typography.bodySmall,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 5.dp),
+                    maxLines = 3
+                )
+            }
+
+            // List of placeholders selected people
+            LazyVerticalGrid(
+                columns = GridCells.FixedSize(120.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .heightIn(max = if (maxHeight > maxWidth) 140.dp else 40.dp)
+                    .padding(start = 10.dp, bottom = 15.dp)
+            ) {
+                items(selectedPeople) { person ->
+                    PersonBadge(
+                        person = person,
+                        onRemove = {
+                            removePerson(person)
+                        }
+                    )
+                }
+            }
+
+            // List of members of the task
+            LazyColumn(
+                modifier = Modifier.fillMaxHeight()
+            ) {
+                items(filteredPeople) {
+                    PeopleEntry(
+                        teamId,
+                        person = it,
+                        selectedPeople,
+                        addPerson,
+                        removePerson,
+                        removePersonFromTask,
+                        taskpeople,
+                        showingCreateTask = true,
+                        isInTeamPeople
+                    )
+                }
+                //NEVER VISUALIZED SINCE WE HAVE AT LEAST ONE OWNER WHEN WE CREATE A NEW TASK!
+                if (!isInTeamPeople && teampeople.isEmpty()) {
+                    item {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 15.dp, vertical = 15.dp)
+                        ) {
+                            Text(
+                                text = "To assign members to a task, \nyou should add members to your teams before!",
+                                style = typography.bodyMedium,
+                                modifier = Modifier.align(Alignment.Center)
+                            )
+                        }
+                    }
+                }
+
+                item {
+                    if (filteredPeople.isEmpty() && taskpeople.isNotEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No results for $searchQuery",
+                                style = typography.labelMedium,
+                                color = palette.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
             }
         }
     }

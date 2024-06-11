@@ -299,7 +299,7 @@ fun Tab4Screen (
                     vm.searchQuery.value, vm::onSearchQueryChanged,
                     {},
                     isInTeamPeople = false,
-                    peopleError = ""
+                    peopleOrTaskNameError = ""
                 )
             }
         }
