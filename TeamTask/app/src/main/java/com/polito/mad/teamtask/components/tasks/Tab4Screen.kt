@@ -42,12 +42,15 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
 import com.polito.mad.teamtask.AppFactory
 import com.polito.mad.teamtask.AppModel
+import com.polito.mad.teamtask.Person
 import com.polito.mad.teamtask.Task
 import com.polito.mad.teamtask.chat.visualization.MemberTag
 import com.polito.mad.teamtask.components.tasks.components.WTViewModel
+import com.polito.mad.teamtask.screens.AddPeopleInTaskSection
 import com.polito.mad.teamtask.screens.PeopleSection
 import com.polito.mad.teamtask.screens.PersonData
 import com.polito.mad.teamtask.screens.SpecificTeamViewModel
+import com.polito.mad.teamtask.screens.ToDoTask
 import com.polito.mad.teamtask.ui.theme.CaribbeanCurrent
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 import kotlinx.coroutines.flow.SharingStarted
@@ -118,6 +121,8 @@ fun Tab4Screen (
     taskId: String,
     task: Task,
     creator: String,
+    rawToDoTasks: List<Pair<String, Task>>,
+    rawPeople: List<Pair<String, Person>>,
     vm: SpecificTeamViewModel = viewModel(),
     descriptionVm: DescriptionViewModel = viewModel(factory = AppFactory(LocalContext.current))
 ) {
@@ -130,9 +135,44 @@ fun Tab4Screen (
 
     val keyboardController = LocalSoftwareKeyboardController.current
 
+    // Convert raw data to required types
+    val toDoTasks = rawToDoTasks.map { (id, task) ->
+        ToDoTask(
+            taskId = id,
+            taskName = task.title,
+            status = task.status,
+            isNotPriority = if (task.prioritized) 0 else 1,
+            recurrence = task.recurrence,
+            expirationTimestamp = task.deadline,
+            creationTimestamp = task.creationDate,
+            taskpeople = task.people.map { personId ->
+                val person = rawPeople.find { it.first == personId }?.second ?: Person()
+                PersonData(
+                    personId = personId,
+                    name = person.name,
+                    surname = person.surname,
+                    username = person.username,
+                    role = "", // Assuming role is not available in your current data structure
+                    permission = "", // Assuming permission is not available in your current data structure
+                    image = ""
+                )
+            },
+            tags = task.tags
+        )
+    }
+
     LaunchedEffect(pagerState.currentPage) {
         descriptionVm.setIsDescriptionEditing(false)
         keyboardController?.hide()
+    }
+
+    /*LaunchedEffect(Unit) {
+        vm.init(toDoTasks)
+    }*/
+
+
+    LaunchedEffect(taskId) {
+        vm.init(toDoTasks.filter { it.taskId == taskId })
     }
 
     if(vm.showExitFromTaskModal) {
@@ -292,6 +332,7 @@ fun Tab4Screen (
                 2 -> DescriptionVariant(task.description, vm::setTaskDescription, taskId, false)
                 3 -> PeopleSection(
                     teamId,
+                    taskId,
                     vm.taskpeople,  vm.teampeople,  vm.selectedPeople, vm::clearSelectedPeople,
                     vm::addPerson,  vm::removePerson,
                     vm::addSelectedTeamPeopleToTask, vm::removePersonFromTask,
@@ -304,4 +345,28 @@ fun Tab4Screen (
             }
         }
     }
+}
+
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun AddMembersInTask (
+    teamId: String,
+    taskId: String,
+    vm: SpecificTeamViewModel = viewModel(),
+) {
+    AddPeopleInTaskSection(
+        teamId,
+        taskId,
+        vm.taskpeople,  vm.teampeople,  vm.selectedPeople, vm::clearSelectedPeople,
+        vm::addPerson,  vm::removePerson,
+        vm::addSelectedTeamPeopleToTask, vm::removePersonFromTask,
+        vm.filteredPeople,
+        vm.searchQuery.value, vm::onSearchQueryChanged,
+        {},
+        isInTeamPeople = false,
+        peopleOrTaskNameError = "",
+        vm::addPersonToTask,
+        vm.isLoadingTaskAddMembers.value
+    )
 }

@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,40 +59,81 @@ data class teamData(
 )
 
 class TeamStatisticsViewModel : ViewModel() {
-    var teamData by mutableStateOf(teamData(
-        totalPeople = 4,
-        totalTasks = 20,
-        totalTasksCompleted = 10,
-        people = listOf(
-            StatisticsDataPerson(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                totalTasksAssigned = 5,
-                totalTasksCompleted = 3
-            ),
-            StatisticsDataPerson(
-                PersonData("1", "Mario", "Rossi", "username1", "CTO", "Admin", ""),
-                totalTasksAssigned = 6,
-                totalTasksCompleted = 5
-            ),
-            StatisticsDataPerson(
-                PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
-                totalTasksAssigned = 4,
-                totalTasksCompleted = 4
-            ),
-            StatisticsDataPerson(
-                PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-                totalTasksAssigned = 5,
-                totalTasksCompleted = 2
+    /*
+    var teamData by mutableStateOf(
+        teamData(
+            totalPeople = 4,
+            totalTasks = 20,
+            totalTasksCompleted = 10,
+            people = listOf(
+                StatisticsDataPerson(
+                    PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+                    totalTasksAssigned = 5,
+                    totalTasksCompleted = 3
+                ),
+                StatisticsDataPerson(
+                    PersonData("1", "Mario", "Rossi", "username1", "CTO", "Admin", ""),
+                    totalTasksAssigned = 6,
+                    totalTasksCompleted = 5
+                ),
+                StatisticsDataPerson(
+                    PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
+                    totalTasksAssigned = 4,
+                    totalTasksCompleted = 4
+                ),
+                StatisticsDataPerson(
+                    PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
+                    totalTasksAssigned = 5,
+                    totalTasksCompleted = 2
+                )
             )
         )
-    ))
+    )
+    */
 }
+
+
 @Composable
 fun TeamPerformances(
+    teamParticipants: List<TeamParticipant>,
+    people: List<Pair<String, Person>>,
+    tasks: List<Pair<String, Task>>,
     teamStatisticsVM: TeamStatisticsViewModel = viewModel()
 ) {
     val typography = TeamTaskTypography
     val palette = MaterialTheme.colorScheme
+
+    val totalMembers = teamParticipants
+        .map { tp -> tp.personId }
+        .distinct().count()
+    val totalTasks = tasks.count()
+    val completedTasks = tasks
+        .filter { t -> t.second.status.equals("Completed") }
+        .distinct().count()
+
+    val members = mutableListOf<StatisticsDataPerson>()
+    teamParticipants.forEach { tp ->
+        val personId = tp.personId
+        val role = tp.role
+        val permission = ""
+        val image = ""
+        val totalTasksAssigned = tp.totalTasks
+        val totalTasksCompleted = tp.completedTasks
+        val person = people.firstOrNull { p -> p.first.equals(tp.personId) }
+
+        if (person!=null) {
+            val name = person.second.name
+            val surname = person.second.surname
+            val username = person.second.username
+
+            val pd = PersonData(personId, name, surname, username, role, permission, image)
+            val sdp = StatisticsDataPerson(pd, totalTasksAssigned.toInt(), totalTasksCompleted.toInt())
+            members.add(sdp)
+        }
+    }
+
+    val bestMember = members
+        .toList().maxByOrNull { p -> p.totalTasksCompleted }!!
 
     LazyColumn(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -115,24 +157,51 @@ fun TeamPerformances(
         item { Spacer(modifier = Modifier.height(6.dp)) }
 
         item {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
+            Row (
+                horizontalArrangement = Arrangement.SpaceBetween,
+                //verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.people),
-                    contentDescription = "Team people",
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
-                Text(
-                    text = "Total members: ${teamStatisticsVM.teamData.totalPeople}",
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    style = typography.bodySmall
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1.0f)
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.people),
+                        contentDescription = "Team people",
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
+                    Text(
+                        //text = "Total members: ${teamStatisticsVM.teamData.totalPeople}",
+                        text = "Total members: $totalMembers",
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        style = typography.bodySmall
+                    )
+                }
+
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.CenterVertically)
+                        .weight(1f)
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.total_tasks),
+                        contentDescription = "Total Tasks",
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
+                    Text(
+                        //text = "Total Tasks: ${teamStatisticsVM.teamData.totalTasks}",
+                        text = "Total Tasks: $totalTasks",
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        style = typography.bodySmall
+                    )
+                }
             }
         }
 
         item { Spacer(modifier = Modifier.height(16.dp)) }
 
+        /*
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -149,7 +218,8 @@ fun TeamPerformances(
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                     Text(
-                        text = "Total Tasks: ${teamStatisticsVM.teamData.totalTasks}",
+                        //text = "Total Tasks: ${teamStatisticsVM.teamData.totalTasks}",
+                        text = "Total Tasks: $totalTasks",
                         modifier = Modifier.align(Alignment.CenterHorizontally),
                         style = typography.bodySmall
                     )
@@ -166,7 +236,8 @@ fun TeamPerformances(
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                     Text(
-                        text = "Tasks Completed: ${teamStatisticsVM.teamData.totalTasksCompleted}",
+                        //text = "Tasks Completed: ${teamStatisticsVM.teamData.totalTasksCompleted}",
+                        text = "Tasks Completed: $completedTasks",
                         modifier = Modifier.align(Alignment.CenterHorizontally),
                         style = typography.bodySmall
                     )
@@ -175,26 +246,7 @@ fun TeamPerformances(
         }
 
         item { Spacer(modifier = Modifier.height(20.dp)) }
-
-        item {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    "Total number of tasks completed:",
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    style = typography.bodySmall
-                )
-                Spacer(modifier = Modifier.height(7.dp))
-                ProgressBar(
-                    teamStatisticsVM.teamData.totalTasksCompleted,
-                    teamStatisticsVM.teamData.totalTasks
-                )
-            }
-        }
-
-        item { Spacer(modifier = Modifier.height(16.dp)) }
+        */
 
         item {
             Row(
@@ -231,7 +283,7 @@ fun TeamPerformances(
                         contentAlignment = Alignment.Center
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable.person_1), // TODO: Adapt to actual person's image
+                            painter = painterResource(id = R.drawable.person_1), // TODO: ${bestMember.person.image}
                             contentDescription = "Account Image",
                             modifier = Modifier.size(48.dp)
                         )
@@ -270,7 +322,7 @@ fun TeamPerformances(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            "Mario Rossi", // TODO: Adapt to actual person's name
+                            "${bestMember.person.name} ${bestMember.person.surname}",
                             style = typography.bodyMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -296,7 +348,8 @@ fun TeamPerformances(
 
         item {
             Column {
-                teamStatisticsVM.teamData.people
+                //teamStatisticsVM.teamData.people
+                members
                     .forEach { p -> TeamPeopleEntry(p) }
             }
         }
@@ -310,7 +363,9 @@ private fun TeamPeopleEntry (
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
 
-    val performance: Double = truncate(data.totalTasksCompleted.toDouble()/data.totalTasksAssigned.toDouble() * 100)
+    val performance: Double =
+        if (data.totalTasksAssigned==0) truncate(0.toDouble())
+        else truncate(data.totalTasksCompleted.toDouble()/data.totalTasksAssigned.toDouble() * 100)
 
     val userImages = listOf(
         R.drawable.person_1,
@@ -330,7 +385,7 @@ private fun TeamPeopleEntry (
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Account image
-        Image( // TODO: Adapt to actual person's image
+        Image( // TODO: data.person.image
             painter = painterResource(id = when (data.person.name.length % 5) {
                 1 -> userImages[0]
                 2 -> userImages[1]
@@ -395,8 +450,13 @@ private fun TeamPeopleEntry (
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = data.person.role,
+                    text =
+                    if (data.person.role!="") data.person.role
+                    else "Without a specific role",
                     style = typography.bodySmall,
+                    fontStyle =
+                    if (data.person.role!="") FontStyle.Normal
+                    else FontStyle.Italic,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     color = palette.onSurface
@@ -437,7 +497,6 @@ private fun TeamPeopleEntry (
         Spacer(modifier = Modifier.width(8.dp))
 
         // Rocket performance icon
-
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.weight(1f)

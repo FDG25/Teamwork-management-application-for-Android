@@ -54,6 +54,7 @@ import com.polito.mad.teamtask.components.CategoryFilterScreen
 import com.polito.mad.teamtask.components.FloatingButton
 import com.polito.mad.teamtask.components.NewTeam
 import com.polito.mad.teamtask.components.TopBar
+import com.polito.mad.teamtask.components.tasks.AddMembersInTask
 import com.polito.mad.teamtask.components.tasks.CommentsViewModel
 import com.polito.mad.teamtask.components.tasks.DescriptionViewModel
 import com.polito.mad.teamtask.components.tasks.EditTeamDescription
@@ -2692,7 +2693,16 @@ fun AppMainScreen(
                         CalendarWithEvents(filteredTasks, filteredTeams, teams)
                     }
 
-                    composable("teams/{teamId}/statistics") { TeamPerformances() }
+                    composable("teams/{teamId}/statistics") { backStackEntry ->
+                        val teamId = backStackEntry.arguments?.getString("teamId")
+
+                        val tps = realTeamParticipants
+                            .filter { tp -> tp.teamId.equals(teamId) }
+                        val filteredTasks = tasks
+                            .filter { t -> t.second.teamId.equals(teamId) }
+
+                        TeamPerformances(tps, people, filteredTasks)
+                    }
 
                     composable("teams/newTeam/info") {
                         NewTeam(
@@ -2825,13 +2835,17 @@ fun AppMainScreen(
                         val teamId = backStackEntry.arguments?.getString("teamId")
                         val taskId = backStackEntry.arguments?.getString("taskId")
 
+                        // Filter tasks that belong to the specified team
+                        val filteredTasks = tasks.filter { it.second.teamId == teamId }
+
                         val task = tasks.find { it.first == taskId }
                         val person = people.find { it.first == task?.second?.creatorId }
                         val creatorName = person?.second?.name + " " + person?.second?.surname
 
                         if (teamId != null && task != null) {
                             if (taskId != null) {
-                                ShowTaskDetails(teamId, taskId, task.second, creatorName, teamVM)
+                                ShowTaskDetails(teamId, taskId, task.second, creatorName,
+                                    filteredTasks, people, teamVM)
                             }
                         }
 
@@ -2859,7 +2873,22 @@ fun AppMainScreen(
 
                     composable("teams/{teamId}/tasks/{taskId}/edit/info") { NotImplementedScreen() } // TODO: Implement
                     composable("teams/{teamId}/tasks/{taskId}/edit/description") { NotImplementedScreen() } // TODO: Implement
-                    composable("teams/{teamId}/tasks/{taskId}/edit/people") { NotImplementedScreen() } // TODO: Implement
+                    composable("teams/{teamId}/tasks/{taskId}/edit/people") { backStackEntry ->
+                        val teamId = backStackEntry.arguments?.getString("teamId")
+                        val taskId = backStackEntry.arguments?.getString("taskId")
+
+                        val task = tasks.find { it.first == taskId }
+                        val person = people.find { it.first == task?.second?.creatorId }
+                        val creatorName = person?.second?.name + " " + person?.second?.surname
+
+                        if (teamId != null && task != null) {
+                            if (taskId != null) {
+                                AddMembersInTask(
+                                    teamId, taskId, teamVM
+                                )
+                            }
+                        }
+                    } // TODO: Implement
 
                     composable("chats") {
                         // Get the list of team IDs the user is part of

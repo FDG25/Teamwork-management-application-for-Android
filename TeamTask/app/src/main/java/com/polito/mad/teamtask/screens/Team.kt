@@ -184,6 +184,30 @@ class SpecificTeamViewModel : ViewModel() {
     val auth = FirebaseAuth.getInstance()
 
     fun init(
+        toDoTasks: List<ToDoTask>
+    ) {
+        viewModelScope.launch {
+            // Populate _taskpeople with all people from each task
+            val allTaskPeople = toDoTasks.flatMap { it.taskpeople }
+                .distinctBy { it.personId }
+                .map {
+                    if (it.image.isNotBlank()) {
+                        val image =
+                            FirebaseStorage.getInstance().reference.child("profileImages/${it.image}")
+                        val url = image.downloadUrl.await()
+                        it.copy(image = url.toString())
+                    } else it
+                }
+
+            val updatedTaskPeople = _teampeople.value.filter { teamPerson ->
+                allTaskPeople.any { it.personId == teamPerson.personId }
+            }
+
+            _taskpeople.value = updatedTaskPeople
+        }
+    }
+
+    fun init(
         toDoTasks: List<ToDoTask>,
         teampeople: List<PersonData>,
         filteredPeople: List<PersonData>
@@ -1525,6 +1549,70 @@ class SpecificTeamViewModel : ViewModel() {
 
     // Provide an immutable view of the taskpeople to the UI
     val taskpeople: List<PersonData> get() = _taskpeople.value
+
+    var isLoadingTaskAddMembers = mutableStateOf(false)
+
+    // Method to add selected people to a task
+    fun addPersonToTask(teamId: String, taskId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                isLoadingTaskAddMembers.value = true
+                val selectedPeople = selectedPeople.toList()
+
+                // Update local state
+                val updatedTaskPeople = _taskpeople.value.toMutableList()
+                val updatedTasks = _toDoTasks.value.map { task ->
+                    if (task.taskId == taskId) {
+                        task.copy(taskpeople = task.taskpeople + selectedPeople.filter { newPerson ->
+                            task.taskpeople.none { it.personId == newPerson.personId }
+                        })
+                    } else {
+                        task
+                    }
+                }
+
+                _taskpeople.value = (updatedTaskPeople + selectedPeople).distinctBy { it.personId }
+                _toDoTasks.value = updatedTasks
+
+                // Update Firestore tasks collection
+                val taskRef = db.collection("tasks").document(taskId)
+                val taskSnapshot = taskRef.get().await()
+                val taskPeople = taskSnapshot.get("people") as? MutableList<String> ?: mutableListOf()
+
+                selectedPeople.forEach { selectedPerson ->
+                    if (!taskPeople.contains(selectedPerson.personId)) {
+                        taskPeople.add(selectedPerson.personId)
+                    }
+                }
+                taskRef.update("people", taskPeople).await()
+
+                // Update Firestore people collection
+                selectedPeople.forEach { selectedPerson ->
+                    val personRef = db.collection("people").document(selectedPerson.personId)
+                    val personSnapshot = personRef.get().await()
+                    val personTasks = personSnapshot.get("tasks") as? MutableList<String> ?: mutableListOf()
+
+                    if (!personTasks.contains(taskId)) {
+                        personTasks.add(taskId)
+                    }
+                    personRef.update("tasks", personTasks).await()
+                }
+
+                // Update the filters --> IT HAS TO BE DONE ONLY FOR REMOVE, BECAUSE OTHERWISE MAY REMAIN A FILTER BY PERSON APPLIED, EVEN IF THAT PERSON IS NOT IN THE TEAM/TASK ANYMORE!
+                //listOfMembersForFilter = (listOfMembersForFilter + selectedPeople).distinctBy { it.personId }
+                //tempListOfMembersForFilter = (tempListOfMembersForFilter + selectedPeople).distinctBy { it.personId }
+
+                // Call init with the updated list of tasks
+                init(_toDoTasks.value)
+            } catch (e: Exception) {
+                // Handle any errors that occur during the database operation
+                e.printStackTrace()
+            }
+            isLoadingTaskAddMembers.value = false
+        }
+    }
+
+
 
     // Method to remove a person from taskpeople
     fun removePersonFromTask(teamId: String, personId: String) {
@@ -3014,6 +3102,7 @@ fun DescriptionStep(
     }*/
 }
 
+/*
 @Composable
 fun PeopleStep(
     teamId: String,
@@ -3066,9 +3155,10 @@ fun PeopleStep(
         addSelectedTeamPeopleToTask, removePersonFromTask,
         filteredPeople,
         searchQueryForNewTask, onSearchQueryChangedForNewTask, {}, isInTeamPeople = false,
-        peopleOrTaskNameError
+        peopleOrTaskNameError,
     )
 }
+ */
 
 @Composable
 fun PeopleStepCreation(
@@ -4279,7 +4369,7 @@ fun Tab3Screen(
     setShowCalendView: (Boolean) -> Unit,
     showCalendarEventsDialog: Boolean,
     setShowCalendEventsDialog: (Boolean) -> Unit,
-    teamDescription: String
+    teamDescription: String,
 ) {
     val palette = MaterialTheme.colorScheme
 
@@ -4348,13 +4438,13 @@ fun Tab3Screen(
 
             1 -> DescriptionViewOnly(descriptionValue = teamDescription, teamId = teamId)
 
-            2 -> PeopleSection(
+            2 -> PeopleSectionForTeam(
                 teamId,
                 teampeople, teampeople, selectedPeople, clearSelectedPeople,
                 addPerson, removePerson,
                 addSelectedTeamPeopleToTask, removePersonFromTeam,
                 filteredPeople,
-                searchQuery, onSearchQueryChanged, setShowTeamLinkOrQrCode, isInTeamPeople = true, peopleOrTaskNameError = ""
+                searchQuery, onSearchQueryChanged, setShowTeamLinkOrQrCode, isInTeamPeople = true, peopleOrTaskNameError = "",
             )
         }
     }
@@ -5703,6 +5793,557 @@ private fun PeopleEntry(
                         verticalArrangement = Arrangement.Center,
                         modifier = Modifier.fillMaxWidth()
                     ) {
+                        Button(
+                            onClick = {
+                                if (isInTeamPeople) {
+                                    vm.removePersonFromTeam(teamId, person.personId)
+                                } else {
+                                    removePersonFromTask(teamId, person.personId)
+
+                                }
+                                showMenu = false  // Close the dialog after action
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = palette.primary,
+                                contentColor = palette.secondary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                text = if (isInTeamPeople) "Remove from Team" else "Remove from Task",
+                                style = typography.bodySmall
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showMenu = false }) {
+                        Text(
+                            "Close",
+                            color = palette.secondary
+                        )
+                    }
+                }
+            )
+        }
+
+        if (showMenuAssignRole) {
+            LaunchedEffect(showMenuAssignRole) {
+                if (person.role.isNotEmpty()) {
+                    vm.setSelectdRole(person.role)
+                } else {
+                    vm.setSelectdRole("")
+                }
+            }
+            AlertDialog(
+                onDismissRequest = {
+                    showMenuAssignRole = false
+                },
+                title = { Text(text = if (person.role == "") "Assign Role" else "Edit Role") },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "Assign a role to " + person.name + " " + person.surname + ":"
+                        )
+                        Spacer(modifier = Modifier.height(15.dp))
+                        TextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            value = vm.selectedRole,
+                            onValueChange = { if (it.length <= 30) vm.setSelectdRole(it) },
+                            singleLine = true,
+                            label = {
+                                Row {
+                                    Text("Role")
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("(${30 - vm.selectedRole.length} characters left)")
+                                }
+                            },
+                            keyboardOptions = KeyboardOptions.Default.copy(
+                                imeAction = ImeAction.Done
+                            ),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = palette.surfaceVariant,
+                                unfocusedContainerColor = palette.surfaceVariant,
+                                disabledContainerColor = palette.surfaceVariant,
+                                cursorColor = palette.secondary,
+                                focusedIndicatorColor = palette.secondary,
+                                unfocusedIndicatorColor = palette.onSurfaceVariant,
+                                errorIndicatorColor = palette.error,
+                                focusedLabelColor = palette.secondary,
+                                unfocusedLabelColor = palette.onSurfaceVariant,
+                                errorLabelColor = palette.error,
+                                selectionColors = TextSelectionColors(
+                                    palette.primary,
+                                    palette.surface
+                                )
+                            )
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        vm.validateRole(teamId, person.personId, vm.selectedRole)
+                        showMenuAssignRole = false
+                    }) {
+                        Text(
+                            text = "Assign",
+                            style = typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = CaribbeanCurrent
+                        )
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = {
+                        vm.selectedRoleError = ""
+                        showMenuAssignRole = false
+                    }) {
+                        Text(
+                            text = "Cancel",
+                            style = typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = CaribbeanCurrent
+                        )
+                    }
+                }
+            )
+        }
+    }
+
+
+    // Person details
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp)
+            .background(backgroundColor, RoundedCornerShape(5.dp))
+            .padding(8.dp)
+            .then(
+                if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status")
+                    && !isAlreadyInTask
+                ) Modifier.clickable {
+                    isSelected = !isSelected
+                    if (isSelected) {
+                        if (!selectedPeople.any { it.username == person.username }) {
+                            addPerson(person)
+                        }
+                    } else {
+                        removePerson(person)
+                    }
+                } else if ((currentRoute != "teams/{teamId}/edit/people" && currentRoute != "teams/{teamId}/filterTasks" && currentRoute != "teams/{teamId}/newTask/status")) Modifier.combinedClickable(
+                    onLongClick = {
+                        if (vm.hasHigherPermission(
+                                teamId,
+                                auth.uid,
+                                person.permission
+                            )
+                        ) if (person.permission == "Owner") {
+
+                        } else {
+                            showMenu = true
+                        }
+                    },
+                    onClick = {
+                        Actions
+                            .getInstance()
+                            .goToAccount(person.personId)
+                    }
+                ) else Modifier
+            ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+
+
+        // Account image
+//        Image(
+//            painter = painterResource(id = when (person.name.length%5) {
+//                1 -> userImages[0]
+//                2 -> userImages[1]
+//                3 -> userImages[2]
+//                4 -> userImages[3]
+//                else -> userImages[2]
+//            }),
+//            contentDescription = "Task Image",
+//            modifier = Modifier
+//                .size(48.dp)
+//                .clip(CircleShape)
+//        )
+
+        if (person.image.isNotEmpty()) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(person.image)
+                    .error(R.drawable.avatar)
+                    .crossfade(true)
+                    .placeholder(R.drawable.avatar)
+                    //.error()
+                    .build(),
+                contentDescription = "Member Pic",
+                Modifier
+                    .size(48.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(palette.surface),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (person.name.isNotEmpty() && person.surname.isNotEmpty()) "${person.name[0]}${person.surname[0]}"
+                    else if (person.name.isNotEmpty()) "${person.name[0]}"
+                    else "",
+                    style = typography.bodyLarge,
+                    color = palette.onSurface
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp),
+            horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(
+                    modifier = Modifier.width(220.dp)
+                ) {
+                    // Account name
+                    Text(
+                        text = "${person.name} ${person.surname}",
+                        style = typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = textColor
+                    )
+                }
+            }
+
+            // Username
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = if (person.personId != auth.uid) {
+                        person.username
+                    } else {
+                        person.username + " (you)"
+                    },
+                    style = typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = textColor
+                )
+                Column(
+                    modifier = Modifier.width(80.dp),
+                    horizontalAlignment = Alignment.End
+                ) {
+                    // Permission for the task
+                    Text(
+                        text = person.permission,
+                        style = typography.bodySmall,
+                        maxLines = 1,
+                        color = palette.secondary
+                    )
+                }
+            }
+
+            // Role inside the team
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = person.role,
+                    style = typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = textColor
+                )
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(10.dp))
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun PeopleEntryForTask(
+    teamId: String,
+    person: PersonData,
+    selectedPeople: List<PersonData>,
+    addPerson: (PersonData) -> Unit,
+    removePerson: (PersonData) -> Unit,
+    removePersonFromTask: (String, String) -> Unit,
+    taskpeople: List<PersonData>,
+    showingCreateTask: Boolean,
+    isInTeamPeople: Boolean,
+    vm: SpecificTeamViewModel = viewModel()
+) {
+    val palette = MaterialTheme.colorScheme
+    val typography = TeamTaskTypography
+    val auth = FirebaseAuth.getInstance()
+
+
+    var isSelected = selectedPeople.any { it.username == person.username }
+    val isAlreadyInTask =
+        remember(taskpeople) { taskpeople.any { it.username == person.username }}
+    var showMenu by remember { mutableStateOf(false) }
+    var showMenuAssignRole by remember { mutableStateOf(false) }
+    var showOwnerMenu by remember { mutableStateOf(false) }
+
+    val backgroundColor = if (isSelected) palette.primaryContainer else palette.surfaceVariant
+    val textColor = palette.onSurface
+
+    val userImages = listOf(
+        R.drawable.person_1,
+        R.drawable.person_2,
+        R.drawable.person_3,
+        R.drawable.person_4
+    )
+
+    // Person details
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp)
+            .background(backgroundColor, RoundedCornerShape(5.dp))
+            .padding(8.dp)
+            .then(
+                if (!isAlreadyInTask) Modifier.clickable {
+                    isSelected = !isSelected
+                    if (isSelected) {
+                        if (!selectedPeople.any { it.username == person.username }) {
+                            addPerson(person)
+                        }
+                    } else {
+                        removePerson(person)
+                    }
+                } else Modifier
+            ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Selected icon
+        if (isSelected && !isAlreadyInTask) {
+            Image(
+                painter = painterResource(id = R.drawable.outline_done_24),
+                contentDescription = "Selected",
+                modifier = Modifier
+                    .size(20.dp)
+                    .clip(CircleShape),
+                colorFilter = ColorFilter.tint(palette.onSurface)
+            )
+        }
+        if (isAlreadyInTask) {
+            Image(
+                painter = painterResource(id = R.drawable.outline_done_24),
+                contentDescription = "Selected",
+                modifier = Modifier
+                    .size(20.dp)
+                    .clip(CircleShape),
+                colorFilter = ColorFilter.tint(palette.onSurface)
+            )
+        }
+
+        // Account image
+//        Image(
+//            painter = painterResource(id = when (person.name.length%5) {
+//                1 -> userImages[0]
+//                2 -> userImages[1]
+//                3 -> userImages[2]
+//                4 -> userImages[3]
+//                else -> userImages[2]
+//            }),
+//            contentDescription = "Task Image",
+//            modifier = Modifier
+//                .size(48.dp)
+//                .clip(CircleShape)
+//        )
+
+        if (person.image.isNotEmpty()) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(person.image)
+                    .error(R.drawable.avatar)
+                    .crossfade(true)
+                    .placeholder(R.drawable.avatar)
+                    //.error()
+                    .build(),
+                contentDescription = "Member Pic",
+                Modifier
+                    .size(48.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(palette.surface),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (person.name.isNotEmpty() && person.surname.isNotEmpty()) "${person.name[0]}${person.surname[0]}"
+                    else if (person.name.isNotEmpty()) "${person.name[0]}"
+                    else "",
+                    style = typography.bodyLarge,
+                    color = palette.onSurface
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp),
+            horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(
+                    modifier = Modifier.width(220.dp)
+                ) {
+                    // Account name
+                    Text(
+                        text = "${person.name} ${person.surname}",
+                        style = typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = textColor
+                    )
+                }
+            }
+
+            // Username
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = if (person.personId != auth.uid) {
+                        person.username
+                    } else {
+                        person.username + " (you)"
+                    },
+                    style = typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = textColor
+                )
+                Column(
+                    modifier = Modifier.width(80.dp),
+                    horizontalAlignment = Alignment.End
+                ) {
+                    // Permission for the task
+                    Text(
+                        text = person.permission,
+                        style = typography.bodySmall,
+                        maxLines = 1,
+                        color = palette.secondary
+                    )
+                }
+            }
+
+            // Role inside the team
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = person.role,
+                    style = typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = textColor
+                )
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(10.dp))
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun PeopleEntryForTeam(
+    teamId: String,
+    person: PersonData,
+    selectedPeople: List<PersonData>,
+    addPerson: (PersonData) -> Unit,
+    removePerson: (PersonData) -> Unit,
+    removePersonFromTask: (String, String) -> Unit,
+    taskpeople: List<PersonData>,
+    showingCreateTask: Boolean,
+    isInTeamPeople: Boolean,
+    vm: SpecificTeamViewModel = viewModel()
+) {
+    val palette = MaterialTheme.colorScheme
+    val typography = TeamTaskTypography
+    val currentRoute = Actions.getInstance().getCurrentRoute()
+    val auth = FirebaseAuth.getInstance()
+
+    val isAlreadyInTask =
+        remember(taskpeople) { taskpeople.any { it.username == person.username } && !showingCreateTask }
+    var showMenu by remember { mutableStateOf(false) }
+    var showMenuAssignRole by remember { mutableStateOf(false) }
+    var showOwnerMenu by remember { mutableStateOf(false) }
+
+    val backgroundColor = palette.surfaceVariant
+    val textColor = palette.onSurface
+
+    val userImages = listOf(
+        R.drawable.person_1,
+        R.drawable.person_2,
+        R.drawable.person_3,
+        R.drawable.person_4
+    )
+
+    if(currentRoute != "teams/{teamId}/newTask/status") {
+        // Modal menu
+        if (showMenu) {
+            AlertDialog(
+                onDismissRequest = { showMenu = false },
+                title = {
+                    Text(
+                        "${person.name} ${person.surname}",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center  // Center the title text
+                    )
+                },
+                text = {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,  // Align text and buttons to the center
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
                         Button(
                             onClick = {
@@ -5925,14 +6566,6 @@ private fun PeopleEntry(
                 if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status")
                     && !isAlreadyInTask
                 ) Modifier.clickable {
-                    isSelected = !isSelected
-                    if (isSelected) {
-                        if (!selectedPeople.any { it.username == person.username }) {
-                            addPerson(person)
-                        }
-                    } else {
-                        removePerson(person)
-                    }
                 } else if ((currentRoute != "teams/{teamId}/edit/people" && currentRoute != "teams/{teamId}/filterTasks" && currentRoute != "teams/{teamId}/newTask/status")) Modifier.combinedClickable(
                     onLongClick = {
                         if (vm.hasHigherPermission(
@@ -5955,32 +6588,6 @@ private fun PeopleEntry(
             ),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Selected icon
-        if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status")
-            && isSelected && !isAlreadyInTask
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.outline_done_24),
-                contentDescription = "Selected",
-                modifier = Modifier
-                    .size(25.dp)
-                    .clip(CircleShape),
-                colorFilter = ColorFilter.tint(palette.onSurface)
-            )
-        }
-        if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status")
-            && isAlreadyInTask
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.outline_done_24),
-                contentDescription = "Selected",
-                modifier = Modifier
-                    .size(25.dp)
-                    .clip(CircleShape),
-                colorFilter = ColorFilter.tint(palette.onSurface)
-            )
-        }
-
         // Account image
 //        Image(
 //            painter = painterResource(id = when (person.name.length%5) {
@@ -6056,19 +6663,6 @@ private fun PeopleEntry(
                         color = textColor
                     )
                 }
-
-                Column(
-                    modifier = Modifier.width(80.dp),
-                    horizontalAlignment = Alignment.End
-                ) {
-                    // Role for the task
-                    Text(
-                        text = person.permission,
-                        style = typography.bodySmall,
-                        maxLines = 1,
-                        color = palette.secondary
-                    )
-                }
             }
 
             // Username
@@ -6088,6 +6682,18 @@ private fun PeopleEntry(
                     overflow = TextOverflow.Ellipsis,
                     color = textColor
                 )
+                Column(
+                    modifier = Modifier.width(80.dp),
+                    horizontalAlignment = Alignment.End
+                ) {
+                    // Permission for the task
+                    Text(
+                        text = person.permission,
+                        style = typography.bodySmall,
+                        maxLines = 1,
+                        color = palette.secondary
+                    )
+                }
             }
 
             // Role inside the team
@@ -6148,6 +6754,7 @@ fun PersonBadge(
 @Composable
 fun PeopleSection(
     teamId: String,
+    taskId: String,
     taskpeople: List<PersonData>,
     teampeople: List<PersonData>,
     selectedPeople: List<PersonData>,
@@ -6173,8 +6780,10 @@ fun PeopleSection(
         val maxWidth = this.maxWidth
 
         Column {
-            if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status")) {
-                if (teampeople.isNotEmpty() || !isInTeamPeople && taskpeople.isNotEmpty()) {
+            if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status"
+                        || currentRoute == "teams/{teamId}/tasks/{taskId}/comments")) {
+                /*
+                if (taskpeople.isNotEmpty()) {
                     // Search bar
                     CustomSearchBar(
                         modifier = Modifier.padding(horizontal = 15.dp, vertical = 10.dp),
@@ -6213,6 +6822,7 @@ fun PeopleSection(
                         )
                     }
                 }
+                 */
             }
 
             // List of members of the task
@@ -6236,64 +6846,29 @@ fun PeopleSection(
                             if ((isInTeamPeople && teampeople.isEmpty() && taskpeople.isEmpty())
                                 || (teampeople.isNotEmpty() && taskpeople.isEmpty())
                             ) {
-                                if(currentRoute != "teams/{teamId}/newTask/status") {
-                                    Text(
-                                        "Press on the button below to add members!",
-                                        style = typography.bodyMedium,
-                                        modifier = Modifier.align(Alignment.Center)
-                                    )
-                                }
+                                Text(
+                                    "Press on the button below to add members to this task!",
+                                    style = typography.bodyMedium,
+                                    modifier = Modifier.align(Alignment.Center)
+                                )
+
                             }
                         }
                     }
                 }
 
-                if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status")) {
-                    if (currentRoute == "teams/{teamId}/newTask/status") {
-                        items(filteredPeople) {
-                            PeopleEntry(
-                                teamId,
-                                person = it,
-                                selectedPeople,
-                                addPerson,
-                                removePerson,
-                                removePersonFromTask,
-                                taskpeople,
-                                showingCreateTask = true,
-                                isInTeamPeople
-                            )
-                        }
-                    } else {
-                        items(filteredPeople) {
-                            if (it.permission != "Owner") {
-                                PeopleEntry(
-                                    teamId,
-                                    person = it,
-                                    selectedPeople,
-                                    addPerson,
-                                    removePerson,
-                                    removePersonFromTask,
-                                    taskpeople,
-                                    showingCreateTask = false,
-                                    isInTeamPeople
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    items(taskpeople) {
-                        PeopleEntry(
-                            teamId,
-                            person = it,
-                            selectedPeople,
-                            addPerson,
-                            removePerson,
-                            removePersonFromTask,
-                            listOf(),
-                            false,
-                            isInTeamPeople
-                        )
-                    }
+                items(taskpeople) {
+                    PeopleEntry(
+                        teamId,
+                        person = it,
+                        selectedPeople,
+                        addPerson,
+                        removePerson,
+                        removePersonFromTask,
+                        listOf(),
+                        false,
+                        isInTeamPeople
+                    )
                 }
                 if (!isInTeamPeople && teampeople.isEmpty()) {
                     item {
@@ -6375,6 +6950,305 @@ fun PeopleSection(
                 )
             }
         }
+
+        //invite people to task
+        if(currentRoute == "teams/{teamId}/tasks/{taskId}/comments"){
+            FloatingActionButton(
+                onClick = {
+
+                      clearSelectedPeople()
+                      Actions.getInstance().goToEditTaskPeople(teamId, taskId)
+
+                      //onSearchQueryChanged("")
+                      //addSelectedTeamPeopleToTask()
+                      //setAddingPeopleInTask(false)
+                      //clearSelectedPeople()
+                },
+                containerColor = palette.secondary,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(25.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.outline_person_add_24),
+                    contentDescription = "Add",
+                    colorFilter = ColorFilter.tint(palette.background)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AddPeopleInTaskSection(
+    teamId: String,
+    taskId: String,
+    taskpeople: List<PersonData>,
+    teampeople: List<PersonData>,
+    selectedPeople: List<PersonData>,
+    clearSelectedPeople: () -> Unit,
+    addPerson: (PersonData) -> Unit,
+    removePerson: (PersonData) -> Unit,
+    addSelectedTeamPeopleToTask: () -> Unit,
+    removePersonFromTask: (String, String) -> Unit,
+    filteredPeople: List<PersonData>,
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit,
+    setShowTeamLinkOrQrCode: (Boolean) -> Unit,
+    isInTeamPeople: Boolean,
+    peopleOrTaskNameError: String,
+    addPersonToTask: (String, String) -> Unit,
+    isLoadingTaskAddMembers: Boolean
+){
+    val typography = TeamTaskTypography
+    val palette = MaterialTheme.colorScheme
+
+    val currentRoute = Actions.getInstance().getCurrentRoute()
+
+    if(isLoadingTaskAddMembers){
+        LoadingScreen()
+    }
+    BoxWithConstraints {
+        val maxHeight = this.maxHeight
+        val maxWidth = this.maxWidth
+
+        Column {
+            if (teampeople.isNotEmpty() || !isInTeamPeople) {
+                // Search bar
+                CustomSearchBar(
+                    modifier = Modifier.padding(horizontal = 15.dp, vertical = 10.dp),
+                    placeholderText = "Who would you like to add?",
+                    searchQuery,
+                    onSearchQueryChanged
+                )
+            }
+
+            // List of placeholders selected people
+            LazyVerticalGrid(
+                columns = GridCells.FixedSize(120.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .heightIn(max = if (maxHeight > maxWidth) 140.dp else 40.dp)
+                    .padding(start = 10.dp, bottom = 15.dp)
+            ) {
+                items(selectedPeople) { person ->
+                    PersonBadge(
+                        person = person,
+                        onRemove = {
+                            removePerson(person)
+                        }
+                    )
+                }
+            }
+
+            // List of members of the task
+            LazyColumn(
+                modifier = Modifier.fillMaxHeight()
+            ) {
+                items(filteredPeople) {
+                    PeopleEntryForTask(
+                        teamId,
+                        person = it,
+                        selectedPeople,
+                        addPerson,
+                        removePerson,
+                        removePersonFromTask,
+                        taskpeople,
+                        showingCreateTask = true,
+                        isInTeamPeople
+                    )
+                }
+                item {
+                    if (filteredPeople.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No results for $searchQuery",
+                                style = typography.labelMedium,
+                                color = palette.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        FloatingActionButton(
+            onClick = {
+                addPersonToTask(teamId, taskId)
+                Actions.getInstance().navigateBack()
+                clearSelectedPeople()
+
+
+                //onSearchQueryChanged("")
+                //addSelectedTeamPeopleToTask()
+                //setAddingPeopleInTask(false)
+                //clearSelectedPeople()
+            },
+            containerColor = palette.secondary,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(25.dp)
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.outline_done_24),
+                contentDescription = "Add",
+                colorFilter = ColorFilter.tint(palette.background)
+            )
+        }
+    }
+}
+
+@Composable
+fun PeopleSectionForTeam(
+    teamId: String,
+    taskpeople: List<PersonData>,
+    teampeople: List<PersonData>,
+    selectedPeople: List<PersonData>,
+    clearSelectedPeople: () -> Unit,
+    addPerson: (PersonData) -> Unit,
+    removePerson: (PersonData) -> Unit,
+    addSelectedTeamPeopleToTask: () -> Unit,
+    removePersonFromTask: (String, String) -> Unit,
+    filteredPeople: List<PersonData>,
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit,
+    setShowTeamLinkOrQrCode: (Boolean) -> Unit,
+    isInTeamPeople: Boolean,
+    peopleOrTaskNameError: String
+) {
+    val typography = TeamTaskTypography
+    val palette = MaterialTheme.colorScheme
+
+    val currentRoute = Actions.getInstance().getCurrentRoute()
+
+    BoxWithConstraints {
+        val maxHeight = this.maxHeight
+        val maxWidth = this.maxWidth
+
+        Column {
+            // List of members of the task
+            LazyColumn(
+                modifier = Modifier.fillMaxHeight()
+            ) {
+                item {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 15.dp, vertical = 15.dp)
+                    ) {
+                        if (taskpeople.isNotEmpty()) {
+                            Text(
+                                "${taskpeople.size} members",
+                                style = typography.bodySmall
+                            )
+                        }
+                        if ((isInTeamPeople && teampeople.isEmpty() && taskpeople.isEmpty())
+                            || (teampeople.isNotEmpty() && taskpeople.isEmpty())
+                        ) {
+                            if (currentRoute != "teams/{teamId}/newTask/status") {
+                                Text(
+                                    "Press on the button below to add members!",
+                                    style = typography.bodyMedium,
+                                    modifier = Modifier.align(Alignment.Center)
+                                )
+                            }
+                        }
+                    }
+                }
+
+
+                items(taskpeople) {
+                    PeopleEntryForTeam(
+                        teamId,
+                        person = it,
+                        selectedPeople,
+                        addPerson,
+                        removePerson,
+                        removePersonFromTask,
+                        listOf(),
+                        false,
+                        isInTeamPeople
+                    )
+                }
+            }
+        }
+
+        if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status") && currentRoute != "teams/{teamId}/newTask/status") {
+            CustomFloatingButton(modifier = Modifier.align(Alignment.BottomEnd),
+                "Confirm Add Members",
+                {},
+                {},
+                addSelectedTeamPeopleToTask,
+                clearSelectedPeople,
+                onSearchQueryChanged,
+                {}
+            )
+        }
+        if ((currentRoute != "teams/{teamId}/edit/people" && currentRoute != "teams/{teamId}/filterTasks" && currentRoute != "teams/{teamId}/newTask/status")) {
+            if (isInTeamPeople) {
+            } else {
+                if (teampeople.isNotEmpty()) {
+                    CustomFloatingButton(modifier = Modifier.align(Alignment.BottomEnd),
+                        "Add Members",
+                        {},
+                        {},
+                        {},
+                        clearSelectedPeople,
+                        {}, {}
+                    )
+                }
+            }
+        }
+
+        //invite people to team
+        if(currentRoute != "teams/{teamId}/newTask/status"){
+            FloatingActionButton(
+                onClick = {
+                    Actions.getInstance().goToEditTeamPeople(teamId)
+                    //Actions.getInstance().goToCreateTaskStatus(teamId)
+                },
+                containerColor = palette.secondary,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(25.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.outline_person_add_24),
+                    contentDescription = "Add",
+                    colorFilter = ColorFilter.tint(palette.background)
+                )
+            }
+        }
+
+        //invite people to ta
+        if(currentRoute == "teams/{teamId}/tasks/{taskId}/comments"){
+            FloatingActionButton(
+                onClick = {
+
+                    clearSelectedPeople()
+                    //NAVIGA AD AGGIUNGI MEMBRI
+
+                    //onSearchQueryChanged("")
+                    //addSelectedTeamPeopleToTask()
+                    //setAddingPeopleInTask(false)
+                    //clearSelectedPeople()
+                },
+                containerColor = palette.secondary,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(25.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.teamtasklogo),
+                    contentDescription = "Add",
+                    colorFilter = ColorFilter.tint(palette.background)
+                )
+            }
+        }
     }
 }
 
@@ -6414,7 +7288,6 @@ fun PeopleSectionCreation(
                     searchQuery,
                     onSearchQueryChanged
                 )
-                Log.e("testinho", searchQuery)
             }
             if(peopleOrTaskNameError.isNotEmpty()){
                 Text(
@@ -6812,8 +7685,11 @@ fun ExpandableContainer(
 
 @Composable
 fun ShowProfile(
-    filteredTeamParticipant: Pair<String, Person>?
+    filteredTeamParticipant: Pair<String, Person>?,
+    accountId: String
 ) {
+    val auth = FirebaseAuth.getInstance()
+
     // Hardcoded list of scheduled tasks
     var toDoTasks = listOf(
         ToDoTask(
@@ -7074,20 +7950,22 @@ fun ShowProfile(
 
                 item { Spacer(modifier = Modifier.height(40.dp)) }
 
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 5.dp),
-                        horizontalAlignment = Alignment.Start,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text("Teams and Tasks in common")
+                if(auth.uid != accountId) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 5.dp),
+                            horizontalAlignment = Alignment.Start,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text("Teams and Tasks in common")
+                        }
                     }
-                }
-                items(teamList) {
-                    ExpandableContainer(groupedtoDoTasks)
-                    Spacer(modifier = Modifier.height(2.dp))
+                    items(teamList) {
+                        ExpandableContainer(groupedtoDoTasks)
+                        Spacer(modifier = Modifier.height(2.dp))
+                    }
                 }
 
                 item {
@@ -7138,11 +8016,12 @@ fun ShowProfile(
 
                     item { Spacer(modifier = Modifier.height(20.dp)) }
 
-                    items(teamList) {
-                        ExpandableContainer(groupedtoDoTasks)
-                        Spacer(modifier = Modifier.height(2.dp))
+                    if(auth.uid != accountId) {
+                        items(teamList) {
+                            ExpandableContainer(groupedtoDoTasks)
+                            Spacer(modifier = Modifier.height(2.dp))
+                        }
                     }
-
                     item { Spacer(modifier = Modifier.height(20.dp)) }
                 }
             }
