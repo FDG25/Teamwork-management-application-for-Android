@@ -166,8 +166,8 @@ fun Tab4Screen(
                     name = person.name,
                     surname = person.surname,
                     username = person.username,
-                    role = "", // Assuming role is not available in your current data structure
-                    permission = "", // Assuming permission is not available in your current data structure
+                    role = "",
+                    permission = "",
                     image = ""
                 )
             },
