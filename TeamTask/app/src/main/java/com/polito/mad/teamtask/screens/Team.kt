@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -109,7 +108,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat.startActivity
-import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -184,27 +182,12 @@ class SpecificTeamViewModel : ViewModel() {
     val auth = FirebaseAuth.getInstance()
 
     fun init(
-        toDoTasks: List<ToDoTask>
+        taskPeople: List<PersonData>,
+        teamPeople: List<PersonData>
     ) {
-        viewModelScope.launch {
-            // Populate _taskpeople with all people from each task
-            val allTaskPeople = toDoTasks.flatMap { it.taskpeople }
-                .distinctBy { it.personId }
-                .map {
-                    if (it.image.isNotBlank()) {
-                        val image =
-                            FirebaseStorage.getInstance().reference.child("profileImages/${it.image}")
-                        val url = image.downloadUrl.await()
-                        it.copy(image = url.toString())
-                    } else it
-                }
-
-            val updatedTaskPeople = _teampeople.value.filter { teamPerson ->
-                allTaskPeople.any { it.personId == teamPerson.personId }
-            }
-
-            _taskpeople.value = updatedTaskPeople
-        }
+        _taskpeople.value = taskPeople
+        _teampeople.value = teamPeople
+        Log.d("SpecificTeamViewModelLoggone", "TaskPeople: $teampeople")
     }
 
     fun init(
@@ -635,8 +618,6 @@ class SpecificTeamViewModel : ViewModel() {
     }
 
 
-
-
     var showDeleteTeamModal by mutableStateOf(false)
     fun setShwDeleteTeamModal(bool: Boolean) {
         showDeleteTeamModal = bool
@@ -646,6 +627,7 @@ class SpecificTeamViewModel : ViewModel() {
     fun setShwDeleteTaskModal(bool: Boolean) {
         showDeleteTaskModal = bool
     }
+
     var showExitFromTaskModal by mutableStateOf(false)
     fun setShwExitFromTaskModal(bool: Boolean) {
         showExitFromTaskModal = bool
@@ -923,9 +905,9 @@ class SpecificTeamViewModel : ViewModel() {
         currentStep = TaskCreationStep.Status
     }
 
-    fun goToPreviousStep(){
+    fun goToPreviousStep() {
         when (currentStep) {
-            TaskCreationStep.Status -> { }
+            TaskCreationStep.Status -> {}
             TaskCreationStep.Description -> currentStep = TaskCreationStep.Status
             TaskCreationStep.People -> currentStep = TaskCreationStep.Description
         }
@@ -992,12 +974,15 @@ class SpecificTeamViewModel : ViewModel() {
             trimmedTaskName.isBlank() -> {
                 "Task name cannot be blank!"
             }
+
             !trimmedTaskName.matches(Regex("^(?=.*[a-zA-Z0-9])[a-zA-Z0-9 ]{1,50}\$")) -> {
                 "Max 50 characters. Only letters, numbers and spaces are allowed!"
             }
+
             !taskExistsInTeam -> {
                 "A task with this name already exists in this team!"
             }
+
             else -> {
                 ""
             }
@@ -1024,7 +1009,6 @@ class SpecificTeamViewModel : ViewModel() {
             ""
         }
     }
-
 
 
     var selectedDateTime by mutableStateOf("")
@@ -1240,7 +1224,8 @@ class SpecificTeamViewModel : ViewModel() {
             if (currentStatus == "Scheduled") {
                 taskRef.update("status", "Completed").await()
 
-                val completionTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                val completionTime =
+                    ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
                 // Create a notification (typology 4) for the task
                 val notification = mapOf(
@@ -1262,12 +1247,12 @@ class SpecificTeamViewModel : ViewModel() {
                 if (task != null) {
                     for (personId in task.people) {
                         //if (personId != auth.uid) {
-                            val userNotification = mapOf(
-                                "notificationId" to notificationId,
-                                "read" to false,
-                                "userId" to personId
-                            )
-                            db.collection("user_notifications").add(userNotification).await()
+                        val userNotification = mapOf(
+                            "notificationId" to notificationId,
+                            "read" to false,
+                            "userId" to personId
+                        )
+                        db.collection("user_notifications").add(userNotification).await()
                         //}
                     }
                 }
@@ -1299,6 +1284,7 @@ class SpecificTeamViewModel : ViewModel() {
             // Handle the case where the task does not exist
         }
     }
+
     private suspend fun addTaskToFirestore(task: Task?, teamId: String) {
         try {
             // Add the task to the 'tasks' collection
@@ -1385,22 +1371,23 @@ class SpecificTeamViewModel : ViewModel() {
                     checkSelectedDateTimeError()
                     if (taskNameError.isBlank() && selectedDateTimeError.isBlank()) {
                         currentStep = TaskCreationStep.Description
-                        if(peopleOrTaskNameError == "A task with this name already exists in this team. Go back and insert another name!") {
+                        if (peopleOrTaskNameError == "A task with this name already exists in this team. Go back and insert another name!") {
                             peopleOrTaskNameError = ""
                         }
                     }
                 }
             }
+
             TaskCreationStep.Description -> {
                 checkTaskDescription()
-                if(taskDescriptionError.isBlank()) {
+                if (taskDescriptionError.isBlank()) {
                     currentStep = TaskCreationStep.People
                 }
             }
 
             TaskCreationStep.People -> {
                 checkPeople()
-                if(peopleOrTaskNameError.isBlank()) {
+                if (peopleOrTaskNameError.isBlank()) {
                     viewModelScope.launch {
                         checkTaskName(teamId)
                         if (taskNameError.isBlank()) {
@@ -1437,7 +1424,8 @@ class SpecificTeamViewModel : ViewModel() {
                             onSearchQueryChanged("")
                             currentStep = TaskCreationStep.Status
                         } else {
-                            peopleOrTaskNameError = "A task with this name already exists in this team. Go back and insert another name!"
+                            peopleOrTaskNameError =
+                                "A task with this name already exists in this team. Go back and insert another name!"
                         }
                         isLoadingTaskCreation.value = false
                     }
@@ -1530,22 +1518,22 @@ class SpecificTeamViewModel : ViewModel() {
 
     // Task people
     private val _taskpeople = mutableStateOf(listOf<PersonData>())
-        /*
-        PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-        PersonData(
-            "1",
-            "Name1ejwnewjneees",
-            "Surname1fskfsmkfnsk",
-            "username1",
-            "CTO",
-            "Admin",
-            ""
-        ),
-        PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
-        PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
+    /*
+    PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
+    PersonData(
+        "1",
+        "Name1ejwnewjneees",
+        "Surname1fskfsmkfnsk",
+        "username1",
+        "CTO",
+        "Admin",
+        ""
+    ),
+    PersonData("2", "Sofia", "Esposito", "sofia_esposito", "Marketing Director", "", ""),
+    PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
 
-    ).sortedBy { it.name })
-         */
+).sortedBy { it.name })
+     */
 
     // Provide an immutable view of the taskpeople to the UI
     val taskpeople: List<PersonData> get() = _taskpeople.value
@@ -1577,7 +1565,8 @@ class SpecificTeamViewModel : ViewModel() {
                 // Update Firestore tasks collection
                 val taskRef = db.collection("tasks").document(taskId)
                 val taskSnapshot = taskRef.get().await()
-                val taskPeople = taskSnapshot.get("people") as? MutableList<String> ?: mutableListOf()
+                val taskPeople =
+                    taskSnapshot.get("people") as? MutableList<String> ?: mutableListOf()
 
                 selectedPeople.forEach { selectedPerson ->
                     if (!taskPeople.contains(selectedPerson.personId)) {
@@ -1590,7 +1579,8 @@ class SpecificTeamViewModel : ViewModel() {
                 selectedPeople.forEach { selectedPerson ->
                     val personRef = db.collection("people").document(selectedPerson.personId)
                     val personSnapshot = personRef.get().await()
-                    val personTasks = personSnapshot.get("tasks") as? MutableList<String> ?: mutableListOf()
+                    val personTasks =
+                        personSnapshot.get("tasks") as? MutableList<String> ?: mutableListOf()
 
                     if (!personTasks.contains(taskId)) {
                         personTasks.add(taskId)
@@ -1603,7 +1593,7 @@ class SpecificTeamViewModel : ViewModel() {
                 //tempListOfMembersForFilter = (tempListOfMembersForFilter + selectedPeople).distinctBy { it.personId }
 
                 // Call init with the updated list of tasks
-                init(_toDoTasks.value)
+                //init(_taskpeople.value)
             } catch (e: Exception) {
                 // Handle any errors that occur during the database operation
                 e.printStackTrace()
@@ -1611,7 +1601,6 @@ class SpecificTeamViewModel : ViewModel() {
             isLoadingTaskAddMembers.value = false
         }
     }
-
 
 
     // Method to remove a person from taskpeople
@@ -1741,7 +1730,7 @@ class SpecificTeamViewModel : ViewModel() {
     var searchQuery = mutableStateOf("")
 
     // Computed list that filters people based on search query
-    val filteredPeople: List<PersonData>
+    var filteredPeople: List<PersonData> = emptyList()
         get() = if (searchQuery.value.isEmpty()) {
             teampeople
         } else {
@@ -2318,7 +2307,7 @@ fun NewTask(
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
 
-    if(vm.isLoadingTaskCreation.value){
+    if (vm.isLoadingTaskCreation.value) {
         LoadingScreen()
     }
     Scaffold(
@@ -2341,7 +2330,10 @@ fun NewTask(
                             onClick = { vm.goToPreviousStep() },
                             enabled = true, // Disable back button on first step
                             modifier = Modifier.width(110.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = palette.primary, contentColor = palette.secondary)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = palette.primary,
+                                contentColor = palette.secondary
+                            )
                         ) {
                             Text("Back")
                         }
@@ -2354,9 +2346,18 @@ fun NewTask(
                             vm.validateCreateTask(teamId)
                         },
                         modifier = Modifier.width(110.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = palette.secondary, contentColor = palette.background)
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = palette.secondary,
+                            contentColor = palette.background
+                        )
                     ) {
-                        Text(if (vm.currentStep == TaskCreationStep.People) { "Create" } else { "Next" })
+                        Text(
+                            if (vm.currentStep == TaskCreationStep.People) {
+                                "Create"
+                            } else {
+                                "Next"
+                            }
+                        )
                     }
                 }
             }
@@ -3507,7 +3508,7 @@ private fun TaskList(
             }
 
 
-            if(teamDocument.ownerId == auth.uid || teamDocument.admins.contains(auth.uid)) {
+            if (teamDocument.ownerId == auth.uid || teamDocument.admins.contains(auth.uid)) {
                 CustomFloatingButton(
                     modifier = Modifier.align(Alignment.BottomEnd),
                     "New Task",
@@ -4440,11 +4441,20 @@ fun Tab3Screen(
 
             2 -> PeopleSectionForTeam(
                 teamId,
-                teampeople, teampeople, selectedPeople, clearSelectedPeople,
-                addPerson, removePerson,
-                addSelectedTeamPeopleToTask, removePersonFromTeam,
+                teampeople,
+                teampeople,
+                selectedPeople,
+                clearSelectedPeople,
+                addPerson,
+                removePerson,
+                addSelectedTeamPeopleToTask,
+                removePersonFromTeam,
                 filteredPeople,
-                searchQuery, onSearchQueryChanged, setShowTeamLinkOrQrCode, isInTeamPeople = true, peopleOrTaskNameError = "",
+                searchQuery,
+                onSearchQueryChanged,
+                setShowTeamLinkOrQrCode,
+                isInTeamPeople = true,
+                peopleOrTaskNameError = "",
             )
         }
     }
@@ -4850,7 +4860,8 @@ fun CalendarWithEvents(
                                 .padding(10.dp)
                                 .background(Color.White)
                         ) {
-                            Text(selectedDateTextual,
+                            Text(
+                                selectedDateTextual,
                                 modifier = Modifier.padding(top = 10.dp, start = 10.dp)
                             )
                             Spacer(modifier = Modifier.height(10.dp))
@@ -5078,7 +5089,8 @@ fun EventList(
 
                         tasks.filter { taskPair ->
                             // Filter tasks based on the specific date
-                            val expirationDate = taskPair.second.deadline.split("T").first() // Assuming ISO date format
+                            val expirationDate = taskPair.second.deadline.split("T")
+                                .first() // Assuming ISO date format
                             expirationDate == date
                             taskPair.second.deadline.split("T")[0] == chosenDate
                         }.forEach { pair ->
@@ -5088,14 +5100,22 @@ fun EventList(
                                 "homeCalendar" -> {
                                     Box(
                                         modifier = Modifier.clickable(
-                                                onClick = { Actions.getInstance().goToTaskComments(pair.second.teamId, pair.first) },
-                                            )
+                                            onClick = {
+                                                Actions.getInstance().goToTaskComments(
+                                                    pair.second.teamId,
+                                                    pair.first
+                                                )
+                                            },
+                                        )
                                     ) {
                                         val imageUri =
                                             homeViewModel.teamImages.collectAsState().value[team?.first]
 
                                         //Log.e("imageuriCalendar", imageUri.toString()) --> TODO: IMAGEURI IS EMPTY HERE
-                                        homeViewModel.fetchTeamImage(team?.second?.image ?: "", pair.first)
+                                        homeViewModel.fetchTeamImage(
+                                            team?.second?.image ?: "",
+                                            pair.first
+                                        )
 
                                         TaskEntry(pair.second, team?.second, imageUri)
                                     }
@@ -5104,7 +5124,7 @@ fun EventList(
                                 "teams/{teamId}/tasksCalendar" -> {
                                     val teamId = Actions.getInstance().getStringParameter("teamId")
 
-                                    if(pair.second.teamId == teamId) {
+                                    if (pair.second.teamId == teamId) {
                                         val tempToDoTask = ToDoTask(
                                             taskId = pair.first,
                                             taskName = pair.second.title,
@@ -5139,7 +5159,6 @@ fun EventList(
         }
     }
 }
-
 
 
 @Composable
@@ -5775,7 +5794,7 @@ private fun PeopleEntry(
         R.drawable.person_4
     )
 
-    if(currentRoute != "teams/{teamId}/newTask/status") {
+    if (currentRoute != "teams/{teamId}/newTask/status") {
         // Modal menu
         if (showMenu) {
             AlertDialog(
@@ -6106,7 +6125,7 @@ private fun PeopleEntryForTask(
 
     var isSelected = selectedPeople.any { it.username == person.username }
     val isAlreadyInTask =
-        remember(taskpeople) { taskpeople.any { it.username == person.username }}
+        remember(taskpeople) { taskpeople.any { it.username == person.username } }
     var showMenu by remember { mutableStateOf(false) }
     var showMenuAssignRole by remember { mutableStateOf(false) }
     var showOwnerMenu by remember { mutableStateOf(false) }
@@ -6326,7 +6345,7 @@ private fun PeopleEntryForTeam(
         R.drawable.person_4
     )
 
-    if(currentRoute != "teams/{teamId}/newTask/status") {
+    if (currentRoute != "teams/{teamId}/newTask/status") {
         // Modal menu
         if (showMenu) {
             AlertDialog(
@@ -6768,20 +6787,31 @@ fun PeopleSection(
     onSearchQueryChanged: (String) -> Unit,
     setShowTeamLinkOrQrCode: (Boolean) -> Unit,
     isInTeamPeople: Boolean,
-    peopleOrTaskNameError: String
+    peopleOrTaskNameError: String,
+    initFunction: (List<PersonData>, List<PersonData>) -> Unit = { _, _ ->  }
 ) {
     val typography = TeamTaskTypography
     val palette = MaterialTheme.colorScheme
 
     val currentRoute = Actions.getInstance().getCurrentRoute()
 
-    BoxWithConstraints {
+    LaunchedEffect(teampeople, taskpeople) {
+        if(teampeople.isNotEmpty())
+            initFunction(
+                taskpeople,
+                teampeople
+            )
+    }
+
+    if(teampeople.isNotEmpty())
+        BoxWithConstraints {
         val maxHeight = this.maxHeight
         val maxWidth = this.maxWidth
 
         Column {
             if ((currentRoute == "teams/{teamId}/edit/people" || currentRoute == "teams/{teamId}/filterTasks" || currentRoute == "teams/{teamId}/newTask/status"
-                        || currentRoute == "teams/{teamId}/tasks/{taskId}/comments")) {
+                        || currentRoute == "teams/{teamId}/tasks/{taskId}/comments")
+            ) {
                 /*
                 if (taskpeople.isNotEmpty()) {
                     // Search bar
@@ -6932,7 +6962,7 @@ fun PeopleSection(
         }
 
         //invite people to team
-        if(currentRoute != "teams/{teamId}/newTask/status"){
+        if (currentRoute != "teams/{teamId}/newTask/status") {
             FloatingActionButton(
                 onClick = {
                     Actions.getInstance().goToEditTeamPeople(teamId)
@@ -6952,17 +6982,17 @@ fun PeopleSection(
         }
 
         //invite people to task
-        if(currentRoute == "teams/{teamId}/tasks/{taskId}/comments"){
+        if (currentRoute == "teams/{teamId}/tasks/{taskId}/comments") {
             FloatingActionButton(
                 onClick = {
 
-                      clearSelectedPeople()
-                      Actions.getInstance().goToEditTaskPeople(teamId, taskId)
+                    clearSelectedPeople()
+                    Actions.getInstance().goToEditTaskPeople(teamId, taskId)
 
-                      //onSearchQueryChanged("")
-                      //addSelectedTeamPeopleToTask()
-                      //setAddingPeopleInTask(false)
-                      //clearSelectedPeople()
+                    //onSearchQueryChanged("")
+                    //addSelectedTeamPeopleToTask()
+                    //setAddingPeopleInTask(false)
+                    //clearSelectedPeople()
                 },
                 containerColor = palette.secondary,
                 modifier = Modifier
@@ -6977,6 +7007,8 @@ fun PeopleSection(
             }
         }
     }
+    else
+        LoadingScreen()
 }
 
 @Composable
@@ -6999,13 +7031,13 @@ fun AddPeopleInTaskSection(
     peopleOrTaskNameError: String,
     addPersonToTask: (String, String) -> Unit,
     isLoadingTaskAddMembers: Boolean
-){
+) {
     val typography = TeamTaskTypography
     val palette = MaterialTheme.colorScheme
 
     val currentRoute = Actions.getInstance().getCurrentRoute()
 
-    if(isLoadingTaskAddMembers){
+    if (isLoadingTaskAddMembers) {
         LoadingScreen()
     }
     BoxWithConstraints {
@@ -7013,15 +7045,15 @@ fun AddPeopleInTaskSection(
         val maxWidth = this.maxWidth
 
         Column {
-            if (teampeople.isNotEmpty() || !isInTeamPeople) {
-                // Search bar
-                CustomSearchBar(
-                    modifier = Modifier.padding(horizontal = 15.dp, vertical = 10.dp),
-                    placeholderText = "Who would you like to add?",
-                    searchQuery,
-                    onSearchQueryChanged
-                )
-            }
+//            if (teampeople.isNotEmpty() || !isInTeamPeople) {
+//                // Search bar
+//                CustomSearchBar(
+//                    modifier = Modifier.padding(horizontal = 15.dp, vertical = 10.dp),
+//                    placeholderText = "Who would you like to add?",
+//                    searchQuery,
+//                    onSearchQueryChanged
+//                )
+//            }
 
             // List of placeholders selected people
             LazyVerticalGrid(
@@ -7046,7 +7078,7 @@ fun AddPeopleInTaskSection(
             LazyColumn(
                 modifier = Modifier.fillMaxHeight()
             ) {
-                items(filteredPeople) {
+                items(teampeople) {
                     PeopleEntryForTask(
                         teamId,
                         person = it,
@@ -7059,20 +7091,20 @@ fun AddPeopleInTaskSection(
                         isInTeamPeople
                     )
                 }
-                item {
-                    if (filteredPeople.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "No results for $searchQuery",
-                                style = typography.labelMedium,
-                                color = palette.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
+//                item {
+//                    if (filteredPeople.isEmpty()) {
+//                        Box(
+//                            modifier = Modifier.fillMaxWidth(),
+//                            contentAlignment = Alignment.Center
+//                        ) {
+//                            Text(
+//                                text = "No results for $searchQuery",
+//                                style = typography.labelMedium,
+//                                color = palette.onSurfaceVariant
+//                            )
+//                        }
+//                    }
+//                }
             }
         }
         FloatingActionButton(
@@ -7205,7 +7237,7 @@ fun PeopleSectionForTeam(
         }
 
         //invite people to team
-        if(currentRoute != "teams/{teamId}/newTask/status"){
+        if (currentRoute != "teams/{teamId}/newTask/status") {
             FloatingActionButton(
                 onClick = {
                     Actions.getInstance().goToEditTeamPeople(teamId)
@@ -7225,7 +7257,7 @@ fun PeopleSectionForTeam(
         }
 
         //invite people to ta
-        if(currentRoute == "teams/{teamId}/tasks/{taskId}/comments"){
+        if (currentRoute == "teams/{teamId}/tasks/{taskId}/comments") {
             FloatingActionButton(
                 onClick = {
 
@@ -7289,7 +7321,7 @@ fun PeopleSectionCreation(
                     onSearchQueryChanged
                 )
             }
-            if(peopleOrTaskNameError.isNotEmpty()){
+            if (peopleOrTaskNameError.isNotEmpty()) {
                 Text(
                     text = peopleOrTaskNameError,
                     color = palette.error,
@@ -7902,8 +7934,9 @@ fun ShowProfile(
     }
 
     LaunchedEffect(person) {
-        if(person?.image?.isNotEmpty() == true) {
-            val imageRef = FirebaseStorage.getInstance().reference.child("profileImages/${person.image}").downloadUrl.await()
+        if (person?.image?.isNotEmpty() == true) {
+            val imageRef =
+                FirebaseStorage.getInstance().reference.child("profileImages/${person.image}").downloadUrl.await()
             imageUri.value = imageRef
         }
     }
@@ -7929,7 +7962,7 @@ fun ShowProfile(
                         person?.surname ?: "",
                         person?.username ?: "",
                         false,
-                        if(imageUri.value != Uri.EMPTY) imageUri.value else null
+                        if (imageUri.value != Uri.EMPTY) imageUri.value else null
                     )
                 }
 
@@ -7949,7 +7982,7 @@ fun ShowProfile(
 
                 item { Spacer(modifier = Modifier.height(40.dp)) }
 
-                if(auth.uid != filteredTeamParticipant?.first) {
+                if (auth.uid != filteredTeamParticipant?.first) {
                     item {
                         Column(
                             modifier = Modifier
@@ -7989,7 +8022,7 @@ fun ShowProfile(
                         person?.surname ?: "",
                         person?.username ?: "",
                         false,
-                        if(imageUri.value != Uri.EMPTY) imageUri.value else null
+                        if (imageUri.value != Uri.EMPTY) imageUri.value else null
                     )
                 }
 
@@ -8015,7 +8048,7 @@ fun ShowProfile(
 
                     item { Spacer(modifier = Modifier.height(20.dp)) }
 
-                    if(auth.uid != filteredTeamParticipant?.first) {
+                    if (auth.uid != filteredTeamParticipant?.first) {
                         items(teamList) {
                             ExpandableContainer(groupedtoDoTasks)
                             Spacer(modifier = Modifier.height(2.dp))

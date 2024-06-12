@@ -61,6 +61,7 @@ import com.polito.mad.teamtask.components.tasks.EditTeamDescription
 import com.polito.mad.teamtask.components.tasks.InfoViewModel
 import com.polito.mad.teamtask.components.tasks.Replies
 import com.polito.mad.teamtask.components.tasks.RepliesViewModel
+import com.polito.mad.teamtask.components.tasks.TaskViewModel
 import com.polito.mad.teamtask.components.tasks.components.SendObject
 import com.polito.mad.teamtask.screens.AddMemberToTeamScreen
 import com.polito.mad.teamtask.screens.CalendarWithEvents
@@ -693,6 +694,36 @@ class AppModel(
         }
         awaitClose { listener?.remove() }
     }
+
+    fun getTeamById(teamId: String): Flow<Team?> =
+        callbackFlow {
+            val listener = db.collection("teams").document(teamId)
+                .addSnapshotListener { r, e ->
+                    if (r != null) {
+                        val name = r.getString("name") ?: ""
+                        val image = r.getString("image") ?: ""
+                        val ownerId = r.getString("ownerId") ?: "Toy person 1"
+                        val admins = r.get("admins") as? List<String> ?: emptyList()
+                        val inviteLink = r.getString("inviteLink") ?: ""
+                        val creationDate = r.getString("creationDate") ?: ""
+                        val category = r.getString("category") ?: ""
+                        val members = r.get("members") as? List<String> ?: emptyList()
+                        val tasks = r.get("tasks") as? List<String> ?: emptyList()
+                        val description = r.getString("description") ?: ""
+
+                        val team = Team(
+                            name, image, ownerId, admins, inviteLink,
+                            creationDate, category, members, tasks, description
+                        )
+
+                        trySend(team)
+                    } else {
+                        Log.e("ERROR", e.toString())
+                        trySend(null)
+                    }
+                }
+            awaitClose { listener.remove() }
+        }
 
     // Notifications
     fun getNotifications(): Flow<List<Pair<String, Notification>>> = callbackFlow {
@@ -2411,7 +2442,17 @@ class ParametricFactory(
                 taskId = taskId,
                 commentId = commentId
             ) as T
-        } else throw IllegalArgumentException("Unexpected ViewModel class")
+        }
+        else if (modelClass.isAssignableFrom(TaskViewModel::class.java)) {
+            // model.generateData()
+            @Suppress("UNCHECKED_CAST")
+            return TaskViewModel(
+                model,
+                taskId = taskId,
+                teamId = teamId
+            ) as T
+        }
+        else throw IllegalArgumentException("Unexpected ViewModel class")
     }
 }
 
