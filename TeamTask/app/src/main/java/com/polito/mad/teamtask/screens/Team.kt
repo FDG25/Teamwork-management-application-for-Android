@@ -6,6 +6,7 @@ import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.net.Uri
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import android.util.Log
@@ -6811,7 +6812,7 @@ fun ExpandableContainer(
 
 @Composable
 fun ShowProfile(
-    filteredTeamParticipant: Pair<String, Person>
+    filteredTeamParticipant: Pair<String, Person>?
 ) {
     // Hardcoded list of scheduled tasks
     var toDoTasks = listOf(
@@ -7019,8 +7020,18 @@ fun ShowProfile(
 
     val groupedtoDoTasks = toDoTasks.groupBy { it.expirationTimestamp.split("T")[0] }
 
-    val person = filteredTeamParticipant.second
-    var imageUri = "teamtasklogo".toUri()
+    val person = filteredTeamParticipant?.second
+
+    val imageUri = remember {
+        mutableStateOf(Uri.EMPTY)
+    }
+
+    LaunchedEffect(person) {
+        if(person?.image?.isNotEmpty() == true) {
+            val imageRef = FirebaseStorage.getInstance().reference.child("profileImages/${person.image}").downloadUrl.await()
+            imageUri.value = imageRef
+        }
+    }
 
     var teamList = listOf(1, 2, 3)
 
@@ -7039,11 +7050,11 @@ fun ShowProfile(
                 // Image and username
                 item {
                     ProfilePictureSection(
-                        person.name,
-                        person.surname,
-                        person.username,
+                        person?.name ?: "",
+                        person?.surname ?: "",
+                        person?.username ?: "",
                         false,
-                        imageUri
+                        imageUri.value
                     )
                 }
 
@@ -7051,12 +7062,12 @@ fun ShowProfile(
 
                 item {
                     ProfileInfoSection(
-                        person.name, "", {},
-                        person.surname, "", {},
-                        person.email, "", {},
-                        person.username, "", {},
-                        person.location, "", {},
-                        person.bio, "", {},
+                        person?.name ?: "", "", {},
+                        person?.surname ?: "", "", {},
+                        person?.email ?: "", "", {},
+                        person?.username ?: "", "", {},
+                        person?.location ?: "", "", {},
+                        person?.bio ?: "", "", {},
                         false
                     )
                 }
@@ -7097,11 +7108,11 @@ fun ShowProfile(
                     verticalArrangement = Arrangement.Center
                 ) {
                     ProfilePictureSection(
-                        person.name,
-                        person.surname,
-                        person.username,
+                        person?.name ?: "",
+                        person?.surname ?: "",
+                        person?.username ?: "",
                         false,
-                        imageUri
+                        imageUri.value
                     )
                 }
 
@@ -7115,12 +7126,12 @@ fun ShowProfile(
 
                     item {
                         ProfileInfoSection(
-                            person.name, "", {},
-                            person.surname, "", {},
-                            person.email, "", {},
-                            person.username, "", {},
-                            person.location, "", {},
-                            person.bio, "", {},
+                            person?.name ?: "", "", {},
+                            person?.surname ?: "", "", {},
+                            person?.email ?: "", "", {},
+                            person?.username ?: "", "", {},
+                            person?.location ?: "", "", {},
+                            person?.bio ?: "", "", {},
                             false
                         )
                     }

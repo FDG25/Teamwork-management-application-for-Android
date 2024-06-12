@@ -1,6 +1,7 @@
 package com.polito.mad.teamtask.components
 
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,22 +14,32 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.google.firebase.storage.FirebaseStorage
 import com.polito.mad.teamtask.R
 import com.polito.mad.teamtask.Team
 import com.polito.mad.teamtask.TeamParticipant
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
+import kotlinx.coroutines.tasks.await
 
 
 data class StatisticsData(
@@ -137,6 +148,17 @@ fun TeamStatistics(
     val typography = TeamTaskTypography
     val palette = MaterialTheme.colorScheme
 
+    val imageUrl = remember {
+        mutableStateOf(Uri.EMPTY)
+    }
+
+    LaunchedEffect(Unit) {
+        if(teamImage.isNotEmpty()) {
+            val imageRef = FirebaseStorage.getInstance().reference.child("teamImages/$teamImage").downloadUrl.await()
+            imageUrl.value = imageRef
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -149,25 +171,19 @@ fun TeamStatistics(
         Row (
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image (
-                painter = painterResource(R.drawable.teamtasklogo), // painterResource(teamImage),
-                contentDescription = "Team image"
-            )
-
-            /*
-            AsyncImage (
+            AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(teamImage)
+                    .data(imageUrl.value)
                     .crossfade(true)
+                    .error(R.drawable.baseline_groups_24)
                     .build(),
-                placeholder = painterResource(R.drawable.outline_camera_alt_24),
                 contentDescription = "Team Image",
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                 modifier = Modifier
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(8.dp))
+                    .size(48.dp)
+                    .border(1.dp, palette.secondary),
+                //.padding(4.dp)
+                contentScale = ContentScale.Crop
             )
-            */
 
             Spacer(modifier = Modifier.width(10.dp))
 
