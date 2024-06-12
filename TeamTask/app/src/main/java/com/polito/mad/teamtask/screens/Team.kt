@@ -634,6 +634,8 @@ class SpecificTeamViewModel : ViewModel() {
         showExitFromTaskModal = bool
     }
 
+    var isLoadingDeleteTeam = mutableStateOf(false)
+
     // Function to delete a team and navigate to the home screen if successful
     fun deleteTeam(teamId: String) {
         val currentUser = auth.currentUser
@@ -643,6 +645,7 @@ class SpecificTeamViewModel : ViewModel() {
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                isLoadingDeleteTeam.value = true
                 // Fetch the team document
                 val teamRef = db.collection("teams").document(teamId)
                 val teamDocument = teamRef.get().await()
@@ -708,6 +711,7 @@ class SpecificTeamViewModel : ViewModel() {
                 // Handle any errors that occur during the database operation
                 Log.e("SpecificTeamViewModel", "Error deleting team", e)
             }
+            isLoadingDeleteTeam.value = false
         }
     }
 
@@ -1258,6 +1262,27 @@ class SpecificTeamViewModel : ViewModel() {
                     }
                 }
 
+                // Update Firestore team_participants collection
+                if (task != null) {
+                    for (personId in task.people) {
+                        val participantQuery = db.collection("team_participants")
+                            .whereEqualTo("teamId", teamId)
+                            .whereEqualTo("personId", personId)
+                            .get()
+                            .await()
+
+                        if (participantQuery.documents.isNotEmpty()) {
+                            val participantDoc = participantQuery.documents[0]
+                            val currentCompletedTasks = participantDoc.getLong("completedTasks") ?: 0L
+                            val newCompletedTasks = currentCompletedTasks + 1
+
+                            db.collection("team_participants").document(participantDoc.id)
+                                .update("completedTasks", newCompletedTasks)
+                                .await()
+                        }
+                    }
+                }
+
                 val time = LocalDateTime.parse(completionTime, DateTimeFormatter.ISO_DATE_TIME)
                 val formatter = DateTimeFormatter.ofPattern("dd/MM/yy HH:mm")
 
@@ -1332,6 +1357,27 @@ class SpecificTeamViewModel : ViewModel() {
                             "userId" to personId
                         )
                         db.collection("user_notifications").add(userNotification).await()
+                    }
+                }
+            }
+
+            // Update 'team_participants' document for each person in the task
+            if (task != null) {
+                for (personId in task.people) {
+                    val participantQuery = db.collection("team_participants")
+                        .whereEqualTo("teamId", teamId)
+                        .whereEqualTo("personId", personId)
+                        .get()
+                        .await()
+
+                    if (participantQuery.documents.isNotEmpty()) {
+                        val participantDoc = participantQuery.documents[0]
+                        val currentTotalTasks = participantDoc.getLong("totalTasks") ?: 0L
+                        val newTotalTasks = currentTotalTasks + 1
+
+                        db.collection("team_participants").document(participantDoc.id)
+                            .update("totalTasks", newTotalTasks)
+                            .await()
                     }
                 }
             }
@@ -1566,8 +1612,7 @@ class SpecificTeamViewModel : ViewModel() {
                 // Update Firestore tasks collection
                 val taskRef = db.collection("tasks").document(taskId)
                 val taskSnapshot = taskRef.get().await()
-                val taskPeople =
-                    taskSnapshot.get("people") as? MutableList<String> ?: mutableListOf()
+                val taskPeople = taskSnapshot.get("people") as? MutableList<String> ?: mutableListOf()
 
                 selectedPeople.forEach { selectedPerson ->
                     if (!taskPeople.contains(selectedPerson.personId)) {
@@ -1587,6 +1632,25 @@ class SpecificTeamViewModel : ViewModel() {
                         personTasks.add(taskId)
                     }
                     personRef.update("tasks", personTasks).await()
+                }
+
+                // Update Firestore team_participants collection
+                selectedPeople.forEach { selectedPerson ->
+                    val participantQuery = db.collection("team_participants")
+                        .whereEqualTo("teamId", teamId)
+                        .whereEqualTo("personId", selectedPerson.personId)
+                        .get()
+                        .await()
+
+                    if (participantQuery.documents.isNotEmpty()) {
+                        val participantDoc = participantQuery.documents[0]
+                        val currentTotalTasks = participantDoc.getLong("totalTasks") ?: 0L
+                        val newTotalTasks = currentTotalTasks + 1
+
+                        db.collection("team_participants").document(participantDoc.id)
+                            .update("totalTasks", newTotalTasks)
+                            .await()
+                    }
                 }
 
                 // Update the filters --> IT HAS TO BE DONE ONLY FOR REMOVE, BECAUSE OTHERWISE MAY REMAIN A FILTER BY PERSON APPLIED, EVEN IF THAT PERSON IS NOT IN THE TEAM/TASK ANYMORE!
@@ -5558,6 +5622,10 @@ fun SpecificTeamScreen(
                 }
             }
         )
+    }
+
+    if(vm.isLoadingDeleteTeam.value){
+        LoadingScreen()
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
