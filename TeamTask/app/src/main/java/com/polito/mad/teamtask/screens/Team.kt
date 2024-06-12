@@ -108,6 +108,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat.startActivity
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -7654,7 +7655,9 @@ fun PeopleSectionForFilters(
 
 @Composable
 fun ExpandableContainer(
-    groupedtoDoTasks: Map<String, List<ToDoTask>>
+    groupedtoDoTasks: Map<String, List<ToDoTask>>,
+    teamName: String,
+    teamRole: String
 ) {
     val typography = TeamTaskTypography
     val palette = MaterialTheme.colorScheme
@@ -7664,7 +7667,7 @@ fun ExpandableContainer(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { expanded = !expanded },
-        border = BorderStroke(1.dp, Color.Gray)
+        border = BorderStroke(1.dp, palette.surfaceVariant)
     ) {
         Column {
             Row(
@@ -7672,14 +7675,14 @@ fun ExpandableContainer(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.teamtasklogo),
+                    painter = painterResource(id = R.drawable.teamtasklogo), // TODO: Change image
                     contentDescription = "Team Image",
                     modifier = Modifier.size(50.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
-                    Text(text = "team name", color = Color.Black)
-                    Text(text = "CEO", color = Color.Gray)
+                    Text(text = teamName, color = palette.onSurface)
+                    Text(text = teamRole, color = palette.onSurfaceVariant)
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 Image(
@@ -7715,233 +7718,57 @@ fun ExpandableContainer(
     Spacer(modifier = Modifier.height(5.dp))
 }
 
+
 @Composable
 fun ShowProfile(
-    filteredTeamParticipant: Pair<String, Person>?
+    filteredTeamParticipant: Pair<String, Person>,
+    accountId: String,
+    teamsInCommon: List<Pair<String, Team>>,
+    teamParticipants: List<TeamParticipant>,
+    tasksInCommon: List<Pair<String, Task>>
 ) {
     val auth = FirebaseAuth.getInstance()
 
-    // Hardcoded list of scheduled tasks
-    var toDoTasks = listOf(
-        ToDoTask(
-            "0",
-            "Task 1",
-            "Completed",
-            1,
-            "Weekly",
-            "2024-04-30T12:53:00+02:00",
-            "2024-04-01T09:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData(
-                    "1",
-                    "Name1ejwnewjneees",
-                    "Surname1fskfsmkfnsk",
-                    "username1",
-                    "CTO",
-                    "Admin",
-                    ""
-                ),
-                PersonData(
-                    "2",
-                    "Sofia",
-                    "Esposito",
-                    "sofia_esposito",
-                    "Marketing Director",
-                    "",
-                    ""
-                ),
-                PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")
-        ),
-        ToDoTask(
-            "1",
-            "Task 2",
-            "Expired",
-            0,
-            "Never",
-            "2024-04-20T16:42:00+02:00",
-            "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")
-        ),
-        ToDoTask(
-            "2",
-            "Task 2.5",
-            "Completed",
-            0,
-            "Never",
-            "2024-04-20T16:42:00+02:00",
-            "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData(
-                    "1",
-                    "Sofia",
-                    "Esposito",
-                    "sofia_esposito",
-                    "Marketing Director",
-                    "",
-                    ""
-                ),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")
-        ),
-        ToDoTask(
-            "3",
-            "Task 2.6",
-            "Completed",
-            0,
-            "Never",
-            "2024-04-20T16:42:00+02:00",
-            "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData(
-                    "1",
-                    "Sofia",
-                    "Esposito",
-                    "sofia_esposito",
-                    "Marketing Director",
-                    "",
-                    ""
-                ),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")
-        ),
-        ToDoTask(
-            "4",
-            "Task 2.7",
-            "Completed",
-            0,
-            "Never",
-            "2024-04-20T16:42:00+02:00",
-            "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData(
-                    "1",
-                    "Sofia",
-                    "Esposito",
-                    "sofia_esposito",
-                    "Marketing Director",
-                    "",
-                    ""
-                ),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")
-        ),
-        ToDoTask(
-            "5",
-            "Task 2.8",
-            "Completed",
-            0,
-            "Never",
-            "2024-04-20T16:42:00+02:00",
-            "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData(
-                    "1",
-                    "Sofia",
-                    "Esposito",
-                    "sofia_esposito",
-                    "Marketing Director",
-                    "",
-                    ""
-                ),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")
-        ),
-        ToDoTask(
-            "6",
-            "Task 3",
-            "Scheduled",
-            1,
-            "Never",
-            "2024-05-07T13:36:00+02:00",
-            "2024-04-02T11:00:00+02:00",
-            listOf(
-                PersonData(
-                    "0",
-                    "Name1ejwnewjneees",
-                    "Surname1fskfsmkfnsk",
-                    "username1",
-                    "CTO",
-                    "Admin",
-                    ""
-                ),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test4", "#test5")
-        ),
-        ToDoTask(
-            "7",
-            "Task 4",
-            "Scheduled",
-            0,
-            "Monthly",
-            "2024-05-30T12:12:00+02:00",
-            "2024-04-02T12:00:00+02:00",
-            listOf(
-                PersonData(
-                    "0",
-                    "Sofia",
-                    "Esposito",
-                    "sofia_esposito",
-                    "Marketing Director",
-                    "",
-                    ""
-                ),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")
-        ),
-        ToDoTask(
-            "8",
-            "Task 5",
-            "Scheduled",
-            1,
-            "Yearly",
-            "2024-05-07T22:21:00+02:00",
-            "2024-04-03T08:00:00+02:00",
-            listOf(
-                PersonData(
-                    "0",
-                    "Sofia",
-                    "Esposito",
-                    "sofia_esposito",
-                    "Marketing Director",
-                    "",
-                    ""
-                ),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test4", "#test5")
-        )
-    )
+    // List of scheduled tasks
+    val toDoTasks = mutableListOf<ToDoTask>()
+    tasksInCommon.forEach { tic ->
+        val taskId = tic.first
+        val taskName = tic.second.title
+        val status = tic.second.status
+        val isNotPriority = if (tic.second.prioritized) 0 else 1
+        val recurrence = tic.second.recurrence
+        val expirationTimestamp = tic.second.deadline
+        val creationTimestamp = tic.second.creationDate
+        val taskPeople = listOf<PersonData>()
+        val tags = tic.second.tags
+
+        val pd = ToDoTask(taskId, taskName, status, isNotPriority, recurrence, expirationTimestamp, creationTimestamp, taskPeople, tags)
+        toDoTasks.add(pd)
+    }
 
     val groupedtoDoTasks = toDoTasks.groupBy { it.expirationTimestamp.split("T")[0] }
 
-    val person = filteredTeamParticipant?.second
+    val person = filteredTeamParticipant.second
+    var imageUri = "teamtasklogo".toUri() // TODO: Change image
 
-    val imageUri = remember {
-        mutableStateOf(Uri.EMPTY)
+    //var teamList = listOf(1, 2, 3)
+    data class TeamData (
+        val name: String = "",
+        val role: String = "",
+        val groupedTasks: Map<String, List<ToDoTask>>
+    )
+    val teamList = mutableListOf<TeamData>()
+    teamsInCommon.forEach { tic ->
+        val teamId = tic.first
+        val teamName = tic.second.name
+        val role = teamParticipants
+            .firstOrNull { t -> t.equals(teamId) }
+            ?.role ?: ""
+        val groupedTasks = toDoTasks
+            .filter { tdt -> tic.second.tasks.contains(tdt.taskId) }
+            .groupBy { it.expirationTimestamp.split("T")[0] }
+        teamList.add(TeamData(teamName, role, groupedTasks))
     }
-
-    LaunchedEffect(person) {
-        if (person?.image?.isNotEmpty() == true) {
-            val imageRef =
-                FirebaseStorage.getInstance().reference.child("profileImages/${person.image}").downloadUrl.await()
-            imageUri.value = imageRef
-        }
-    }
-
-    var teamList = listOf(1, 2, 3)
 
     BoxWithConstraints {
         if (this.maxHeight >= this.maxWidth) {
@@ -7958,11 +7785,11 @@ fun ShowProfile(
                 // Image and username
                 item {
                     ProfilePictureSection(
-                        person?.name ?: "",
-                        person?.surname ?: "",
-                        person?.username ?: "",
+                        person.name,
+                        person.surname,
+                        person.username,
                         false,
-                        if (imageUri.value != Uri.EMPTY) imageUri.value else null
+                        imageUri
                     )
                 }
 
@@ -7970,19 +7797,19 @@ fun ShowProfile(
 
                 item {
                     ProfileInfoSection(
-                        person?.name ?: "", "", {},
-                        person?.surname ?: "", "", {},
-                        person?.email ?: "", "", {},
-                        person?.username ?: "", "", {},
-                        person?.location ?: "", "", {},
-                        person?.bio ?: "", "", {},
+                        person.name, "", {},
+                        person.surname, "", {},
+                        person.email, "", {},
+                        person.username, "", {},
+                        person.location, "", {},
+                        person.bio, "", {},
                         false
                     )
                 }
 
                 item { Spacer(modifier = Modifier.height(40.dp)) }
 
-                if (auth.uid != filteredTeamParticipant?.first) {
+                if(auth.uid != accountId) {
                     item {
                         Column(
                             modifier = Modifier
@@ -7995,7 +7822,7 @@ fun ShowProfile(
                         }
                     }
                     items(teamList) {
-                        ExpandableContainer(groupedtoDoTasks)
+                        ExpandableContainer(it.groupedTasks, it.name, it.role)
                         Spacer(modifier = Modifier.height(2.dp))
                     }
                 }
@@ -8018,11 +7845,11 @@ fun ShowProfile(
                     verticalArrangement = Arrangement.Center
                 ) {
                     ProfilePictureSection(
-                        person?.name ?: "",
-                        person?.surname ?: "",
-                        person?.username ?: "",
+                        person.name,
+                        person.surname,
+                        person.username,
                         false,
-                        if (imageUri.value != Uri.EMPTY) imageUri.value else null
+                        imageUri
                     )
                 }
 
@@ -8036,21 +7863,21 @@ fun ShowProfile(
 
                     item {
                         ProfileInfoSection(
-                            person?.name ?: "", "", {},
-                            person?.surname ?: "", "", {},
-                            person?.email ?: "", "", {},
-                            person?.username ?: "", "", {},
-                            person?.location ?: "", "", {},
-                            person?.bio ?: "", "", {},
+                            person.name, "", {},
+                            person.surname, "", {},
+                            person.email, "", {},
+                            person.username, "", {},
+                            person.location, "", {},
+                            person.bio, "", {},
                             false
                         )
                     }
 
                     item { Spacer(modifier = Modifier.height(20.dp)) }
 
-                    if (auth.uid != filteredTeamParticipant?.first) {
+                    if(auth.uid != accountId) {
                         items(teamList) {
-                            ExpandableContainer(groupedtoDoTasks)
+                            ExpandableContainer(groupedtoDoTasks, it.name, it.role)
                             Spacer(modifier = Modifier.height(2.dp))
                         }
                     }
@@ -8059,6 +7886,5 @@ fun ShowProfile(
             }
         }
     }
-
 }
 

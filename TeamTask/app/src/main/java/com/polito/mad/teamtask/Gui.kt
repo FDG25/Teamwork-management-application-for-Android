@@ -2997,9 +2997,17 @@ fun AppMainScreen(
                     composable("accounts/{accountId}") { backStackEntry ->
                         val accountId = backStackEntry.arguments?.getString("accountId")
 
-                        val filteredTeamParticipant = people.firstOrNull() { it.first == accountId }
-                        ShowProfile(filteredTeamParticipant)
-                    } // TODO: Implement
+                        val filteredTeamParticipant = people.first { it.first == accountId }
+
+                        val teamsInCommon = teams
+                            .filter { t -> t.second.members.contains(accountId) }
+                        val tasksInCommon = tasks
+                            .filter { t -> t.second.people.contains(accountId) }
+
+                        if (accountId != null) {
+                            ShowProfile(filteredTeamParticipant, accountId, teamsInCommon, teamParticipants, tasksInCommon)
+                        }
+                    }
 
                     composable("profile") {
                         val numTeams = personal.second.teams.size
