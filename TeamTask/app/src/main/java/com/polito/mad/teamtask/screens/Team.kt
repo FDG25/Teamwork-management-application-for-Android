@@ -7685,8 +7685,7 @@ fun ExpandableContainer(
 
 @Composable
 fun ShowProfile(
-    filteredTeamParticipant: Pair<String, Person>?,
-    accountId: String
+    filteredTeamParticipant: Pair<String, Person>?
 ) {
     val auth = FirebaseAuth.getInstance()
 
@@ -7930,7 +7929,7 @@ fun ShowProfile(
                         person?.surname ?: "",
                         person?.username ?: "",
                         false,
-                        imageUri.value
+                        if(imageUri.value != Uri.EMPTY) imageUri.value else null
                     )
                 }
 
@@ -7950,7 +7949,7 @@ fun ShowProfile(
 
                 item { Spacer(modifier = Modifier.height(40.dp)) }
 
-                if(auth.uid != accountId) {
+                if(auth.uid != filteredTeamParticipant?.first) {
                     item {
                         Column(
                             modifier = Modifier
@@ -7990,7 +7989,7 @@ fun ShowProfile(
                         person?.surname ?: "",
                         person?.username ?: "",
                         false,
-                        imageUri.value
+                        if(imageUri.value != Uri.EMPTY) imageUri.value else null
                     )
                 }
 
@@ -8016,7 +8015,7 @@ fun ShowProfile(
 
                     item { Spacer(modifier = Modifier.height(20.dp)) }
 
-                    if(auth.uid != accountId) {
+                    if(auth.uid != filteredTeamParticipant?.first) {
                         items(teamList) {
                             ExpandableContainer(groupedtoDoTasks)
                             Spacer(modifier = Modifier.height(2.dp))
