@@ -100,6 +100,9 @@ class ProfileFormViewModel : ViewModel() {
     var showBackButtonModal by mutableStateOf(false)
     var isLoading by mutableStateOf(false) // Add a state for loading
 
+
+    var isLoadingDeleteAccount = mutableStateOf(false)
+
     fun setShowMen(bool: Boolean) {
         showMenu = bool
     }
@@ -266,7 +269,8 @@ class ProfileFormViewModel : ViewModel() {
     }
 
 
-    suspend fun deleteDocumentByUid() {
+    suspend fun deleteDocumentByUid(onLogout: () -> Unit) {
+        isLoadingDeleteAccount.value = true
         val userDocument = auth.currentUser?.let { db.collection("people").document(it.uid) }
         Log.e("oddo", "oddo2")
         try {
@@ -278,17 +282,28 @@ class ProfileFormViewModel : ViewModel() {
                     // Handle case where no document found with the uid
                 }
             }
+            if (auth.currentUser != null) {
+                try {
+                    // Delete the user from Firebase Authentication
+                    auth.currentUser!!.delete().await()
+                    onLogout()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    // Handle any errors that occur during the deletion process
+                }
+            }
         } catch (e: Exception) {
             // Handle potential errors during deletion
         }
+        isLoadingDeleteAccount.value = false
     }
 
     fun deleteAccount(onLogout: () -> Unit) {
         viewModelScope.launch {
             try {
-                deleteDocumentByUid()
+                deleteDocumentByUid(onLogout)
                 // Handle successful deletion (e.g., show a success message)
-                onLogout()
+                //onLogout()
             } catch (e: Exception) {
                 // Handle potential errors during deletion (e.g., show an error message)
             }
@@ -537,6 +552,9 @@ fun ProfileScreen (
     val typography = TeamTaskTypography
     val auth = FirebaseAuth.getInstance()
 
+    if(vm.isLoadingDeleteAccount.value){
+        LoadingScreen()
+    }
 
     LaunchedEffect(userId, user) {
             vm.fetchProfileImage(userId)
