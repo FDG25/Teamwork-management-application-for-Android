@@ -113,6 +113,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
@@ -286,8 +287,7 @@ class SpecificTeamViewModel : ViewModel() {
             } else {
                 val userId = currentUser.uid
 
-                val teamQuery =
-                    db.collection("teams").whereEqualTo("inviteLink", hash).get().await()
+                val teamQuery = db.collection("teams").whereEqualTo("inviteLink", hash).get().await()
                 if (teamQuery.documents.isNotEmpty()) {
                     val teamDocument = teamQuery.documents.first()
                     val teamData = teamDocument.data
@@ -304,9 +304,12 @@ class SpecificTeamViewModel : ViewModel() {
                         val category = teamData["category"] as? String ?: ""
                         val tasks = teamData["tasks"] as? List<String> ?: emptyList()
 
+                        // Fetch the image URL from Firebase Storage
+                        val teamImageUrl = getImageFromFirebaseStorage(teamImage)
+
                         val team = Team(
                             name = teamName,
-                            image = teamImage,
+                            image = teamImageUrl.toString(),
                             ownerId = teamOwnerId,
                             admins = teamAdminIds,
                             inviteLink = inviteLink,
@@ -342,6 +345,17 @@ class SpecificTeamViewModel : ViewModel() {
         } catch (e: Exception) {
             // Handle any errors that occur during the database operation
             Pair(null, "Error retrieving team information")
+        }
+    }
+
+    private suspend fun getImageFromFirebaseStorage(fileName: String): Uri? {
+        val storage = FirebaseStorage.getInstance()
+        val imageRef = storage.reference.child("teamImages/${fileName}")
+        return try {
+            imageRef.downloadUrl.await()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 
@@ -3998,12 +4012,12 @@ fun InviteConfirmationScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Image(
-                                painter = painterResource(id = R.drawable.group_2),
+                                painter = painterResource(id = R.drawable.team_not_found_foreground),
                                 contentDescription = "Team Not Found",
                                 modifier = Modifier
-                                    .border(1.dp, palette.secondary, RoundedCornerShape(5))
-                                    .width(120.dp)
-                                    .height(120.dp),
+                                    .border(1.dp, palette.secondary)
+                                    .width(180.dp)
+                                    .height(180.dp),
                             )
                         }
 
@@ -4054,14 +4068,30 @@ fun InviteConfirmationScreen(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.group_2),
-                                contentDescription = "Team Image",
-                                modifier = Modifier
-                                    .border(1.dp, palette.secondary, RoundedCornerShape(5))
-                                    .width(120.dp)
-                                    .height(120.dp),
-                            )
+                            //Log.e("teamimage", team?.image.toString())
+
+                            team?.image?.let { imageUrl ->
+                                if(team?.image != null) {
+                                    Image(
+                                        painter = rememberAsyncImagePainter(imageUrl),
+                                        contentDescription = "Team Image",
+                                        modifier = Modifier
+                                            .border(1.dp, palette.secondary, RoundedCornerShape(5))
+                                            .width(120.dp)
+                                            .height(120.dp),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.baseline_groups_24),
+                                        contentDescription = "Team Image",
+                                        modifier = Modifier
+                                            .border(1.dp, palette.secondary)
+                                            .width(120.dp)
+                                            .height(120.dp),
+                                    )
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -4154,10 +4184,10 @@ fun InviteConfirmationScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable.group_2),
+                            painter = painterResource(id = R.drawable.team_not_found_foreground),
                             contentDescription = "Team Not Found",
                             modifier = Modifier
-                                .border(1.dp, palette.secondary, RoundedCornerShape(5))
+                                .border(1.dp, palette.secondary)
                                 .width(120.dp)
                                 .height(120.dp),
                         )
@@ -4232,14 +4262,28 @@ fun InviteConfirmationScreen(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.group_2),
-                            contentDescription = "Team Image",
-                            modifier = Modifier
-                                .border(1.dp, palette.secondary, RoundedCornerShape(5))
-                                .width(120.dp)
-                                .height(120.dp),
-                        )
+                        team?.image?.let { imageUrl ->
+                            if(team?.image != null) {
+                                Image(
+                                    painter = rememberAsyncImagePainter(imageUrl),
+                                    contentDescription = "Team Image",
+                                    modifier = Modifier
+                                        .border(1.dp, palette.secondary, RoundedCornerShape(5))
+                                        .width(120.dp)
+                                        .height(120.dp),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Image(
+                                    painter = painterResource(id = R.drawable.baseline_groups_24),
+                                    contentDescription = "Team Image",
+                                    modifier = Modifier
+                                        .border(1.dp, palette.secondary)
+                                        .width(120.dp)
+                                        .height(120.dp),
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
