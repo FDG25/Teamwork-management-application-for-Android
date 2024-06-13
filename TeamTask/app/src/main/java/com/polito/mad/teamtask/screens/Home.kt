@@ -6,6 +6,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -116,21 +117,21 @@ fun HomeScreen(
                 }
             }
         } else {
+
             item {
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(horizontal = 15.dp)
                 ) {
-                    filteredTeams.forEach { pair ->
-                        item {
-                            val team = pair.second
-                            val imageUri = homeViewModel.teamImages.collectAsState().value[pair.first]
+                    items(filteredTeams) { pair ->
+                        val team = pair.second
+                        val imageUri = homeViewModel.teamImages.collectAsState().value[pair.first]
 
-                            homeViewModel.fetchTeamImage(pair.second.image, pair.first)
-
-                            TeamCard(team, imageUri = imageUri, teamId = pair.first)
-
+                        LaunchedEffect(pair.first) {
+                            homeViewModel.fetchTeamImage(team.image, pair.first)
                         }
+
+                        TeamCard(team, imageUri = imageUri, teamId = pair.first)
                     }
                 }
             }
@@ -199,6 +200,15 @@ fun HomeScreen(
                         tasks.forEach { pair ->
                             val team = teams.firstOrNull { it.first == pair.second.teamId }
 
+                            val imageUri = homeViewModel.teamImages.collectAsState().value[team?.first]
+
+                            LaunchedEffect(team?.first) {
+                                if (team != null) {
+                                    homeViewModel.fetchTeamImage(team.second.image, pair.second.teamId)
+                                }
+                            }
+
+
                             Button(
                                 onClick = { goToTask(pair.second.teamId, pair.first) },
                                 shape = RoundedCornerShape(5.dp),
@@ -209,10 +219,6 @@ fun HomeScreen(
                                 contentPadding = PaddingValues(0.dp),
                                 modifier = Modifier.padding(horizontal = 15.dp)
                             ) {
-                                val imageUri = homeViewModel.teamImages.collectAsState().value[team?.first]
-
-                                homeViewModel.fetchTeamImage(team?.second?.image ?: "" ,pair.second.teamId)
-
                                 TaskEntry(pair.second, team?.second, imageUri )
                             }
 
