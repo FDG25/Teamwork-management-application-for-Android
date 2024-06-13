@@ -401,94 +401,113 @@ class AppModel(
                             if (LocalDateTime.now()
                                     .isAfter(expirationDate) && status == "Scheduled"
                             ) {
-
                                 db.collection("team_participants").where(
                                     Filter.equalTo("teamId", teamId)
                                 ).whereIn("personId", people)
                                     .get().addOnSuccessListener { result ->
                                         db.runTransaction { transaction ->
-                                            if (recurrence == "Never") {
-                                                transaction.update(
-                                                    db.collection("tasks").document(id),
-                                                    "status",
-                                                    "Expired"
+                                            //new atomic assertion
+                                            val myTask = db.collection("tasks").document(id)
+                                            val snap = transaction.get(myTask)
+
+                                            val deadlineDate =
+                                                LocalDateTime.parse(
+                                                    snap.getString("deadline"),
+                                                    DateTimeFormatter.ISO_DATE_TIME
                                                 )
-                                            } else {
-                                                when (recurrence) {
-                                                    "Yearly" -> {
-                                                        transaction.update(
-                                                            db.collection("tasks").document(id),
-                                                            "deadline",
-                                                            expirationDate.plusYears(1)
-                                                                .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "+02:00"
-                                                        )
+                                            val myStatus = snap.getString("status")
+
+                                            if (LocalDateTime.now()
+                                                    .isAfter(deadlineDate) && myStatus == "Scheduled"
+                                            ) {
+                                                if (recurrence == "Never") {
+                                                    transaction.update(
+                                                        db.collection("tasks").document(id),
+                                                        "status",
+                                                        "Expired"
+                                                    )
+                                                } else {
+                                                    when (recurrence) {
+                                                        "Yearly" -> {
+                                                            transaction.update(
+                                                                db.collection("tasks").document(id),
+                                                                "deadline",
+                                                                expirationDate.plusYears(1)
+                                                                    .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "+02:00"
+                                                            )
+                                                        }
+
+                                                        "Weekly" -> {
+                                                            transaction.update(
+                                                                db.collection("tasks").document(id),
+                                                                "deadline",
+                                                                expirationDate.plusWeeks(1)
+                                                                    .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "+02:00"
+                                                            )
+                                                        }
+
+                                                        "Monthly" -> {
+                                                            transaction.update(
+                                                                db.collection("tasks").document(id),
+                                                                "deadline",
+                                                                expirationDate.plusMonths(1)
+                                                                    .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "+02:00"
+                                                            )
+                                                        }
                                                     }
 
-                                                    "Weekly" -> {
-                                                        transaction.update(
-                                                            db.collection("tasks").document(id),
-                                                            "deadline",
-                                                            expirationDate.plusWeeks(1)
-                                                                .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "+02:00"
-                                                        )
+                                                    transaction.update(
+                                                        db.collection("tasks").document(id),
+                                                        "status",
+                                                        "Scheduled"
+                                                    )
+
+                                                    for (document in result) {
+                                                        val totalTasks =
+                                                            document.getLong("totalTasks")
+
+                                                        if (totalTasks != null)
+                                                            transaction.update(
+                                                                db.collection("team_participants")
+                                                                    .document(document.id),
+                                                                "totalTasks",
+                                                                totalTasks + 1
+                                                            )
                                                     }
 
-                                                    "Monthly" -> {
-                                                        transaction.update(
-                                                            db.collection("tasks").document(id),
-                                                            "deadline",
-                                                            expirationDate.plusMonths(1)
-                                                                .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "+02:00"
-                                                        )
-                                                    }
                                                 }
 
-                                                transaction.update(
-                                                    db.collection("tasks").document(id),
-                                                    "status",
-                                                    "Scheduled"
+                                                val notification = Notification(
+                                                    teamId,
+                                                    taskId = id,
+                                                    "Oops! *$title* expired",
+                                                    LocalDateTime.now()
+                                                        .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                                                    5L,
+                                                    teamId = "",
+                                                    true,
+                                                    people
                                                 )
+                                                val newNotification =
+                                                    db.collection("notifications").document()
+                                                transaction.set(newNotification, notification)
 
-                                                for (document in result) {
-                                                    val totalTasks =
-                                                        document.getLong("totalTasks")
+                                                people.forEach { userId ->
+                                                    val newUN =
+                                                        db.collection("user_notifications")
+                                                            .document()
 
-                                                    if (totalTasks != null)
-                                                        transaction.update(
-                                                            db.collection("team_participants")
-                                                                .document(document.id),
-                                                            "totalTasks",
-                                                            totalTasks + 1
+                                                    transaction.set(
+                                                        newUN,
+                                                        UserNotification(
+                                                            newNotification.id,
+                                                            userId,
+                                                            false
                                                         )
+                                                    )
                                                 }
 
                                             }
-
-//                                            val notification = Notification(
-//                                                teamId,
-//                                                taskId = id,
-//                                                "Oops! *$title* expired",
-//                                                LocalDateTime.now()
-//                                                    .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-//                                                5L,
-//                                                teamId = "",
-//                                                true,
-//                                                people
-//                                            )
-//                                            val newNotification =
-//                                                db.collection("notifications").document()
-//                                            transaction.set(newNotification, notification)
-//
-//                                            people.forEach { userId ->
-//                                                val newUN =
-//                                                    db.collection("user_notifications").document()
-//
-//                                                transaction.set(
-//                                                    newUN,
-//                                                    UserNotification(newNotification.id, userId, false)
-//                                                )
-//                                            }
-
                                         }
                                     }
                             }
@@ -2326,22 +2345,6 @@ class AppModel(
         db.collection("tasks").document(taskId).update("description", description)
     }
 
-    fun getTaskById(taskId: String): Flow<Task?> =
-        callbackFlow {
-            val listener = db.collection("tasks").document(taskId)
-                .addSnapshotListener { r, e ->
-                    if (r != null) {
-                        val task = db.collection("tasks").document(taskId)
-                            .get().result.toObject(Task::class.java)
-                        trySend(task)
-                    } else {
-                        Log.e("ERROR", e.toString())
-                        trySend(null)
-                    }
-                }
-            awaitClose { listener.remove() }
-        }
-
     fun updateTaskStatus(taskId: String, task: Task) {
         CoroutineScope(Dispatchers.IO).launch {
             val taskRef = db.collection("tasks").document(taskId).get().await()
@@ -2442,8 +2445,7 @@ class ParametricFactory(
                 taskId = taskId,
                 commentId = commentId
             ) as T
-        }
-        else if (modelClass.isAssignableFrom(TaskViewModel::class.java)) {
+        } else if (modelClass.isAssignableFrom(TaskViewModel::class.java)) {
             // model.generateData()
             @Suppress("UNCHECKED_CAST")
             return TaskViewModel(
@@ -2451,8 +2453,7 @@ class ParametricFactory(
                 taskId = taskId,
                 teamId = teamId
             ) as T
-        }
-        else throw IllegalArgumentException("Unexpected ViewModel class")
+        } else throw IllegalArgumentException("Unexpected ViewModel class")
     }
 }
 
@@ -2885,8 +2886,10 @@ fun AppMainScreen(
 
                         if (teamId != null && task != null) {
                             if (taskId != null) {
-                                ShowTaskDetails(teamId, taskId, task.second, creatorName,
-                                    filteredTasks, people, teamVM)
+                                ShowTaskDetails(
+                                    teamId, taskId, task.second, creatorName,
+                                    filteredTasks, people, teamVM
+                                )
                             }
                         }
 
