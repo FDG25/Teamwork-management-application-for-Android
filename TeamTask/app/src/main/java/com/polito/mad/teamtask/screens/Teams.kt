@@ -98,7 +98,7 @@ class TeamsViewModel(private val myModel: AppModel) : ViewModel() {
 
 
     fun fetchTeamImage(imageName: String, teamId: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val imageRef = storage.reference.child("teamImages/$imageName").downloadUrl.await()
 
@@ -171,7 +171,7 @@ class TeamsViewModel(private val myModel: AppModel) : ViewModel() {
             setIsShowingCreateTeam(false)
             if (isInCreation) {
                 //create new Team on Firebase
-                viewModelScope.launch {
+                viewModelScope.launch(Dispatchers.IO) {
                     isLoading = true
                     val result = myModel.createTeam(teamNameValue, teamCategory, imageUri)
                     isLoading = false
@@ -198,7 +198,7 @@ class TeamsViewModel(private val myModel: AppModel) : ViewModel() {
         //no image for the team
         if (imageUri==null) myImageUri = null
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             isLoading = true
             myModel.updateTeamStatus(teamId, teamNameValue, teamCategory, myImageUri)
             isLoading = false

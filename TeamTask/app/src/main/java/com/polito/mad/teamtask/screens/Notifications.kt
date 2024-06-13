@@ -76,7 +76,7 @@ class NotificationsViewModel : ViewModel() {
 
     fun fetchImage(teamIdOrUserId: String, fromGroup: Boolean, typology: Int, imageEntry: String?) {
         if(imageEntry != null) {
-            viewModelScope.launch {
+            viewModelScope.launch(Dispatchers.IO) {
                 try {
                     val imageRef = if (fromGroup) {
                         storage.reference.child("teamImages/$imageEntry")

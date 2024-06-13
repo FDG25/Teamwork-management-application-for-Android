@@ -200,7 +200,7 @@ class SpecificTeamViewModel : ViewModel() {
         _toDoTasks.value = toDoTasks
         //_teampeople.value = teampeople
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val updatedTeamPeople = teampeople.map {
                 if (it.image.isNotBlank()) {
                     val image =
@@ -263,7 +263,7 @@ class SpecificTeamViewModel : ViewModel() {
     }
 
     fun validateStringForDeleteTeam(teamId: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             if (stringValueForDelete == auth.currentUser?.email) {
                 deleteTeam(teamId)
                 setShwDeleteTeamModal(false)
@@ -818,7 +818,7 @@ class SpecificTeamViewModel : ViewModel() {
     }
 
     fun validateRole(teamId: String, userId: String, role: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             addOrUpdateRoleInTeamParticipants(teamId, userId, role)
             setSelectdRole("")
         }
@@ -1223,7 +1223,7 @@ class SpecificTeamViewModel : ViewModel() {
     }
 
     fun markAsCompletedOrScheduled(teamId: String, taskId: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 updateTaskStatusToCompletedOrScheduled(teamId, taskId)
             } catch (e: Exception) {
@@ -1427,7 +1427,7 @@ class SpecificTeamViewModel : ViewModel() {
     fun validateCreateTask(teamId: String) {
         when (currentStep) {
             TaskCreationStep.Status -> {
-                viewModelScope.launch {
+                viewModelScope.launch(Dispatchers.IO) {
                     checkTaskName(teamId)
                     checkSelectedDateTimeError()
                     if (taskNameError.isBlank() && selectedDateTimeError.isBlank()) {
@@ -1449,7 +1449,7 @@ class SpecificTeamViewModel : ViewModel() {
             TaskCreationStep.People -> {
                 checkPeople()
                 if (peopleOrTaskNameError.isBlank()) {
-                    viewModelScope.launch {
+                    viewModelScope.launch(Dispatchers.IO) {
                         checkTaskName(teamId)
                         if (taskNameError.isBlank()) {
                             isLoadingTaskCreation.value = true
