@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.ListResult
 import com.polito.mad.teamtask.Notification
@@ -34,15 +36,43 @@ import com.polito.mad.teamtask.UserNotification
 import com.polito.mad.teamtask.components.NotificationEntry
 import com.polito.mad.teamtask.components.TeamCard
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 class NotificationsViewModel : ViewModel() {
+    private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
     private val storage = FirebaseStorage.getInstance()
     private val _images = MutableStateFlow<Map<String, Uri?>>(emptyMap())
     val images: StateFlow<Map<String, Uri?>> = _images
+
+    fun markNotificationAsRead(notificationId: String, userId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                updateNotificationReadStatus(notificationId, userId)
+            } catch (e: Exception) {
+                // Handle the exception
+                e.printStackTrace()
+            }
+        }
+    }
+
+    suspend fun updateNotificationReadStatus(notificationId: String, userId: String) {
+        val notificationRef = db.collection("user_notifications")
+            .whereEqualTo("notificationId", notificationId)
+            .whereEqualTo("userId", userId)
+            .get()
+            .await()
+
+        if (notificationRef.documents.isNotEmpty()) {
+            val documentId = notificationRef.documents[0].id
+            db.collection("user_notifications").document(documentId)
+                .update("read", true)
+                .await()
+        }
+    }
 
     fun fetchImage(teamIdOrUserId: String, fromGroup: Boolean, typology: Int, imageEntry: String?) {
         if(imageEntry != null) {
@@ -87,6 +117,7 @@ fun NotificationsScreen (
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
+    val auth = FirebaseAuth.getInstance()
 
     val localNotifications = filteredNotifications.mapNotNull { id ->
         val n = notifications.firstOrNull { t -> t.first.equals(id) }?.second
@@ -168,6 +199,7 @@ fun NotificationsScreen (
 
                             Button(
                                 onClick = {
+                                    notificationsVm.markNotificationAsRead(id, auth.uid!!)
                                     if(n.typology.toInt()==2 || n.typology.toInt()==3) {
                                         goToTask(n.teamId, n.taskId)
                                     } else {
