@@ -272,11 +272,109 @@ class ProfileFormViewModel : ViewModel() {
     suspend fun deleteDocumentByUid(onLogout: () -> Unit) {
         isLoadingDeleteAccount.value = true
         val userDocument = auth.currentUser?.let { db.collection("people").document(it.uid) }
+        val userId = auth.currentUser?.uid
+
         Log.e("oddo", "oddo2")
         try {
             val document = userDocument?.get()?.await()
             if (document != null) {
                 if (document.exists()) {
+                    // Remove user from 'notifications', if it is the only receiver, remove the whole notification
+                    val notificationsQuery = userId?.let {
+                        db.collection("notifications").whereArrayContains("receivers",
+                            it
+                        ).get().await()
+                    }
+                    if (notificationsQuery != null) {
+                        for (notification in notificationsQuery.documents) {
+                            val receivers = notification.get("receivers") as MutableList<String>
+                            receivers.remove(userId)
+                            if (receivers.isEmpty()) {
+                                notification.reference.delete().await()
+                            } else {
+                                notification.reference.update("receivers", receivers).await()
+                            }
+                        }
+                    }
+
+                    // Remove user from 'tasks', if it is the only user, remove the whole task
+                    val tasksQuery =
+                        userId?.let {
+                            db.collection("tasks").whereArrayContains("people",
+                                it
+                            ).get().await()
+                        }
+                    if (tasksQuery != null) {
+                        for (task in tasksQuery.documents) {
+                            val people = task.get("people") as MutableList<String>
+                            people.remove(userId)
+                            if (people.isEmpty()) {
+                                task.reference.delete().await()
+                            } else {
+                                task.reference.update("people", people).await()
+                            }
+                        }
+                    }
+
+                    // Remove all instances from 'team_participants' where personId = uid
+                    val participantsQuery = db.collection("team_participants").whereEqualTo("personId", userId).get().await()
+                    for (participant in participantsQuery.documents) {
+                        participant.reference.delete().await()
+                    }
+
+                    // Remove user from 'teams' from members or from admins. If is owner, take the first admin, remove him from admin and promote to owner. If there
+                    // are no admins but there is at least one member, promote that member to owner. If in the team there is only the owner and he decides to delete
+                    // his account, remove directly also the whole team!
+                    val teamsQuery = userId?.let { db.collection("teams").whereArrayContains("members", it).get().await() }
+                    if (teamsQuery != null) {
+                        for (team in teamsQuery.documents) {
+                            val members = team.get("members") as MutableList<String>
+                            val admins = team.get("admins") as MutableList<String>
+                            val ownerId = team.getString("ownerId")
+
+                            var isModified = false
+
+                            // Remove user from members list
+                            if (members.contains(userId)) {
+                                members.remove(userId)
+                                isModified = true
+                            }
+
+                            // Remove user from admins list
+                            if (admins.contains(userId)) {
+                                admins.remove(userId)
+                                isModified = true
+                            }
+
+                            // Handle case where user is the owner
+                            if (ownerId == userId) {
+                                if (admins.isNotEmpty()) {
+                                    val newOwnerId = admins.removeAt(0)
+                                    team.reference.update("ownerId", newOwnerId, "admins", admins).await()
+                                } else if (members.isNotEmpty()) {
+                                    val newOwnerId = members.removeAt(0)
+                                    team.reference.update("ownerId", newOwnerId, "members", members).await()
+                                } else {
+                                    team.reference.delete().await()
+                                    continue
+                                }
+                            }
+
+                            // Update team document with modified members and admins lists if changed
+                            if (isModified) {
+                                team.reference.update("members", members, "admins", admins).await()
+                            }
+                        }
+                    }
+
+
+                    // Remove user from 'user_notifications'
+                    val userNotificationsQuery = db.collection("user_notifications").whereEqualTo("userId", userId).get().await()
+                    for (userNotification in userNotificationsQuery.documents) {
+                        userNotification.reference.delete().await()
+                    }
+
+                    // Delete the user document from 'people' collection
                     document.reference.delete().await()
                 } else {
                     // Handle case where no document found with the uid
@@ -298,11 +396,11 @@ class ProfileFormViewModel : ViewModel() {
         isLoadingDeleteAccount.value = false
     }
 
+
     fun deleteAccount(onLogout: () -> Unit) {
         viewModelScope.launch {
             try {
                 deleteDocumentByUid(onLogout)
-                // Handle successful deletion (e.g., show a success message)
                 //onLogout()
             } catch (e: Exception) {
                 // Handle potential errors during deletion (e.g., show an error message)

@@ -952,7 +952,7 @@ fun TopBar(
                        if (task != null) {
                             Text(
                                 task.title,
-                                style = typography.titleLarge
+                                style = typography.titleMedium
                             )
                         }
                     }
@@ -1293,7 +1293,7 @@ fun TopBar(
                                     modifier = Modifier.scale(1.2f).padding(top = 3.dp)
                                 )
                             }
-                            DropDownButton(onClick = { /* TODO: Handle click */ })
+                            //DropDownButton(onClick = { /* TODO: Handle click */ })
                         }
                     }
                 },
