@@ -220,11 +220,12 @@ fun MessageEntry(
                         .error(R.drawable.baseline_person_24)
                         .build(),
                     contentDescription = "Profile Image",
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .border(1.dp, palette.secondary, CircleShape)
-                        //.padding(4.dp)
+                    contentScale = ContentScale.Crop,
+                    modifier =
+                        Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .border(1.dp, palette.secondary, CircleShape)
                 )
             } else {
                 Image (
@@ -234,7 +235,6 @@ fun MessageEntry(
                         .size(48.dp)
                         .clip(CircleShape)
                         .border(1.dp, palette.secondary, CircleShape)
-                        .padding(4.dp)
                 )
             }
         }

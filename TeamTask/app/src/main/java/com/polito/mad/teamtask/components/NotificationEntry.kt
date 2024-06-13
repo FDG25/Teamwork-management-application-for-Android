@@ -87,9 +87,18 @@ fun NotificationEntry (
                             .build(),
                         contentDescription = "User or Team image",
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(45.dp)
-                            .fillMaxSize()
+                        modifier =
+                        if(!notification.fromGroup){
+                            Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .border(1.dp, palette.secondary, CircleShape)
+                        } else {
+                            Modifier
+                                .size(45.dp)
+                                .border(1.dp, palette.secondary)
+                                .fillMaxSize()
+                        }
                         //.padding(4.dp)
                     )
                 } else { // No image set
@@ -101,9 +110,18 @@ fun NotificationEntry (
                         }), // TODO: Replace with placeholder for teams
                         contentDescription = "User or Team image",
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(45.dp)
-                            .fillMaxSize()
+                        modifier =
+                        if(!notification.fromGroup) {
+                            Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .border(1.dp, palette.secondary, CircleShape)
+                        } else {
+                            Modifier
+                                .size(45.dp)
+                                .border(1.dp, palette.secondary)
+                                .fillMaxSize()
+                        }
                     )
                 }
             }

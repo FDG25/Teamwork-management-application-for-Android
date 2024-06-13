@@ -108,10 +108,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat.startActivity
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
@@ -285,8 +287,7 @@ class SpecificTeamViewModel : ViewModel() {
             } else {
                 val userId = currentUser.uid
 
-                val teamQuery =
-                    db.collection("teams").whereEqualTo("inviteLink", hash).get().await()
+                val teamQuery = db.collection("teams").whereEqualTo("inviteLink", hash).get().await()
                 if (teamQuery.documents.isNotEmpty()) {
                     val teamDocument = teamQuery.documents.first()
                     val teamData = teamDocument.data
@@ -303,9 +304,12 @@ class SpecificTeamViewModel : ViewModel() {
                         val category = teamData["category"] as? String ?: ""
                         val tasks = teamData["tasks"] as? List<String> ?: emptyList()
 
+                        // Fetch the image URL from Firebase Storage
+                        val teamImageUrl = getImageFromFirebaseStorage(teamImage)
+
                         val team = Team(
                             name = teamName,
-                            image = teamImage,
+                            image = teamImageUrl.toString(),
                             ownerId = teamOwnerId,
                             admins = teamAdminIds,
                             inviteLink = inviteLink,
@@ -341,6 +345,17 @@ class SpecificTeamViewModel : ViewModel() {
         } catch (e: Exception) {
             // Handle any errors that occur during the database operation
             Pair(null, "Error retrieving team information")
+        }
+    }
+
+    private suspend fun getImageFromFirebaseStorage(fileName: String): Uri? {
+        val storage = FirebaseStorage.getInstance()
+        val imageRef = storage.reference.child("teamImages/${fileName}")
+        return try {
+            imageRef.downloadUrl.await()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 
@@ -633,6 +648,8 @@ class SpecificTeamViewModel : ViewModel() {
         showExitFromTaskModal = bool
     }
 
+    var isLoadingDeleteTeam = mutableStateOf(false)
+
     // Function to delete a team and navigate to the home screen if successful
     fun deleteTeam(teamId: String) {
         val currentUser = auth.currentUser
@@ -642,6 +659,7 @@ class SpecificTeamViewModel : ViewModel() {
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                isLoadingDeleteTeam.value = true
                 // Fetch the team document
                 val teamRef = db.collection("teams").document(teamId)
                 val teamDocument = teamRef.get().await()
@@ -707,6 +725,7 @@ class SpecificTeamViewModel : ViewModel() {
                 // Handle any errors that occur during the database operation
                 Log.e("SpecificTeamViewModel", "Error deleting team", e)
             }
+            isLoadingDeleteTeam.value = false
         }
     }
 
@@ -1257,6 +1276,27 @@ class SpecificTeamViewModel : ViewModel() {
                     }
                 }
 
+                // Update Firestore team_participants collection
+                if (task != null) {
+                    for (personId in task.people) {
+                        val participantQuery = db.collection("team_participants")
+                            .whereEqualTo("teamId", teamId)
+                            .whereEqualTo("personId", personId)
+                            .get()
+                            .await()
+
+                        if (participantQuery.documents.isNotEmpty()) {
+                            val participantDoc = participantQuery.documents[0]
+                            val currentCompletedTasks = participantDoc.getLong("completedTasks") ?: 0L
+                            val newCompletedTasks = currentCompletedTasks + 1
+
+                            db.collection("team_participants").document(participantDoc.id)
+                                .update("completedTasks", newCompletedTasks)
+                                .await()
+                        }
+                    }
+                }
+
                 val time = LocalDateTime.parse(completionTime, DateTimeFormatter.ISO_DATE_TIME)
                 val formatter = DateTimeFormatter.ofPattern("dd/MM/yy HH:mm")
 
@@ -1331,6 +1371,27 @@ class SpecificTeamViewModel : ViewModel() {
                             "userId" to personId
                         )
                         db.collection("user_notifications").add(userNotification).await()
+                    }
+                }
+            }
+
+            // Update 'team_participants' document for each person in the task
+            if (task != null) {
+                for (personId in task.people) {
+                    val participantQuery = db.collection("team_participants")
+                        .whereEqualTo("teamId", teamId)
+                        .whereEqualTo("personId", personId)
+                        .get()
+                        .await()
+
+                    if (participantQuery.documents.isNotEmpty()) {
+                        val participantDoc = participantQuery.documents[0]
+                        val currentTotalTasks = participantDoc.getLong("totalTasks") ?: 0L
+                        val newTotalTasks = currentTotalTasks + 1
+
+                        db.collection("team_participants").document(participantDoc.id)
+                            .update("totalTasks", newTotalTasks)
+                            .await()
                     }
                 }
             }
@@ -1565,8 +1626,7 @@ class SpecificTeamViewModel : ViewModel() {
                 // Update Firestore tasks collection
                 val taskRef = db.collection("tasks").document(taskId)
                 val taskSnapshot = taskRef.get().await()
-                val taskPeople =
-                    taskSnapshot.get("people") as? MutableList<String> ?: mutableListOf()
+                val taskPeople = taskSnapshot.get("people") as? MutableList<String> ?: mutableListOf()
 
                 selectedPeople.forEach { selectedPerson ->
                     if (!taskPeople.contains(selectedPerson.personId)) {
@@ -1586,6 +1646,25 @@ class SpecificTeamViewModel : ViewModel() {
                         personTasks.add(taskId)
                     }
                     personRef.update("tasks", personTasks).await()
+                }
+
+                // Update Firestore team_participants collection
+                selectedPeople.forEach { selectedPerson ->
+                    val participantQuery = db.collection("team_participants")
+                        .whereEqualTo("teamId", teamId)
+                        .whereEqualTo("personId", selectedPerson.personId)
+                        .get()
+                        .await()
+
+                    if (participantQuery.documents.isNotEmpty()) {
+                        val participantDoc = participantQuery.documents[0]
+                        val currentTotalTasks = participantDoc.getLong("totalTasks") ?: 0L
+                        val newTotalTasks = currentTotalTasks + 1
+
+                        db.collection("team_participants").document(participantDoc.id)
+                            .update("totalTasks", newTotalTasks)
+                            .await()
+                    }
                 }
 
                 // Update the filters --> IT HAS TO BE DONE ONLY FOR REMOVE, BECAUSE OTHERWISE MAY REMAIN A FILTER BY PERSON APPLIED, EVEN IF THAT PERSON IS NOT IN THE TEAM/TASK ANYMORE!
@@ -3933,12 +4012,12 @@ fun InviteConfirmationScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Image(
-                                painter = painterResource(id = R.drawable.group_2),
+                                painter = painterResource(id = R.drawable.team_not_found_foreground),
                                 contentDescription = "Team Not Found",
                                 modifier = Modifier
-                                    .border(1.dp, palette.secondary, RoundedCornerShape(5))
-                                    .width(120.dp)
-                                    .height(120.dp),
+                                    .border(1.dp, palette.secondary)
+                                    .width(180.dp)
+                                    .height(180.dp),
                             )
                         }
 
@@ -3989,14 +4068,30 @@ fun InviteConfirmationScreen(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.group_2),
-                                contentDescription = "Team Image",
-                                modifier = Modifier
-                                    .border(1.dp, palette.secondary, RoundedCornerShape(5))
-                                    .width(120.dp)
-                                    .height(120.dp),
-                            )
+                            //Log.e("teamimage", team?.image.toString())
+
+                            team?.image?.let { imageUrl ->
+                                if(team?.image != null) {
+                                    Image(
+                                        painter = rememberAsyncImagePainter(imageUrl),
+                                        contentDescription = "Team Image",
+                                        modifier = Modifier
+                                            .border(1.dp, palette.secondary, RoundedCornerShape(5))
+                                            .width(120.dp)
+                                            .height(120.dp),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.baseline_groups_24),
+                                        contentDescription = "Team Image",
+                                        modifier = Modifier
+                                            .border(1.dp, palette.secondary)
+                                            .width(120.dp)
+                                            .height(120.dp),
+                                    )
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -4089,10 +4184,10 @@ fun InviteConfirmationScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable.group_2),
+                            painter = painterResource(id = R.drawable.team_not_found_foreground),
                             contentDescription = "Team Not Found",
                             modifier = Modifier
-                                .border(1.dp, palette.secondary, RoundedCornerShape(5))
+                                .border(1.dp, palette.secondary)
                                 .width(120.dp)
                                 .height(120.dp),
                         )
@@ -4167,14 +4262,28 @@ fun InviteConfirmationScreen(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.group_2),
-                            contentDescription = "Team Image",
-                            modifier = Modifier
-                                .border(1.dp, palette.secondary, RoundedCornerShape(5))
-                                .width(120.dp)
-                                .height(120.dp),
-                        )
+                        team?.image?.let { imageUrl ->
+                            if(team?.image != null) {
+                                Image(
+                                    painter = rememberAsyncImagePainter(imageUrl),
+                                    contentDescription = "Team Image",
+                                    modifier = Modifier
+                                        .border(1.dp, palette.secondary, RoundedCornerShape(5))
+                                        .width(120.dp)
+                                        .height(120.dp),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Image(
+                                    painter = painterResource(id = R.drawable.baseline_groups_24),
+                                    contentDescription = "Team Image",
+                                    modifier = Modifier
+                                        .border(1.dp, palette.secondary)
+                                        .width(120.dp)
+                                        .height(120.dp),
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -5557,6 +5666,10 @@ fun SpecificTeamScreen(
                 }
             }
         )
+    }
+
+    if(vm.isLoadingDeleteTeam.value){
+        LoadingScreen()
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -7654,7 +7767,9 @@ fun PeopleSectionForFilters(
 
 @Composable
 fun ExpandableContainer(
-    groupedtoDoTasks: Map<String, List<ToDoTask>>
+    groupedtoDoTasks: Map<String, List<ToDoTask>>,
+    teamName: String,
+    teamRole: String
 ) {
     val typography = TeamTaskTypography
     val palette = MaterialTheme.colorScheme
@@ -7664,7 +7779,7 @@ fun ExpandableContainer(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { expanded = !expanded },
-        border = BorderStroke(1.dp, Color.Gray)
+        border = BorderStroke(1.dp, palette.surfaceVariant)
     ) {
         Column {
             Row(
@@ -7672,14 +7787,14 @@ fun ExpandableContainer(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.teamtasklogo),
+                    painter = painterResource(id = R.drawable.teamtasklogo), // TODO: Change image
                     contentDescription = "Team Image",
                     modifier = Modifier.size(50.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
-                    Text(text = "team name", color = Color.Black)
-                    Text(text = "CEO", color = Color.Gray)
+                    Text(text = teamName, color = palette.onSurface)
+                    Text(text = teamRole, color = palette.onSurfaceVariant)
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 Image(
@@ -7715,233 +7830,57 @@ fun ExpandableContainer(
     Spacer(modifier = Modifier.height(5.dp))
 }
 
+
 @Composable
 fun ShowProfile(
-    filteredTeamParticipant: Pair<String, Person>?
+    filteredTeamParticipant: Pair<String, Person>,
+    accountId: String,
+    teamsInCommon: List<Pair<String, Team>>,
+    teamParticipants: List<TeamParticipant>,
+    tasksInCommon: List<Pair<String, Task>>
 ) {
     val auth = FirebaseAuth.getInstance()
 
-    // Hardcoded list of scheduled tasks
-    var toDoTasks = listOf(
-        ToDoTask(
-            "0",
-            "Task 1",
-            "Completed",
-            1,
-            "Weekly",
-            "2024-04-30T12:53:00+02:00",
-            "2024-04-01T09:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData(
-                    "1",
-                    "Name1ejwnewjneees",
-                    "Surname1fskfsmkfnsk",
-                    "username1",
-                    "CTO",
-                    "Admin",
-                    ""
-                ),
-                PersonData(
-                    "2",
-                    "Sofia",
-                    "Esposito",
-                    "sofia_esposito",
-                    "Marketing Director",
-                    "",
-                    ""
-                ),
-                PersonData("3", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")
-        ),
-        ToDoTask(
-            "1",
-            "Task 2",
-            "Expired",
-            0,
-            "Never",
-            "2024-04-20T16:42:00+02:00",
-            "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")
-        ),
-        ToDoTask(
-            "2",
-            "Task 2.5",
-            "Completed",
-            0,
-            "Never",
-            "2024-04-20T16:42:00+02:00",
-            "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData(
-                    "1",
-                    "Sofia",
-                    "Esposito",
-                    "sofia_esposito",
-                    "Marketing Director",
-                    "",
-                    ""
-                ),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")
-        ),
-        ToDoTask(
-            "3",
-            "Task 2.6",
-            "Completed",
-            0,
-            "Never",
-            "2024-04-20T16:42:00+02:00",
-            "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData(
-                    "1",
-                    "Sofia",
-                    "Esposito",
-                    "sofia_esposito",
-                    "Marketing Director",
-                    "",
-                    ""
-                ),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")
-        ),
-        ToDoTask(
-            "4",
-            "Task 2.7",
-            "Completed",
-            0,
-            "Never",
-            "2024-04-20T16:42:00+02:00",
-            "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData(
-                    "1",
-                    "Sofia",
-                    "Esposito",
-                    "sofia_esposito",
-                    "Marketing Director",
-                    "",
-                    ""
-                ),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")
-        ),
-        ToDoTask(
-            "5",
-            "Task 2.8",
-            "Completed",
-            0,
-            "Never",
-            "2024-04-20T16:42:00+02:00",
-            "2024-04-01T10:00:00+02:00",
-            listOf(
-                PersonData("0", "Luca", "Bianchi", "luca_bianchi", "CEO", "Owner", ""),
-                PersonData(
-                    "1",
-                    "Sofia",
-                    "Esposito",
-                    "sofia_esposito",
-                    "Marketing Director",
-                    "",
-                    ""
-                ),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")
-        ),
-        ToDoTask(
-            "6",
-            "Task 3",
-            "Scheduled",
-            1,
-            "Never",
-            "2024-05-07T13:36:00+02:00",
-            "2024-04-02T11:00:00+02:00",
-            listOf(
-                PersonData(
-                    "0",
-                    "Name1ejwnewjneees",
-                    "Surname1fskfsmkfnsk",
-                    "username1",
-                    "CTO",
-                    "Admin",
-                    ""
-                ),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test4", "#test5")
-        ),
-        ToDoTask(
-            "7",
-            "Task 4",
-            "Scheduled",
-            0,
-            "Monthly",
-            "2024-05-30T12:12:00+02:00",
-            "2024-04-02T12:00:00+02:00",
-            listOf(
-                PersonData(
-                    "0",
-                    "Sofia",
-                    "Esposito",
-                    "sofia_esposito",
-                    "Marketing Director",
-                    "",
-                    ""
-                ),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test1", "#test2")
-        ),
-        ToDoTask(
-            "8",
-            "Task 5",
-            "Scheduled",
-            1,
-            "Yearly",
-            "2024-05-07T22:21:00+02:00",
-            "2024-04-03T08:00:00+02:00",
-            listOf(
-                PersonData(
-                    "0",
-                    "Sofia",
-                    "Esposito",
-                    "sofia_esposito",
-                    "Marketing Director",
-                    "",
-                    ""
-                ),
-                PersonData("1", "Giulia", "Ricci", "giulia_ricci", "HR Manager", "", ""),
-            ).sortedBy { it.name },
-            listOf("#test4", "#test5")
-        )
-    )
+    // List of scheduled tasks
+    val toDoTasks = mutableListOf<ToDoTask>()
+    tasksInCommon.forEach { tic ->
+        val taskId = tic.first
+        val taskName = tic.second.title
+        val status = tic.second.status
+        val isNotPriority = if (tic.second.prioritized) 0 else 1
+        val recurrence = tic.second.recurrence
+        val expirationTimestamp = tic.second.deadline
+        val creationTimestamp = tic.second.creationDate
+        val taskPeople = listOf<PersonData>()
+        val tags = tic.second.tags
+
+        val pd = ToDoTask(taskId, taskName, status, isNotPriority, recurrence, expirationTimestamp, creationTimestamp, taskPeople, tags)
+        toDoTasks.add(pd)
+    }
 
     val groupedtoDoTasks = toDoTasks.groupBy { it.expirationTimestamp.split("T")[0] }
 
-    val person = filteredTeamParticipant?.second
+    val person = filteredTeamParticipant.second
+    var imageUri = "teamtasklogo".toUri() // TODO: Change image
 
-    val imageUri = remember {
-        mutableStateOf(Uri.EMPTY)
+    //var teamList = listOf(1, 2, 3)
+    data class TeamData (
+        val name: String = "",
+        val role: String = "",
+        val groupedTasks: Map<String, List<ToDoTask>>
+    )
+    val teamList = mutableListOf<TeamData>()
+    teamsInCommon.forEach { tic ->
+        val teamId = tic.first
+        val teamName = tic.second.name
+        val role = teamParticipants
+            .firstOrNull { t -> t.equals(teamId) }
+            ?.role ?: ""
+        val groupedTasks = toDoTasks
+            .filter { tdt -> tic.second.tasks.contains(tdt.taskId) }
+            .groupBy { it.expirationTimestamp.split("T")[0] }
+        teamList.add(TeamData(teamName, role, groupedTasks))
     }
-
-    LaunchedEffect(person) {
-        if (person?.image?.isNotEmpty() == true) {
-            val imageRef =
-                FirebaseStorage.getInstance().reference.child("profileImages/${person.image}").downloadUrl.await()
-            imageUri.value = imageRef
-        }
-    }
-
-    var teamList = listOf(1, 2, 3)
 
     BoxWithConstraints {
         if (this.maxHeight >= this.maxWidth) {
@@ -7958,11 +7897,11 @@ fun ShowProfile(
                 // Image and username
                 item {
                     ProfilePictureSection(
-                        person?.name ?: "",
-                        person?.surname ?: "",
-                        person?.username ?: "",
+                        person.name,
+                        person.surname,
+                        person.username,
                         false,
-                        if (imageUri.value != Uri.EMPTY) imageUri.value else null
+                        imageUri
                     )
                 }
 
@@ -7970,19 +7909,19 @@ fun ShowProfile(
 
                 item {
                     ProfileInfoSection(
-                        person?.name ?: "", "", {},
-                        person?.surname ?: "", "", {},
-                        person?.email ?: "", "", {},
-                        person?.username ?: "", "", {},
-                        person?.location ?: "", "", {},
-                        person?.bio ?: "", "", {},
+                        person.name, "", {},
+                        person.surname, "", {},
+                        person.email, "", {},
+                        person.username, "", {},
+                        person.location, "", {},
+                        person.bio, "", {},
                         false
                     )
                 }
 
                 item { Spacer(modifier = Modifier.height(40.dp)) }
 
-                if (auth.uid != filteredTeamParticipant?.first) {
+                if(auth.uid != accountId) {
                     item {
                         Column(
                             modifier = Modifier
@@ -7995,7 +7934,7 @@ fun ShowProfile(
                         }
                     }
                     items(teamList) {
-                        ExpandableContainer(groupedtoDoTasks)
+                        ExpandableContainer(it.groupedTasks, it.name, it.role)
                         Spacer(modifier = Modifier.height(2.dp))
                     }
                 }
@@ -8018,11 +7957,11 @@ fun ShowProfile(
                     verticalArrangement = Arrangement.Center
                 ) {
                     ProfilePictureSection(
-                        person?.name ?: "",
-                        person?.surname ?: "",
-                        person?.username ?: "",
+                        person.name,
+                        person.surname,
+                        person.username,
                         false,
-                        if (imageUri.value != Uri.EMPTY) imageUri.value else null
+                        imageUri
                     )
                 }
 
@@ -8036,21 +7975,21 @@ fun ShowProfile(
 
                     item {
                         ProfileInfoSection(
-                            person?.name ?: "", "", {},
-                            person?.surname ?: "", "", {},
-                            person?.email ?: "", "", {},
-                            person?.username ?: "", "", {},
-                            person?.location ?: "", "", {},
-                            person?.bio ?: "", "", {},
+                            person.name, "", {},
+                            person.surname, "", {},
+                            person.email, "", {},
+                            person.username, "", {},
+                            person.location, "", {},
+                            person.bio, "", {},
                             false
                         )
                     }
 
                     item { Spacer(modifier = Modifier.height(20.dp)) }
 
-                    if (auth.uid != filteredTeamParticipant?.first) {
+                    if(auth.uid != accountId) {
                         items(teamList) {
-                            ExpandableContainer(groupedtoDoTasks)
+                            ExpandableContainer(groupedtoDoTasks, it.name, it.role)
                             Spacer(modifier = Modifier.height(2.dp))
                         }
                     }
@@ -8059,6 +7998,5 @@ fun ShowProfile(
             }
         }
     }
-
 }
 
