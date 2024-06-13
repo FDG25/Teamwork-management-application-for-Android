@@ -6125,14 +6125,13 @@ private fun PeopleEntry(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(palette.surface),
+                    .background(palette.onSurfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = if (person.name.isNotEmpty() && person.surname.isNotEmpty()) "${person.name[0]}${person.surname[0]}"
                     else if (person.name.isNotEmpty()) "${person.name[0]}"
                     else "",
-                    style = typography.bodyLarge,
                     color = palette.onSurface
                 )
             }
@@ -6331,14 +6330,13 @@ private fun PeopleEntryForTask(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(palette.surface),
+                    .background(palette.onSurfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = if (person.name.isNotEmpty() && person.surname.isNotEmpty()) "${person.name[0]}${person.surname[0]}"
                     else if (person.name.isNotEmpty()) "${person.name[0]}"
                     else "",
-                    style = typography.bodyLarge,
                     color = palette.onSurface
                 )
             }
@@ -6755,14 +6753,13 @@ private fun PeopleEntryForTeam(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(palette.surface),
+                    .background(palette.onSurfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = if (person.name.isNotEmpty() && person.surname.isNotEmpty()) "${person.name[0]}${person.surname[0]}"
                     else if (person.name.isNotEmpty()) "${person.name[0]}"
                     else "",
-                    style = typography.bodyLarge,
                     color = palette.onSurface
                 )
             }
@@ -7861,9 +7858,18 @@ fun ShowProfile(
     val groupedtoDoTasks = toDoTasks.groupBy { it.expirationTimestamp.split("T")[0] }
 
     val person = filteredTeamParticipant.second
-    var imageUri = "teamtasklogo".toUri() // TODO: Change image
 
-    //var teamList = listOf(1, 2, 3)
+    val imageUri = remember {
+        mutableStateOf(Uri.EMPTY)
+    }
+
+    LaunchedEffect(filteredTeamParticipant) {
+        if(person.image.isNotEmpty()) {
+            val imageRef = FirebaseStorage.getInstance().reference.child("profileImages/${person.image}").downloadUrl.await()
+            imageUri.value = imageRef
+        }
+    }
+
     data class TeamData (
         val name: String = "",
         val role: String = "",
@@ -7901,7 +7907,7 @@ fun ShowProfile(
                         person.surname,
                         person.username,
                         false,
-                        imageUri
+                        imageUri.value
                     )
                 }
 
@@ -7961,7 +7967,7 @@ fun ShowProfile(
                         person.surname,
                         person.username,
                         false,
-                        imageUri
+                        imageUri.value
                     )
                 }
 

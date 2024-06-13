@@ -145,7 +145,7 @@ fun Comment(
                                     modifier = Modifier
                                         .wrapContentWidth(Alignment.Start, unbounded = false)
                                         .widthIn(max = 100.dp, min = 0.dp),
-                                    text = comment.username,
+                                    text = comment.username.ifEmpty { "Deleted user" },
                                     style = typography.labelSmall.copy(
                                         color = palette.onSurface,
                                         fontSize = 12.sp,

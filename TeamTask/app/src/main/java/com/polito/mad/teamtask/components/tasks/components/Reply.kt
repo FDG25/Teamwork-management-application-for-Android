@@ -138,7 +138,7 @@ fun Reply(
                                 modifier = Modifier
                                     .wrapContentWidth(Alignment.Start, unbounded = false)
                                     .widthIn(max = 100.dp, min = 0.dp),
-                                text = reply.username,
+                                text = reply.username.ifEmpty { "Deleted user" },
                                 style = typography.labelSmall.copy(
                                     color = palette.onSurface,
                                     fontSize = 12.sp,

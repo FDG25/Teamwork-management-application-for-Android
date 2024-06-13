@@ -74,20 +74,26 @@ class ChatViewModel : ViewModel() {
 
     // Provide an immutable view of the messages to the UI
     val messages: List<Message> get() = _messages.value
-    val filteredMessages: List<Message> get() = if (searchQuery.value.isEmpty()) {
-        messages
-    } else {
-        messages.filter {
-            it.username.contains(searchQuery.value, ignoreCase = true)
-        }
-    }.sortedByDescending { it.timeStamp }
+    val filteredMessages: List<Message>
+        get() = if (searchQuery.value.isEmpty()) {
+            messages
+        } else {
+            messages.filter {
+                it.username.contains(searchQuery.value, ignoreCase = true)
+            }
+        }.sortedByDescending { it.timeStamp }
 
     fun onSearchQueryChanged(query: String) {
         searchQuery.value = query
     }
 
     // Update messages based on chat data
-    fun updateMessages(chat: List<ChatMessage>, people: List<Pair<String, Person>>, teams: List<Pair<String, Team>>, userId: String) {
+    fun updateMessages(
+        chat: List<ChatMessage>,
+        people: List<Pair<String, Person>>,
+        teams: List<Pair<String, Team>>,
+        userId: String
+    ) {
         _messages.value = chat.map { chatMessage ->
             when (chatMessage) {
                 is ChatMessage.TeamChatMessage -> {
@@ -97,7 +103,7 @@ class ChatViewModel : ViewModel() {
 
 
                     // Fetch team image URL from Firebase Storage
-                    if(team!=null && team.image.isNotEmpty()) {
+                    if (team != null && team.image.isNotEmpty()) {
                         val teamPicRef =
                             FirebaseStorage.getInstance().reference.child("teamImages/${team.image}")
                         teamPicRef.downloadUrl.addOnSuccessListener { uri ->
@@ -124,24 +130,25 @@ class ChatViewModel : ViewModel() {
                             (sender?.name + ": ") ?: "Unknown Sender"
                         },
                         chatId = message.teamId
-                        )
+                    )
                 }
+
                 is ChatMessage.PrivateChatMessage -> {
                     val message = chatMessage.message
                     val sender = people.find { it.first == message.receiverId }?.second
 
-                    // Fetch user profile picture URL from Firebase Storage
-                    val userProfilePicRef = FirebaseStorage.getInstance().reference.child("profileImages")
-                    userProfilePicRef.listAll().addOnSuccessListener { listResult ->
-                        val matchingItem = listResult.items.firstOrNull { it.name.startsWith(sender?.image ?: "") }
-                        matchingItem?.downloadUrl?.addOnSuccessListener { uri ->
-                            _messages.value = _messages.value.map {
-                                if (it.username == (sender?.name + " " + sender?.surname)) {
-                                    it.copy(profilePic = uri.toString())
-                                } else {
-                                    it
+                    if (sender != null && sender.image.isNotEmpty()) {
+                        // Fetch user profile picture URL from Firebase Storage
+                        val userProfilePicRef =
+                            FirebaseStorage.getInstance().reference.child("profileImages/${sender.image}")
+                        userProfilePicRef.downloadUrl.addOnSuccessListener { uri ->
+                                _messages.value = _messages.value.map {
+                                    if (it.username == (sender.name + " " + sender.surname)) {
+                                        it.copy(profilePic = uri.toString())
+                                    } else {
+                                        it
+                                    }
                                 }
-                            }
                         }
                     }
 
@@ -164,8 +171,6 @@ class ChatViewModel : ViewModel() {
         }
     }
 }
-
-
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -201,10 +206,10 @@ fun MessageEntry(
                     contentScale = ContentScale.Crop
                 )
             } else {
-                Image (
+                Image(
                     painter = painterResource(id = R.drawable.baseline_groups_24), // TODO: Replace with placeholder for teams
                     contentDescription = "Default Team image",
-                    modifier =  Modifier
+                    modifier = Modifier
                         .size(48.dp)
                         .border(1.dp, palette.secondary)
                         .padding(4.dp)
@@ -222,13 +227,13 @@ fun MessageEntry(
                     contentDescription = "Profile Image",
                     contentScale = ContentScale.Crop,
                     modifier =
-                        Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .border(1.dp, palette.secondary, CircleShape)
+                    Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .border(1.dp, palette.secondary, CircleShape)
                 )
             } else {
-                Image (
+                Image(
                     painter = painterResource(id = R.drawable.baseline_person_24), // TODO: Replace with placeholder for teams
                     contentDescription = "Default Team image",
                     modifier = Modifier
@@ -272,7 +277,10 @@ fun MessageEntry(
                 val yesterday = today.minusDays(1)
 
                 val displayText = when {
-                    messageDate.isEqual(today) -> messageTimestamp.split('T')[1].split('+')[0].slice(IntRange(0, 4))
+                    messageDate.isEqual(today) -> messageTimestamp.split('T')[1].split('+')[0].slice(
+                        IntRange(0, 4)
+                    )
+
                     messageDate.isEqual(yesterday) -> "Yesterday"
                     messageDate.isBefore(yesterday) -> messageTimestamp.split("T")[0]
                     else -> ""
@@ -316,7 +324,9 @@ fun MessageEntry(
                             text = (message.unreadMessages).toString(),
                             style = typography.bodySmall,
                             color = palette.background,
-                            modifier = Modifier.padding(4.dp).background(color = palette.secondary),
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .background(color = palette.secondary),
                         )
                     }
                 }
@@ -324,8 +334,6 @@ fun MessageEntry(
         }
     }
 }
-
-
 
 
 fun getSortedPair(id1: String, id2: String): Pair<String, String> {
@@ -390,7 +398,7 @@ fun ChatScreen(
                 vm.searchQuery.value, vm::onSearchQueryChanged
             )
         }
-        if(chats.isEmpty()){
+        if (chats.isEmpty()) {
             Spacer(modifier = Modifier.height(26.dp))
             Column(verticalArrangement = Arrangement.Center) {
                 Row(

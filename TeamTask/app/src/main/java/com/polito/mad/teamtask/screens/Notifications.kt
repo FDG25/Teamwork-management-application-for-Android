@@ -43,32 +43,32 @@ class NotificationsViewModel : ViewModel() {
     private val _images = MutableStateFlow<Map<String, Uri?>>(emptyMap())
     val images: StateFlow<Map<String, Uri?>> = _images
 
-    fun fetchImage(teamIdOrUserId: String, fromGroup: Boolean, typology: Int) {
-        viewModelScope.launch {
-            try {
-                val imageRef = if (fromGroup){
-                    storage.reference.child("teamImages")
-                } else {
-                    storage.reference.child("profileImages")
-                    /*
+    fun fetchImage(teamIdOrUserId: String, fromGroup: Boolean, typology: Int, imageEntry: String?) {
+        if(imageEntry != null) {
+            viewModelScope.launch {
+                try {
+                    val imageRef = if (fromGroup) {
+                        storage.reference.child("teamImages/$imageEntry")
+                    } else {
+                        storage.reference.child("profileImages/$imageEntry")
+                        /*
                     if(typology == 2){
                         storage.reference.child("profileImages")
                     } else {
                         storage.reference.child("profileImages")
                     }
                     */
-                }
-                val result: ListResult = imageRef.listAll().await()
-                val matchingItem = result.items.firstOrNull { it.name.startsWith(teamIdOrUserId) }
+                    }
+//                    val result: ListResult = imageRef.listAll().await()
+//                    val matchingItem =
+//                        result.items.firstOrNull { it.name.startsWith(teamIdOrUserId) }
 
-                if (matchingItem != null) {
-                    val uri = matchingItem.downloadUrl.await()
-                    _images.value = _images.value.toMutableMap().apply { put(teamIdOrUserId, uri) }
-                } else {
+                    val uri = imageRef.downloadUrl.await()
+                    _images.value =
+                        _images.value.toMutableMap().apply { put(teamIdOrUserId, uri) }
+                } catch (e: Exception) {
                     _images.value = _images.value.toMutableMap().apply { put(teamIdOrUserId, null) }
                 }
-            } catch (e: Exception) {
-                _images.value = _images.value.toMutableMap().apply { put(teamIdOrUserId, null) }
             }
         }
     }
@@ -151,9 +151,16 @@ fun NotificationsScreen (
                                         ?: "") + " " + (localPeople[n.senderId]?.surname ?: "")
                                 }
                             }
+
+                            val imageEntry: String? = if(n.fromGroup) {
+                                localTeams[n.senderId]?.image
+                            } else {
+                                localPeople[n.senderId]?.image
+                            }
+
                             val read = localUserNotifications[id]?.read ?: false
                             val imageUri = notificationsVm.images.collectAsState().value[n.senderId]
-                            notificationsVm.fetchImage(n.senderId, n.fromGroup, n.typology.toInt())
+                            notificationsVm.fetchImage(n.senderId, n.fromGroup, n.typology.toInt(), imageEntry)
 
                             Button(
                                 onClick = {

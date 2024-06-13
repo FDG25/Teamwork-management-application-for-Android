@@ -37,6 +37,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navDeepLink
+import coil.ImageLoader
+import coil.ImageLoaderFactory
+import coil.disk.DiskCache
+import coil.memory.MemoryCache
+import coil.util.DebugLogger
 import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
@@ -274,12 +279,30 @@ sealed class ChatMessage {
 }
 
 
-class TeamTask : Application() {
+class TeamTask : Application(), ImageLoaderFactory {
     lateinit var model: AppModel
 
     override fun onCreate() {
         super.onCreate()
         model = AppModel(this)
+    }
+
+    override fun newImageLoader(): ImageLoader {
+        return ImageLoader.Builder(this)
+            .memoryCache {
+                MemoryCache.Builder(this)
+                    .maxSizePercent(0.20)
+                    .build()
+            }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(cacheDir.resolve("image_cache"))
+                    .maxSizeBytes(5 * 1024 * 1024)
+                    .build()
+            }
+            .logger(DebugLogger())
+            .respectCacheHeaders(false)
+            .build()
     }
 }
 
@@ -939,11 +962,11 @@ class AppModel(
             val listener = db.collection("private_messages")
                 .where(
                     Filter.or(
-                        Filter.or(
+                        Filter.and(
                             Filter.equalTo("senderId", personId),
                             Filter.equalTo("receiverId", auth.currentUser?.uid)
                         ),
-                        Filter.or(
+                        Filter.and(
                             Filter.equalTo("senderId", auth.currentUser?.uid),
                             Filter.equalTo("receiverId", personId)
                         ),
@@ -2362,6 +2385,21 @@ class AppModel(
                 )
             )
 
+            if (actualStatus == "Expired" && oldDeadline != task.deadline) {
+                //update team_participants
+                db.collection("team_participants").where(
+                    Filter.equalTo("teamId", task.teamId)
+                ).whereIn("personId", task.people)
+                    .get().addOnSuccessListener { result ->
+                        result.documents.forEach { doc ->
+                            db.collection("team_participants").document(doc.id).update(
+                                "totalTasks",
+                                doc.getLong("totalTasks")!! + 1
+                            )
+                        }
+                    }
+            }
+
             if (oldDeadline != null && oldDeadline != task.deadline) {
                 val oldDateTime = LocalDateTime.parse(oldDeadline, DateTimeFormatter.ISO_DATE_TIME)
                 val newDateTime =
@@ -3000,15 +3038,21 @@ fun AppMainScreen(
                     composable("accounts/{accountId}") { backStackEntry ->
                         val accountId = backStackEntry.arguments?.getString("accountId")
 
-                        val filteredTeamParticipant = people.first { it.first == accountId }
+                        val filteredTeamParticipant = people.firstOrNull() { it.first == accountId }
 
                         val teamsInCommon = teams
                             .filter { t -> t.second.members.contains(accountId) }
                         val tasksInCommon = tasks
                             .filter { t -> t.second.people.contains(accountId) }
 
-                        if (accountId != null) {
-                            ShowProfile(filteredTeamParticipant, accountId, teamsInCommon, teamParticipants, tasksInCommon)
+                        if (accountId != null && filteredTeamParticipant != null) {
+                            ShowProfile(
+                                filteredTeamParticipant,
+                                accountId,
+                                teamsInCommon,
+                                teamParticipants,
+                                tasksInCommon
+                            )
                         }
                     }
 
