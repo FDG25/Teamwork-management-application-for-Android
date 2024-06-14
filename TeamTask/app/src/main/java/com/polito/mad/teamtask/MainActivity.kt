@@ -75,7 +75,7 @@ class MainActivity : ComponentActivity() {
 
                     db.collection("people").document(uid).set(newUser).await()
                     Log.d("MainActivity", "User document added with UID: $uid")
-                    db.collection("people").add(newUser).await()
+                    //db.collection("people").add(newUser).await()
                     //LocalContext.current.getSharedPreferences()
 
                     Log.d("MainActivity", "User document added: ${user.uid}")
@@ -151,6 +151,7 @@ class MainActivity : ComponentActivity() {
                         viewModel.updateLoginStatus(false)
                         saveLoginStatus(false)
                         viewModel.updateIsSignUpFlow(true)
+                        viewModel.updateisShowngConsentForm(false)
                         Log.d("MainActivity", "signInWithCredential:success")
                     } else {
                         val userDocument = documents.documents[0]
@@ -207,6 +208,7 @@ class MainActivity : ComponentActivity() {
                         viewModel.updateLoginStatus(false)
                         saveLoginStatus(false)
                         viewModel.updateIsSignUpFlow(true)
+                        viewModel.updateisShowngConsentForm(true)
                         //Log.d("MainActivity", "signInWithCredential:success")
                     } else {
                         val userDocument = documents.documents[0]
@@ -322,6 +324,7 @@ class MainActivity : ComponentActivity() {
                 viewModel.updateLoginStatus(false)
                 saveLoginStatus(false)
                 viewModel.updateIsSignUpFlow(false)
+                viewModel.updateisShowngConsentForm(false)
             }
         }
 
@@ -402,6 +405,7 @@ class MainActivity : ComponentActivity() {
             viewModel.updateLoginStatus(false)
             saveLoginStatus(false)
             viewModel.updateIsSignUpFlow(false)
+            viewModel.updateisShowngConsentForm(false)
         }
     }
 

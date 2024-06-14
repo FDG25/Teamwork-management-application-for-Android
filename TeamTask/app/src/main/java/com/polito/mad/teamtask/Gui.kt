@@ -2509,6 +2509,8 @@ class AppViewModel(
     private val _isAccountBeenDeleted = MutableStateFlow(false)
     val isAccountBeenDeleted: StateFlow<Boolean> get() = _isAccountBeenDeleted
 
+    private val _isShowingConsentForm = MutableStateFlow(false)
+    val isShowingConsentForm: StateFlow<Boolean> get() = _isShowingConsentForm
 
     // Function to update login status
     fun updateLoginStatus(isLoggedIn: Boolean) {
@@ -2518,6 +2520,10 @@ class AppViewModel(
     // Function to update login status
     fun updateIsSignUpFlow(isSignUpFlow: Boolean) {
         _isSignUpFlow.value = isSignUpFlow
+    }
+
+    fun updateisShowngConsentForm(isShowingConsentForm: Boolean) {
+        _isShowingConsentForm.value = isShowingConsentForm
     }
 
     fun updateAccountBeenDeletedStatus(isAccountBeenDeleted: Boolean) {
@@ -2582,6 +2588,7 @@ fun AppMainScreen(
     val isLoggedIn by appVM.isLoggedIn.collectAsState()
     val isSignUpFlow by appVM.isSignUpFlow.collectAsState()
     val isAccountBeenDeleted by appVM.isAccountBeenDeleted.collectAsState()
+    val isShowingConsentForm by appVM.isShowingConsentForm.collectAsState()
 
     val auth = FirebaseAuth.getInstance()
 
@@ -2693,6 +2700,8 @@ fun AppMainScreen(
                             signUpWithGoogle = signUpWithGoogle,
                             isSignUpFlow = isSignUpFlow,
                             updateIsSignUpFlow = appVM::updateIsSignUpFlow,
+                            isShowingConsentForm = isShowingConsentForm,
+                            updateisShowngConsentForm = appVM::updateisShowngConsentForm,
                             saveLoginStatus = saveLoginStatus,
                             performPendingGoogleSignIn = performPendingGoogleSignIn,
                             resetPendingGoogleSignInAccount = resetPendingGoogleSignInAccount,
