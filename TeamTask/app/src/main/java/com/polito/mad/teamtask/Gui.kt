@@ -2381,15 +2381,18 @@ class AppModel(
                     "prioritized" to task.prioritized,
                     "recurrence" to task.recurrence,
                     "tags" to task.tags,
-                    "status" to if (actualStatus == "Expired" && oldDeadline != task.deadline) "Scheduled" else actualStatus
+                    "status" to if (actualStatus == "Expired" || actualStatus == "Completed" && oldDeadline != task.deadline) "Scheduled" else actualStatus
                 )
             )
 
-            if (actualStatus == "Expired" && oldDeadline != task.deadline) {
+            if (oldDeadline != task.deadline) {
+                val taskDocument = db.collection("tasks").document(taskId).get().await()
+                val taskPeople = taskDocument.get("people") as? List<String> ?: emptyList()
+                val taskTeamId = taskDocument.get("teamId") as? String ?: ""
                 //update team_participants
                 db.collection("team_participants").where(
-                    Filter.equalTo("teamId", task.teamId)
-                ).whereIn("personId", task.people)
+                    Filter.equalTo("teamId", taskTeamId)
+                ).whereIn("personId", taskPeople)
                     .get().addOnSuccessListener { result ->
                         result.documents.forEach { doc ->
                             db.collection("team_participants").document(doc.id).update(
