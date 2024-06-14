@@ -7774,6 +7774,7 @@ fun PeopleSectionForFilters(
 }
 
 
+
 @Composable
 fun ExpandableContainer(
     groupedtoDoTasks: Map<String, List<ToDoTask>>,
@@ -7813,23 +7814,34 @@ fun ExpandableContainer(
             }
 
             if (expanded) {
-                groupedtoDoTasks.forEach { (label, schedtasks) ->
+                if (groupedtoDoTasks.isEmpty()) {
                     Text(
-                        text = label,
+                        text = "No tasks in common for this team",
                         style = typography.labelMedium,
-                        fontSize = 18.sp,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier
-                            .padding(horizontal = 16.dp)
-                            .padding(top = 12.dp, bottom = 8.dp)
+                            .padding(top = 12.dp, bottom = 8.dp, start = 25.dp)
                     )
-                    for (task in schedtasks) {
-                        ToDoTaskEntry(
-                            scheduledtask = task,
-                            viewOnlyMode = true,
-                            teamId = "",
-                            taskId = ""
+                } else {
+                    groupedtoDoTasks.forEach { (label, schedtasks) ->
+                        Text(
+                            text = label,
+                            style = typography.labelMedium,
+                            fontSize = 18.sp,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(top = 12.dp, bottom = 8.dp)
                         )
-                        Spacer(modifier = Modifier.height(5.dp))
+                        for (task in schedtasks) {
+                            ToDoTaskEntry(
+                                scheduledtask = task,
+                                viewOnlyMode = true,
+                                teamId = "",
+                                taskId = ""
+                            )
+                            Spacer(modifier = Modifier.height(5.dp))
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(20.dp))
@@ -8017,4 +8029,6 @@ fun ShowProfile(
         }
     }
 }
+
+
 
