@@ -5416,7 +5416,7 @@ fun ToDoTaskEntry(
                         Spacer(modifier = Modifier.width(5.dp))
 
                         // Label
-                        Text(text = scheduledtask.status, style = typography.bodySmall)
+                        Text(text = scheduledtask.status, style = typography.bodySmall, color = palette.onSurface)
 
                         when (scheduledtask.recurrence) {
                             "Weekly" -> {
