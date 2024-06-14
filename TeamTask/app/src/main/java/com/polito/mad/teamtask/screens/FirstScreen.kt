@@ -246,9 +246,9 @@ class LoginSignupViewModel: ViewModel() {
                 passwordError.isBlank() && confirmPasswordError.isBlank() && checkedStateError.isBlank()
             ) {
                 val isEmailValid = verifyEmailAddress()
-                //val isUsernameValid = verifyUsername()
+                val isUsernameValid = verifyUsername()
 
-                if (isEmailValid) {
+                if (isEmailValid && isUsernameValid) {
                     signUpWithEmail(
                         nameValue,
                         surnameValue,
@@ -267,8 +267,11 @@ class LoginSignupViewModel: ViewModel() {
                     setShowLogin(true)
                     setShowForm(true)
                 } else {
-                    if(!isEmailValid) {
+                    if (!isEmailValid) {
                         emailAddressError = "Email already exists!"
+                    }
+                    if (!isUsernameValid) {
+                        usernameError = "Username already exists!"
                     }
                 }
             }
@@ -1412,6 +1415,8 @@ fun FirstScreen(
     signUpWithGoogle: () -> Unit,
     isSignUpFlow: Boolean,
     updateIsSignUpFlow: (Boolean) -> Unit,
+    isShowingConsentForm: Boolean,
+    updateisShowngConsentForm: (Boolean) -> Unit,
     saveLoginStatus: (Boolean) -> Unit,
     performPendingGoogleSignIn: (String) -> Unit,
     resetPendingGoogleSignInAccount: () -> Unit,
@@ -1442,8 +1447,6 @@ fun FirstScreen(
             vm.loginError, vm::clearValuesAndErrors
         )
     } else {
-        var isShowingConsentForm by remember { mutableStateOf(true) }
-
         BackHandler {
             resetPendingGoogleSignInAccount()
             updateIsSignUpFlow(false)
@@ -1459,7 +1462,7 @@ fun FirstScreen(
                     appViewModel.updateLoginStatus(false)
                     saveLoginStatus(false)
                     vm.clearValuesAndErrors()
-                    isShowingConsentForm = false
+                    updateisShowngConsentForm(false)
                 },
                 title = {
                     Row(
@@ -1474,7 +1477,7 @@ fun FirstScreen(
                             appViewModel.updateLoginStatus(false)
                             saveLoginStatus(false)
                             vm.clearValuesAndErrors()
-                            isShowingConsentForm = false
+                            updateisShowngConsentForm(false)
                         }) {
                             Icon(Icons.Default.Close, contentDescription = "Close")
                         }
@@ -1491,7 +1494,9 @@ fun FirstScreen(
                 },
                 confirmButton = {
                     Button(
-                        onClick = { isShowingConsentForm = false},
+                        onClick = {
+                            updateisShowngConsentForm(false)
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = palette.primary, contentColor = palette.secondary)
                     ) {
                         Text(
