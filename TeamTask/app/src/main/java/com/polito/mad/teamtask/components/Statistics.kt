@@ -209,6 +209,7 @@ fun TeamStatistics(
                     )
 
                     // Role inside the team
+                    /*
                     Text(
                         teamRole,
                         modifier = Modifier.weight(0.25f),
@@ -218,6 +219,7 @@ fun TeamStatistics(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                     */
                 }
 
                 Spacer(modifier = Modifier.height(15.dp))

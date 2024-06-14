@@ -173,6 +173,13 @@ private fun EditTeamPictureSection(
                         .fillMaxSize(),
                     contentScale = ContentScale.Crop//, onError = {}
                 )
+            } else {
+                Image(
+                    painter = painterResource(R.drawable.baseline_groups_24),
+                    contentDescription = "Toy group image",
+                    modifier = Modifier
+                        .fillMaxSize(0.8f)
+                )
             }
             IconButton(
                 onClick = {
