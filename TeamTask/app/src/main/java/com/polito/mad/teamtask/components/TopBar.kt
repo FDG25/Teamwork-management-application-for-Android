@@ -1060,19 +1060,14 @@ fun TopBar(
                             if (team != null) {
                                 if(team.ownerId == auth.uid || team.admins.contains(auth.uid)){
                                     if (task != null) {
-                                        if(task.status != "Expired") {
+                                        if(task.status == "Scheduled") {
                                             DropdownMenuItem(
                                                 text = {
-                                                    if (task != null) {
                                                         Text(
-                                                            if (task.status == "Scheduled") {
-                                                                "Mark as Completed"
-                                                            } else {
-                                                                "Mark as Scheduled"
-                                                            }, style = typography.headlineSmall,
+                                                            "Mark as Completed",
+                                                            style = typography.headlineSmall,
                                                             color = palette.onSurface
                                                         )
-                                                    }
                                                 },
                                                 onClick = {
                                                     if (teamId != null) {
