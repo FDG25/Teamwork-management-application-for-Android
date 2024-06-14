@@ -563,6 +563,7 @@ fun ScrollingGrid(
                     Text(
                         text = tag,
                         style = typography.labelSmall,
+                        color = palette.onSurface,
                         modifier = Modifier.padding(4.dp),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -571,7 +572,7 @@ fun ScrollingGrid(
             }
         }
     } else {
-        Text("No tags selected for this task", style = typography.bodySmall)
+        Text("No tags selected for this task", style = typography.bodySmall, color = palette.onSurface)
     }
 }
 
@@ -640,7 +641,8 @@ fun InfoRow(
 
         Text(
             value,
-            style = typography.bodySmall
+            style = typography.bodySmall,
+            color = palette.onSurface
         )
     }
 }

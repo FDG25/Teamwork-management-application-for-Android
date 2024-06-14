@@ -83,7 +83,8 @@ fun ProfilePictureSection (
                     }",
                     modifier = Modifier
                         .padding(top = 6.dp),
-                    style = typography.headlineLarge
+                    style = typography.headlineLarge,
+                    color = palette.onSurface
                 )
             }
         }
@@ -114,7 +115,8 @@ fun ProfilePictureSection (
             text = username,
             modifier = Modifier
                 .padding(top = 6.dp),
-            style = typography.bodyLarge
+            style = typography.bodyLarge,
+            color = palette.onSurface
         )
     }
 }
@@ -151,7 +153,7 @@ fun ProfileInfoSection (
                 Column (
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(nameValue, style = typography.bodyMedium)
+                    Text(nameValue, style = typography.bodyMedium, color = palette.onSurface)
                 }
             }
 
@@ -167,7 +169,7 @@ fun ProfileInfoSection (
                 Column (
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(surnameValue, style = typography.bodyMedium)
+                    Text(surnameValue, style = typography.bodyMedium, color = palette.onSurface)
                 }
             }
 
@@ -183,7 +185,7 @@ fun ProfileInfoSection (
                 Column (
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(emailAddressValue, style = typography.bodyMedium)
+                    Text(emailAddressValue, style = typography.bodyMedium, color = palette.onSurface)
                 }
             }
 
@@ -199,7 +201,7 @@ fun ProfileInfoSection (
                 Column (
                     modifier = Modifier.fillMaxWidth(0.65f)
                 ) {
-                    Text(locationValue, style = typography.bodyMedium)
+                    Text(locationValue, style = typography.bodyMedium, color = palette.onSurface)
                 }
             }
 
@@ -218,7 +220,7 @@ fun ProfileInfoSection (
                     if (descriptionValue == "") {
                         Text("Hey, there! I am using TeamTask", style = typography.bodyMedium, fontStyle = FontStyle.Italic)
                     } else {
-                        Text(descriptionValue, style = typography.bodyMedium)
+                        Text(descriptionValue, style = typography.bodyMedium, color = palette.onSurface)
                     }
                 }
             }

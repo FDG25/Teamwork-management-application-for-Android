@@ -91,6 +91,7 @@ fun TeamEntry (
                 text = team.name,
                 modifier = Modifier.weight(1f),
                 style = typography.bodyMedium,
+                color = palette.onSurface,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

@@ -93,14 +93,16 @@ fun Statistics(
     ) {
         Text(
             "Your Statistics",
-            style = typography.titleMedium
+            style = typography.titleMedium,
+            color = palette.onSurface
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = "Number of teams: ${data.numberOfTeams}",
-            style = typography.bodySmall
+            style = typography.bodySmall,
+            color = palette.onSurface
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -108,7 +110,8 @@ fun Statistics(
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 "Completed tasks:",
-                style = typography.bodySmall
+                style = typography.bodySmall,
+                color = palette.onSurface
             )
 
             Spacer(modifier = Modifier.height(7.dp))
@@ -121,7 +124,8 @@ fun Statistics(
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 "Tasks completed per team: ",
-                style = typography.bodySmall
+                style = typography.bodySmall,
+                color = palette.onSurface
             )
             data.tasksCompletedPerTeam.forEach {
                 Spacer(modifier = Modifier.height(10.dp))
@@ -198,6 +202,7 @@ fun TeamStatistics(
                         teamName,
                         modifier = Modifier.weight(0.65f),
                         style = typography.bodyMedium,
+                        color = palette.onSurface,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -208,6 +213,7 @@ fun TeamStatistics(
                         teamRole,
                         modifier = Modifier.weight(0.25f),
                         textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                        color = palette.onSurface,
                         style = typography.bodySmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis

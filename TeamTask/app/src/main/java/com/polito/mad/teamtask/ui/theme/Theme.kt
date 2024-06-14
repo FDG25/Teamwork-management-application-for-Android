@@ -15,15 +15,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = lightColorScheme(
-    primary = Maize,                    // Primary
-    primaryContainer = LightYellow,     // Message back
+private val DarkColorScheme = darkColorScheme(
+    primary = MaizeDarkMode,                    // Primary
+    primaryContainer = LightYellowDarkMode,   // Message back
     secondary = CaribbeanCurrent,       // Secondary
     tertiary = Amethyst,                // Tertiary
-    surface = WhiteSmoke,               // Background
-    surfaceVariant = LightGrey,         // Card back
-    onSurface = Jet,                    // Text
-    onSurfaceVariant = DarkGrey,        // Button border
+    surface = MyBlack,                   // Background
+    surfaceVariant = DarkGreyDarkMode,  // Card back
+    onSurface = WhiteSmoke,             // Text
+    onSurfaceVariant = LightGrey,        // Button border
     error = Red,                        // Error
     inverseSurface = Orange,            // Scheduled
     inverseOnSurface = LightBlue,       // Blue

@@ -263,6 +263,7 @@ fun MessageEntry(
                     modifier = Modifier.weight(1f),
                     text = message.username,
                     style = typography.bodyMedium,
+                    color = palette.onSurface,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

@@ -193,6 +193,7 @@ fun HomeScreen(
                         Text(
                             text = date,
                             style = typography.labelMedium,
+                            color = palette.onSurface,
                             modifier = Modifier
                                 .padding(horizontal = 15.dp)
                                 .padding(top = 8.dp, bottom = 5.dp)

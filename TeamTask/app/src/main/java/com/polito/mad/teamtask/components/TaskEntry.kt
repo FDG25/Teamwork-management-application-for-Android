@@ -88,7 +88,8 @@ fun TaskEntry (
                 Text (
                     text = task.title,
                     style = typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = palette.onSurface
                 )
 
                 if (task.prioritized) {
@@ -123,14 +124,16 @@ fun TaskEntry (
                 if (team != null) {
                     Text (
                         text = team.name,
-                        style = typography.bodySmall
+                        style = typography.bodySmall,
+                        color = palette.onSurface
                     )
                 }
 
                 Text (
                     text = "Expires at " + task.deadline.split("T")[1].split("+")[0].slice(IntRange(0,4)),
                     style = typography.bodySmall,
-                    modifier = Modifier.padding(start = 8.dp)
+                    modifier = Modifier.padding(start = 8.dp),
+                    color = palette.onSurface
                 )
             }
         }

@@ -2567,6 +2567,7 @@ fun DateRangePicker(
     Column {
         Text(
             text = "Date Range",
+            color = palette.onSurface,
             style = typography.labelMedium,
             modifier = Modifier.padding(start = 10.dp, top = 8.dp)
         )
@@ -3025,7 +3026,7 @@ fun StatusStep(
         ProgressBar(1, 3)
     }
 
-    Text("Status", style = typography.titleMedium)
+    Text("Status", style = typography.titleMedium, color = palette.onSurface)
 
     LazyColumn {
         item {
@@ -3129,7 +3130,7 @@ fun DescriptionStep(
         ProgressBar(2, 3)
     }
 
-    Text("Description", style = typography.titleMedium)
+    Text("Description", style = typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
 
     Description(
         taskDescriptionValue, setTaskDescription
@@ -3284,7 +3285,7 @@ fun PeopleStepCreation(
         ProgressBar(3, 3)
     }
 
-    Text("People", style = typography.titleMedium)
+    Text("People", style = typography.titleMedium, color = palette.onSurface)
 
     Text(
         text = "If you are interested in monitoring the work, add yourself " +
@@ -3557,6 +3558,7 @@ private fun TaskList(
                             Text(
                                 text = label,
                                 style = typography.labelMedium,
+                                color = palette.onSurface,
                                 fontSize = 18.sp,
                                 modifier = Modifier
                                     .padding(horizontal = 16.dp)
@@ -4608,6 +4610,7 @@ fun MembersSelectorForFilter(
                 Text(
                     text = "Members",
                     style = typography.labelMedium,
+                    color = palette.onSurface,
                     modifier = Modifier.padding(start = 10.dp, top = 8.dp)
                 )
             }
@@ -4653,6 +4656,7 @@ fun MembersSelectorForFilter(
                 Text(
                     text = "Members",
                     style = typography.labelMedium,
+                    color = palette.onSurface,
                     modifier = Modifier.padding(start = 10.dp, top = 8.dp)
                 )
             }
@@ -4685,6 +4689,7 @@ fun MembersSelectorForFilter(
                         Text(
                             text = "Select members",
                             style = typography.bodySmall,
+                            color = palette.onSurface,
                             modifier = Modifier.padding(start = 8.dp),
                         )
                     }
@@ -4807,6 +4812,7 @@ fun FilterTasksScreen(
                         Text(
                             text = "Tags",
                             style = typography.labelMedium,
+                            color = palette.onSurface,
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                     }
@@ -5039,7 +5045,8 @@ fun CalendarControls(currentMonth: Calendar, onMonthChange: (Calendar) -> Unit) 
                     Locale.getDefault()
                 )
             } ${currentMonth.get(Calendar.YEAR)}",
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyLarge,
+            color = palette.onSurface
         )
 
         IconButton(onClick = {
@@ -5158,7 +5165,7 @@ fun CalendarGrid(
                 )
                 Text(
                     text = eventDots,
-                    color = Color.Black,
+                    color = palette.onSurface,
                     textAlign = TextAlign.Center
                 )
             }
@@ -5416,8 +5423,7 @@ fun ToDoTaskEntry(
                                 Text(
                                     text = " (Weekly) ",
                                     fontWeight = FontWeight.Bold,
-                                    //color = palette.error,
-                                    modifier = Modifier.padding(end = 8.dp),
+                                    color = palette.onSurface,
                                     style = typography.bodySmall
                                 )
                             }
@@ -5426,8 +5432,7 @@ fun ToDoTaskEntry(
                                 Text(
                                     text = " (Monthly) ",
                                     fontWeight = FontWeight.Bold,
-                                    //color = palette.error,
-                                    modifier = Modifier.padding(end = 8.dp),
+                                    color = palette.onSurface,
                                     style = typography.bodySmall
                                 )
                             }
@@ -5436,8 +5441,7 @@ fun ToDoTaskEntry(
                                 Text(
                                     text = " (Yearly) ",
                                     fontWeight = FontWeight.Bold,
-                                    //color = palette.error,
-                                    modifier = Modifier.padding(end = 8.dp),
+                                    color = palette.onSurface,
                                     style = typography.bodySmall
                                 )
                             }
@@ -5806,6 +5810,7 @@ fun CustomToggle(
             Text(
                 text = label,
                 style = typography.labelMedium,
+                color = palette.onSurface,
                 modifier = Modifier.padding(start = 10.dp, top = 8.dp)
             )
         }
@@ -5862,7 +5867,7 @@ fun CustomToggle(
                             fontSize = 11.6.sp,
                             lineHeight = 16.sp,
                             letterSpacing = 0.sp,
-                            color = Jet
+                            color = palette.onSurface
                         )
                     }
                 }
@@ -5927,6 +5932,7 @@ private fun PeopleEntry(
                 title = {
                     Text(
                         "${person.name} ${person.surname}",
+                        color = palette.onSurface,
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center  // Center the title text
                     )
@@ -5957,7 +5963,8 @@ private fun PeopleEntry(
                         ) {
                             Text(
                                 text = if (isInTeamPeople) "Remove from Team" else "Remove from Task",
-                                style = typography.bodySmall
+                                style = typography.bodySmall,
+                                color = palette.onSurface
                             )
                         }
                     }
@@ -6477,6 +6484,7 @@ private fun PeopleEntryForTeam(
                     Text(
                         "${person.name} ${person.surname}",
                         modifier = Modifier.fillMaxWidth(),
+                        color = palette.onSurface,
                         textAlign = TextAlign.Center  // Center the title text
                     )
                 },
@@ -6506,7 +6514,8 @@ private fun PeopleEntryForTeam(
                         ) {
                             Text(
                                 text = if (person.permission == "Admin") "Declass to Member" else "Set as Admin",
-                                style = typography.bodySmall
+                                style = typography.bodySmall,
+                                color = palette.onSurface
                             )
                         }
                         // Text("Set Role/Edit Role", textAlign = TextAlign.Center)
@@ -6525,6 +6534,7 @@ private fun PeopleEntryForTeam(
                         ) {
                             Text(
                                 text = if (person.role == "") "Assign Role" else "Edit Role",
+                                color = palette.onSurface,
                                 style = typography.bodySmall
                             )
                         }
@@ -6548,7 +6558,8 @@ private fun PeopleEntryForTeam(
                         ) {
                             Text(
                                 text = if (isInTeamPeople) "Remove from Team" else "Remove from Task",
-                                style = typography.bodySmall
+                                style = typography.bodySmall,
+                                color = palette.onSurface
                             )
                         }
                     }
@@ -6557,7 +6568,7 @@ private fun PeopleEntryForTeam(
                     TextButton(onClick = { showMenu = false }) {
                         Text(
                             "Close",
-                            color = palette.secondary
+                            color = palette.secondary,
                         )
                     }
                 }
@@ -6654,6 +6665,7 @@ private fun PeopleEntryForTeam(
                     Text(
                         "${person.name} ${person.surname}",
                         modifier = Modifier.fillMaxWidth(),
+                        color = palette.onSurface,
                         textAlign = TextAlign.Center
                     )
                 },
@@ -6679,7 +6691,8 @@ private fun PeopleEntryForTeam(
                         ) {
                             Text(
                                 text = if (person.role == "") "Assign Role" else "Edit Role",
-                                style = typography.bodySmall
+                                style = typography.bodySmall,
+                                color = palette.onSurface
                             )
                         }
                     }
@@ -6688,7 +6701,7 @@ private fun PeopleEntryForTeam(
                     TextButton(onClick = { showOwnerMenu = false }) {
                         Text(
                             "Close",
-                            color = palette.secondary
+                            color = palette.secondary,
                         )
                     }
                 }
@@ -6992,6 +7005,7 @@ fun PeopleSection(
                             if (taskpeople.isNotEmpty()) {
                                 Text(
                                     "${taskpeople.size} members",
+                                    color = palette.onSurface,
                                     style = typography.bodySmall
                                 )
                             }
@@ -7001,6 +7015,7 @@ fun PeopleSection(
                                 Text(
                                     "Press on the button below to add members to this task!",
                                     style = typography.bodyMedium,
+                                    color = palette.onSurface,
                                     modifier = Modifier.align(Alignment.Center)
                                 )
 
@@ -7033,6 +7048,7 @@ fun PeopleSection(
                             Text(
                                 text = "To assign members to a task, \nyou should add members to your teams before!",
                                 style = typography.bodyMedium,
+                                color = palette.onSurface,
                                 modifier = Modifier.align(Alignment.Center)
                             )
                         }
@@ -7297,7 +7313,8 @@ fun PeopleSectionForTeam(
                         if (taskpeople.isNotEmpty()) {
                             Text(
                                 "${taskpeople.size} members",
-                                style = typography.bodySmall
+                                style = typography.bodySmall,
+                                color = palette.onSurface
                             )
                         }
                         if ((isInTeamPeople && teampeople.isEmpty() && taskpeople.isEmpty())
@@ -7307,6 +7324,7 @@ fun PeopleSectionForTeam(
                                 Text(
                                     "Press on the button below to add members!",
                                     style = typography.bodyMedium,
+                                    color = palette.onSurface,
                                     modifier = Modifier.align(Alignment.Center)
                                 )
                             }
@@ -7503,6 +7521,7 @@ fun PeopleSectionCreation(
                             Text(
                                 text = "To assign members to a task, \nyou should add members to your teams before!",
                                 style = typography.bodyMedium,
+                                color = palette.onSurface,
                                 modifier = Modifier.align(Alignment.Center)
                             )
                         }
@@ -7818,6 +7837,7 @@ fun ExpandableContainer(
                     Text(
                         text = "No tasks in common for this team",
                         style = typography.labelMedium,
+                        color = palette.onSurface,
                         fontSize = 14.sp,
                         textAlign = TextAlign.Center,
                         modifier = Modifier
@@ -7829,6 +7849,7 @@ fun ExpandableContainer(
                             text = label,
                             style = typography.labelMedium,
                             fontSize = 18.sp,
+                            color = palette.onSurface,
                             modifier = Modifier
                                 .padding(horizontal = 16.dp)
                                 .padding(top = 12.dp, bottom = 8.dp)

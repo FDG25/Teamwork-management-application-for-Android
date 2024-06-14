@@ -167,7 +167,8 @@ fun NotificationEntry (
                 Text (
                     senderName,
                     style = typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = palette.onSurface
                 )
             }
 
@@ -191,6 +192,7 @@ fun NotificationEntry (
                                     Text(
                                         text = part,
                                         style = typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                        color = palette.onSurface,
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -199,6 +201,7 @@ fun NotificationEntry (
                                     Text(
                                         text = part,
                                         style = typography.bodySmall,
+                                        color = palette.onSurface,
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -210,6 +213,7 @@ fun NotificationEntry (
                             Text(
                                 text = parts[3],
                                 style = typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                color = palette.onSurface,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -225,6 +229,7 @@ fun NotificationEntry (
                                 Text(
                                     text = part,
                                     style = typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                    color = palette.onSurface,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -233,6 +238,7 @@ fun NotificationEntry (
                                 Text(
                                     text = part,
                                     style = typography.bodySmall,
+                                    color = palette.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -241,6 +247,7 @@ fun NotificationEntry (
                                 Text(
                                     text = part,
                                     style = typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                    color = palette.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -257,6 +264,7 @@ fun NotificationEntry (
                                 Text(
                                     text = part,
                                     style = typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                    color = palette.onSurface,
                                     maxLines = Int.MAX_VALUE, // Allow wrapping to multiple lines
                                 )
                             }
@@ -264,6 +272,7 @@ fun NotificationEntry (
                                 Text(
                                     text = part.trim(),
                                     style = typography.bodySmall,
+                                    color = palette.onSurface,
                                     maxLines = Int.MAX_VALUE, // Allow wrapping to multiple lines
                                 )
                             }
@@ -279,6 +288,7 @@ fun NotificationEntry (
                                 Text(
                                     text = part,
                                     style = typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                    color = palette.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -286,6 +296,7 @@ fun NotificationEntry (
                                 Text(
                                     text = part,
                                     style = typography.bodySmall,
+                                    color = palette.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -306,6 +317,7 @@ fun NotificationEntry (
                 Text (
                     notification.timestamp.split("T")[1].split("+")[0].slice(IntRange(0,4)),
                     style = typography.bodySmall,
+                    color = palette.onSurface,
                     modifier = Modifier.padding(start = 8.dp)
                 )
             }

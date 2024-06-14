@@ -14,3 +14,8 @@ val Orange = Color(0xFFF4A939)
 val DarkGrey = Color(0xFFADADAD)
 val LightYellow = Color(0xFFFFEE85)
 val LightGrey = Color(0xFFE3E3E3)
+//dark mode support
+val MyBlack = Color(0xFF000000)
+val DarkGreyDarkMode = Color(0xFF404040)
+val LightYellowDarkMode = Color(0xFFA09656)
+val MaizeDarkMode = Color(0xFFAF9C21)

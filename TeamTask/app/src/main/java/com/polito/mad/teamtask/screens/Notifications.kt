@@ -169,7 +169,8 @@ fun NotificationsScreen (
                             style = typography.labelMedium,
                             modifier = Modifier
                                 .padding(horizontal = 15.dp)
-                                .padding(top = 8.dp, bottom = 5.dp)
+                                .padding(top = 8.dp, bottom = 5.dp),
+                            color = palette.onSurface
                         )
 
                         notifications.forEach { (id, n) ->

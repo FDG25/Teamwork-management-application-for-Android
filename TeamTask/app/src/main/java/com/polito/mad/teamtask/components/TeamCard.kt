@@ -86,7 +86,8 @@ fun TeamCard (
                 text = team.name,
                 style = typography.bodySmall,
                 maxLines = 1,
-                overflow = Ellipsis
+                overflow = Ellipsis,
+                color = palette.onSurface
             )
         }
     }

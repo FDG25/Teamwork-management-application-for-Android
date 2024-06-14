@@ -98,7 +98,7 @@ fun TopBar(
                             modifier = Modifier.size(40.dp)
                         )
                         Spacer(Modifier.width(6.dp))
-                        Text("TeamTask", style = typography.titleLarge)
+                        Text("TeamTask", style = typography.titleLarge, color = palette.onSurface)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary)
@@ -113,7 +113,13 @@ fun TopBar(
                 },
 
                 // Title
-                title = { Text("Personal Agenda", style = typography.titleLarge) },
+                title = {
+                    Text(
+                        "Personal Agenda",
+                        style = typography.titleLarge,
+                        color = palette.onSurface
+                    )
+                },
 
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary),
             )
@@ -125,7 +131,7 @@ fun TopBar(
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Teams", style = typography.titleLarge)
+                        Text("Teams", style = typography.titleLarge, color = palette.onSurface)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary)
@@ -138,7 +144,7 @@ fun TopBar(
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Chats", style = typography.titleLarge)
+                        Text("Chats", style = typography.titleLarge, color = palette.onSurface)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary)
@@ -151,7 +157,11 @@ fun TopBar(
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Notifications", style = typography.titleLarge)
+                        Text(
+                            "Notifications",
+                            style = typography.titleLarge,
+                            color = palette.onSurface
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary)
@@ -161,7 +171,13 @@ fun TopBar(
         "profile" -> {
             TopAppBar(
                 // Title
-                title = { Text("Profile", style = typography.titleLarge) },
+                title = {
+                    Text(
+                        "Profile",
+                        style = typography.titleLarge,
+                        color = palette.onSurface
+                    )
+                },
                 actions = {
                     // Dropdown
                     DropDownButton(onClick = { setShowMen(true) })
@@ -173,7 +189,13 @@ fun TopBar(
                     ) {
                         // Edit profile
                         DropdownMenuItem(
-                            text = { Text("Edit Profile", style = typography.headlineSmall) },
+                            text = {
+                                Text(
+                                    "Edit Profile",
+                                    style = typography.headlineSmall,
+                                    color = palette.onSurface
+                                )
+                            },
                             onClick = {
                                 editProfile()
                                 setShowMen(false)
@@ -248,7 +270,13 @@ fun TopBar(
                 },
 
                 // Title
-                title = { Text("Edit Profile", style = typography.titleLarge) },
+                title = {
+                    Text(
+                        "Edit Profile",
+                        style = typography.titleLarge,
+                        color = palette.onSurface
+                    )
+                },
 
                 // Confirm button
                 actions = {
@@ -322,7 +350,13 @@ fun TopBar(
                 },
 
                 // Title
-                title = { Text("Edit Team Description", style = typography.titleLarge) },
+                title = {
+                    Text(
+                        "Edit Team Description",
+                        style = typography.titleLarge,
+                        color = palette.onSurface
+                    )
+                },
 
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary),
             )
@@ -336,7 +370,13 @@ fun TopBar(
                 },
 
                 // Title
-                title = { Text("New Team", style = typography.titleLarge) },
+                title = {
+                    Text(
+                        "New Team",
+                        style = typography.titleLarge,
+                        color = palette.onSurface
+                    )
+                },
 
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary),
             )
@@ -411,7 +451,13 @@ fun TopBar(
                 },
 
                 // Title
-                title = { Text("Add people", style = typography.titleLarge) },
+                title = {
+                    Text(
+                        "Add people",
+                        style = typography.titleLarge,
+                        color = palette.onSurface
+                    )
+                },
 
                 actions = {
                     DoneButton(onClick = {
@@ -436,11 +482,11 @@ fun TopBar(
             }?.frequentlyAccessed ?: false
 
             val userPermissionInTeam =
-                if(teams.find { it.first == teamId }?.second?.ownerId == auth.uid) {
+                if (teams.find { it.first == teamId }?.second?.ownerId == auth.uid) {
                     "Owner"
-                } else if(teams.find { it.first == teamId }?.second?.admins?.contains(auth.uid) == true) {
+                } else if (teams.find { it.first == teamId }?.second?.admins?.contains(auth.uid) == true) {
                     "Admin"
-                } else if(teams.find { it.first == teamId }?.second?.members?.contains(auth.uid) == true) {
+                } else if (teams.find { it.first == teamId }?.second?.members?.contains(auth.uid) == true) {
                     ""
                 } else {
                     "Not Member of this team"
@@ -475,25 +521,29 @@ fun TopBar(
                         Spacer(modifier = Modifier.width(5.dp))
                         if (team?.second?.name != null) {
                             Column(
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
                                     .padding(bottom = 4.dp),
                                 verticalArrangement = Arrangement.Center
                             ) {
                                 Text(
                                     team.second.name,
                                     style = typography.titleMedium,
+                                    color = palette.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                Row{
+                                Row {
                                     Text(
                                         team.second.category,
                                         style = typography.labelSmall,
+                                        color = palette.onSurface,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
                                         " | " + team.second.creationDate.split("T")[0],
+                                        color = palette.onSurface,
                                         style = typography.labelSmall,
                                         maxLines = 1,
                                     )
@@ -517,7 +567,9 @@ fun TopBar(
                             Image(
                                 painter = painterResource(id = R.drawable.outline_chat_24),
                                 contentDescription = "Chat",
-                                modifier = Modifier.scale(1.2f).padding(top = 3.dp)
+                                modifier = Modifier
+                                    .scale(1.2f)
+                                    .padding(top = 3.dp)
                             )
                         }
                         // Dropdown
@@ -529,12 +581,13 @@ fun TopBar(
                             modifier = Modifier.background(palette.background)
                         ) {
                             // Edit profile
-                            if(userPermissionInTeam == "Owner" || userPermissionInTeam == "Admin") {
+                            if (userPermissionInTeam == "Owner" || userPermissionInTeam == "Admin") {
                                 DropdownMenuItem(
                                     text = {
                                         Text(
                                             "Edit Team Info",
-                                            style = typography.headlineSmall
+                                            style = typography.headlineSmall,
+                                            color = palette.onSurface
                                         )
                                     },
                                     onClick = {
@@ -555,7 +608,8 @@ fun TopBar(
                                 text = {
                                     Text(
                                         if (!frequentlyAccessed) "Mark as favourite" else "Remove from favourites",
-                                        style = typography.headlineSmall
+                                        style = typography.headlineSmall,
+                                        color = palette.onSurface
                                     )
                                 },
                                 onClick = {
@@ -590,7 +644,8 @@ fun TopBar(
                                 text = {
                                     Text(
                                         "Show Statistics",
-                                        style = typography.headlineSmall
+                                        style = typography.headlineSmall,
+                                        color = palette.onSurface
                                     )
                                 },
                                 onClick = {
@@ -607,7 +662,7 @@ fun TopBar(
                                     )
                                 }
                             )
-                            if(userPermissionInTeam != "Owner") {
+                            if (userPermissionInTeam != "Owner") {
                                 DropdownMenuItem(
                                     text = {
                                         Text(
@@ -629,7 +684,7 @@ fun TopBar(
                                     }
                                 )
                             }
-                            if(userPermissionInTeam == "Owner") {
+                            if (userPermissionInTeam == "Owner") {
                                 DropdownMenuItem(
                                     text = {
                                         Text(
@@ -689,26 +744,30 @@ fun TopBar(
                         Spacer(modifier = Modifier.width(5.dp))
                         if (team?.second?.name != null) {
                             Column(
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
                                     .padding(bottom = 4.dp),
                                 verticalArrangement = Arrangement.Center
                             ) {
                                 Text(
                                     team.second.name,
                                     style = typography.titleMedium,
+                                    color = palette.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                Row{
+                                Row {
                                     Text(
                                         team.second.category,
                                         style = typography.labelSmall,
+                                        color = palette.onSurface,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
                                         " | " + team.second.creationDate.split("T")[0],
                                         style = typography.labelSmall,
+                                        color = palette.onSurface,
                                         maxLines = 1,
                                     )
                                 }
@@ -752,7 +811,8 @@ fun TopBar(
                 title = {
                     Text(
                         if (currentRoute != "teams/filter") "Filter Tasks" else "Filter Teams",
-                        style = typography.titleLarge
+                        style = typography.titleLarge,
+                        color = palette.onSurface
                     )
                 },
 
@@ -827,6 +887,7 @@ fun TopBar(
                 title = {
                     Text(
                         "Replies",
+                        color = palette.onSurface,
                         style = typography.titleLarge
                     )
                 },
@@ -843,7 +904,13 @@ fun TopBar(
                 },
 
                 // Title
-                title = { Text("Edit Team Info", style = typography.titleLarge) },
+                title = {
+                    Text(
+                        "Edit Team Info",
+                        style = typography.titleLarge,
+                        color = palette.onSurface,
+                    )
+                },
 
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary),
             )
@@ -871,7 +938,8 @@ fun TopBar(
 
                         Text(
                             "Team name", // TODO: Adapt team name
-                            style = typography.titleLarge
+                            style = typography.titleLarge,
+                            color = palette.onSurface
                         )
                     }
                 },
@@ -888,7 +956,13 @@ fun TopBar(
                 },
 
                 // Title
-                title = { Text("Add people", style = typography.titleLarge) },
+                title = {
+                    Text(
+                        "Add people",
+                        style = typography.titleLarge,
+                        color = palette.onSurface
+                    )
+                },
 
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary),
             )
@@ -901,8 +975,8 @@ fun TopBar(
                 navigationIcon = {
                     BackButton(onClick = {
                         //if(currentRoute == "teams/{teamId}/newTask/status") {
-                            Actions.getInstance().navigateBack()
-                            cancelCreateTask()
+                        Actions.getInstance().navigateBack()
+                        cancelCreateTask()
                         /*} else {
                             goToPreviousStep
                         }*/
@@ -913,6 +987,7 @@ fun TopBar(
                 title = {
                     Text(
                         "New Task",
+                        color = palette.onSurface,
                         style = typography.titleLarge
                     )
                 },
@@ -952,9 +1027,10 @@ fun TopBar(
 
                         //Spacer(Modifier.width(10.dp))
 
-                       if (task != null) {
+                        if (task != null) {
                             Text(
                                 task.title,
+                                color = palette.onSurface,
                                 style = typography.titleMedium
                             )
                         }
@@ -976,11 +1052,19 @@ fun TopBar(
                         ) {
                             // Edit profile
                             if (team != null) {
-                                if(team.ownerId == auth.uid || team.admins.contains(auth.uid)){
+                                if (team.ownerId == auth.uid || team.admins.contains(auth.uid)) {
                                     DropdownMenuItem(
                                         text = {
                                             if (task != null) {
-                                                Text(if(task.status=="Scheduled"){"Mark as Completed"}else{"Mark as Scheduled"}, style = typography.headlineSmall)
+                                                Text(
+                                                    if (task.status == "Scheduled") {
+                                                        "Mark as Completed"
+                                                    } else {
+                                                        "Mark as Scheduled"
+                                                    },
+                                                    style = typography.headlineSmall,
+                                                    color = palette.onSurface
+                                                )
                                             }
                                         },
                                         onClick = {
@@ -993,12 +1077,15 @@ fun TopBar(
                                         },
                                         leadingIcon = {
                                             if (task != null) {
-                                                if(task.status=="Scheduled"){
+                                                if (task.status == "Scheduled") {
                                                     Image(
                                                         painter = painterResource(id = R.drawable.outline_done_24),
                                                         contentDescription = "Status",
                                                         modifier = Modifier
-                                                            .background(palette.inversePrimary, shape = CircleShape)
+                                                            .background(
+                                                                palette.inversePrimary,
+                                                                shape = CircleShape
+                                                            )
                                                             .scale(0.8f),
                                                         colorFilter = ColorFilter.tint(palette.background)
                                                     )
@@ -1007,7 +1094,10 @@ fun TopBar(
                                                         painter = painterResource(id = R.drawable.outline_access_time_24),
                                                         contentDescription = "Status",
                                                         modifier = Modifier
-                                                            .background(palette.inverseSurface, shape = CircleShape)
+                                                            .background(
+                                                                palette.inverseSurface,
+                                                                shape = CircleShape
+                                                            )
                                                             .scale(0.8f),
                                                         colorFilter = ColorFilter.tint(palette.background)
                                                     )
@@ -1038,7 +1128,7 @@ fun TopBar(
                                 }
                             )
                             if (team != null) {
-                                if(team.ownerId == auth.uid || team.admins.contains(auth.uid)){
+                                if (team.ownerId == auth.uid || team.admins.contains(auth.uid)) {
                                     DropdownMenuItem(
                                         text = {
                                             Text(
@@ -1078,7 +1168,8 @@ fun TopBar(
                 title = {
                     Text(
                         "Add People to Task",
-                        style = typography.titleLarge
+                        style = typography.titleLarge,
+                        color = palette.onSurface
                     )
                 },
 
@@ -1135,20 +1226,23 @@ fun TopBar(
                         )
                         Spacer(modifier = Modifier.width(5.dp))
                         Column(
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
                                 .padding(bottom = 4.dp),
                             verticalArrangement = Arrangement.Center
                         ) {
                             Text(
                                 topAppBarLabel ?: "",
                                 style = if (!isGroupChat) typography.titleLarge else typography.titleMedium,
+                                color = palette.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             if (isGroupChat)
                                 Text(
-                                    teamCategory?:"",
+                                    teamCategory ?: "",
                                     style = typography.labelSmall,
+                                    color = palette.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -1275,12 +1369,13 @@ fun TopBar(
                 title = {
                     Text(
                         "Contact name", // TODO: Adapt contact name
-                        style = typography.titleLarge
+                        style = typography.titleLarge,
+                        color = palette.onSurface
                     )
                 },
 
                 actions = {
-                    if(auth.uid != accountId){
+                    if (auth.uid != accountId) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -1293,7 +1388,9 @@ fun TopBar(
                                 Image(
                                     painter = painterResource(id = R.drawable.outline_chat_24),
                                     contentDescription = "Chat",
-                                    modifier = Modifier.scale(1.2f).padding(top = 3.dp)
+                                    modifier = Modifier
+                                        .scale(1.2f)
+                                        .padding(top = 3.dp)
                                 )
                             }
                             //DropDownButton(onClick = { /* TODO: Handle click */ })
@@ -1317,7 +1414,7 @@ fun TopBar(
                             modifier = Modifier.size(32.dp)
                         )
                         Spacer(Modifier.width(10.dp))
-                        Text("TeamTask", style = typography.titleLarge)
+                        Text("TeamTask", style = typography.titleLarge, color = palette.onSurface)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary)
