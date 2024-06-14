@@ -171,7 +171,7 @@ class TeamsViewModel(private val myModel: AppModel) : ViewModel() {
             setIsShowingCreateTeam(false)
             if (isInCreation) {
                 //create new Team on Firebase
-                viewModelScope.launch(Dispatchers.IO) {
+                viewModelScope.launch {
                     isLoading = true
                     val result = myModel.createTeam(teamNameValue, teamCategory, imageUri)
                     isLoading = false
@@ -202,7 +202,9 @@ class TeamsViewModel(private val myModel: AppModel) : ViewModel() {
             isLoading = true
             myModel.updateTeamStatus(teamId, teamNameValue, teamCategory, myImageUri)
             isLoading = false
-            Actions.getInstance().navigateBack()
+            withContext(Dispatchers.Main) {
+                Actions.getInstance().navigateBack()
+            }
         }
     }
 

@@ -461,6 +461,8 @@ class SpecificTeamViewModel : ViewModel() {
         showExitFromTeamModal = bool
     }
 
+    var isLoadingExitFromTeam = mutableStateOf(false)
+
     // Function to remove the current logged-in user from a team and navigate if successful
     fun exitFromTeam(teamId: String) {
         val currentUser = auth.currentUser
@@ -469,19 +471,26 @@ class SpecificTeamViewModel : ViewModel() {
         }
 
         val userId = currentUser.uid
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             try {
+                isLoadingExitFromTeam.value = true
                 // Remove the user from the team's members
                 val teamRef = db.collection("teams").document(teamId)
                 val teamDocument = teamRef.get().await()
 
                 if (teamDocument.exists()) {
-                    val members =
-                        teamDocument.get("members") as? MutableList<String> ?: mutableListOf()
+                    val members = teamDocument.get("members") as? MutableList<String> ?: mutableListOf()
+                    val admins = teamDocument.get("admins") as? MutableList<String> ?: mutableListOf()
+
                     if (members.contains(userId)) {
                         members.remove(userId)
-                        teamRef.update("members", members).await()
                     }
+
+                    if (admins.contains(userId)) {
+                        admins.remove(userId)
+                    }
+
+                    teamRef.update("members", members, "admins", admins).await()
 
                     // Remove the entry in the team_participants collection
                     val participantQuery = db.collection("team_participants")
@@ -536,7 +545,7 @@ class SpecificTeamViewModel : ViewModel() {
                     }
 
                     withContext(Dispatchers.Main) {
-                        Actions.getInstance().goToHome()
+                        Actions.getInstance().navigateBack()
                     }
                 }
             } catch (e: Exception) {
@@ -544,6 +553,7 @@ class SpecificTeamViewModel : ViewModel() {
                 Log.e("SpecificTeamViewModel", "Error exiting team", e)
             }
         }
+        isLoadingExitFromTeam.value = true
     }
 
     // Function to remove the current logged-in user from a task and navigate if successful
@@ -1481,7 +1491,9 @@ class SpecificTeamViewModel : ViewModel() {
 
                             addTaskToFirestore(newTask, teamId)
                             cancelCreateTask()
-                            Actions.getInstance().goToTeamTasks(teamId)
+                            withContext(Dispatchers.Main) {
+                                Actions.getInstance().navigateBack()
+                            }
                             onSearchQueryChanged("")
                             currentStep = TaskCreationStep.Status
                         } else {
@@ -5668,7 +5680,7 @@ fun SpecificTeamScreen(
         )
     }
 
-    if(vm.isLoadingDeleteTeam.value){
+    if(vm.isLoadingDeleteTeam.value || vm.isLoadingExitFromTeam.value){
         LoadingScreen()
     }
 
