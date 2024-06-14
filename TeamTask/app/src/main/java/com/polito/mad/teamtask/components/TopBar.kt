@@ -404,7 +404,10 @@ fun TopBar(
             CenterAlignedTopAppBar(
                 // Back button
                 navigationIcon = {
-                    BackButton(onClick = { Actions.getInstance().navigateBack() })
+                    BackButton(onClick = {
+                        Actions.getInstance().navigateBack()
+                        Actions.getInstance().navigateBack()
+                    })
                 },
 
                 // Title
@@ -526,7 +529,7 @@ fun TopBar(
                             modifier = Modifier.background(palette.background)
                         ) {
                             // Edit profile
-                            if(userPermissionInTeam == "Owner") {
+                            if(userPermissionInTeam == "Owner" || userPermissionInTeam == "Admin") {
                                 DropdownMenuItem(
                                     text = {
                                         Text(

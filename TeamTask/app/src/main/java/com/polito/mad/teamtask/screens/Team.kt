@@ -200,7 +200,7 @@ class SpecificTeamViewModel : ViewModel() {
         _toDoTasks.value = toDoTasks
         //_teampeople.value = teampeople
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val updatedTeamPeople = teampeople.map {
                 if (it.image.isNotBlank()) {
                     val image =
@@ -263,7 +263,7 @@ class SpecificTeamViewModel : ViewModel() {
     }
 
     fun validateStringForDeleteTeam(teamId: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             if (stringValueForDelete == auth.currentUser?.email) {
                 deleteTeam(teamId)
                 setShwDeleteTeamModal(false)
@@ -461,6 +461,8 @@ class SpecificTeamViewModel : ViewModel() {
         showExitFromTeamModal = bool
     }
 
+    var isLoadingExitFromTeam = mutableStateOf(false)
+
     // Function to remove the current logged-in user from a team and navigate if successful
     fun exitFromTeam(teamId: String) {
         val currentUser = auth.currentUser
@@ -469,19 +471,26 @@ class SpecificTeamViewModel : ViewModel() {
         }
 
         val userId = currentUser.uid
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             try {
+                isLoadingExitFromTeam.value = true
                 // Remove the user from the team's members
                 val teamRef = db.collection("teams").document(teamId)
                 val teamDocument = teamRef.get().await()
 
                 if (teamDocument.exists()) {
-                    val members =
-                        teamDocument.get("members") as? MutableList<String> ?: mutableListOf()
+                    val members = teamDocument.get("members") as? MutableList<String> ?: mutableListOf()
+                    val admins = teamDocument.get("admins") as? MutableList<String> ?: mutableListOf()
+
                     if (members.contains(userId)) {
                         members.remove(userId)
-                        teamRef.update("members", members).await()
                     }
+
+                    if (admins.contains(userId)) {
+                        admins.remove(userId)
+                    }
+
+                    teamRef.update("members", members, "admins", admins).await()
 
                     // Remove the entry in the team_participants collection
                     val participantQuery = db.collection("team_participants")
@@ -536,7 +545,7 @@ class SpecificTeamViewModel : ViewModel() {
                     }
 
                     withContext(Dispatchers.Main) {
-                        Actions.getInstance().goToHome()
+                        Actions.getInstance().navigateBack()
                     }
                 }
             } catch (e: Exception) {
@@ -544,6 +553,7 @@ class SpecificTeamViewModel : ViewModel() {
                 Log.e("SpecificTeamViewModel", "Error exiting team", e)
             }
         }
+        isLoadingExitFromTeam.value = true
     }
 
     // Function to remove the current logged-in user from a task and navigate if successful
@@ -818,7 +828,7 @@ class SpecificTeamViewModel : ViewModel() {
     }
 
     fun validateRole(teamId: String, userId: String, role: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             addOrUpdateRoleInTeamParticipants(teamId, userId, role)
             setSelectdRole("")
         }
@@ -1223,7 +1233,7 @@ class SpecificTeamViewModel : ViewModel() {
     }
 
     fun markAsCompletedOrScheduled(teamId: String, taskId: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 updateTaskStatusToCompletedOrScheduled(teamId, taskId)
             } catch (e: Exception) {
@@ -1427,7 +1437,7 @@ class SpecificTeamViewModel : ViewModel() {
     fun validateCreateTask(teamId: String) {
         when (currentStep) {
             TaskCreationStep.Status -> {
-                viewModelScope.launch {
+                viewModelScope.launch(Dispatchers.IO) {
                     checkTaskName(teamId)
                     checkSelectedDateTimeError()
                     if (taskNameError.isBlank() && selectedDateTimeError.isBlank()) {
@@ -1449,7 +1459,7 @@ class SpecificTeamViewModel : ViewModel() {
             TaskCreationStep.People -> {
                 checkPeople()
                 if (peopleOrTaskNameError.isBlank()) {
-                    viewModelScope.launch {
+                    viewModelScope.launch(Dispatchers.IO) {
                         checkTaskName(teamId)
                         if (taskNameError.isBlank()) {
                             isLoadingTaskCreation.value = true
@@ -1481,7 +1491,9 @@ class SpecificTeamViewModel : ViewModel() {
 
                             addTaskToFirestore(newTask, teamId)
                             cancelCreateTask()
-                            Actions.getInstance().goToTeamTasks(teamId)
+                            withContext(Dispatchers.Main) {
+                                Actions.getInstance().navigateBack()
+                            }
                             onSearchQueryChanged("")
                             currentStep = TaskCreationStep.Status
                         } else {
@@ -5668,7 +5680,7 @@ fun SpecificTeamScreen(
         )
     }
 
-    if(vm.isLoadingDeleteTeam.value){
+    if(vm.isLoadingDeleteTeam.value || vm.isLoadingExitFromTeam.value){
         LoadingScreen()
     }
 
@@ -7762,6 +7774,7 @@ fun PeopleSectionForFilters(
 }
 
 
+
 @Composable
 fun ExpandableContainer(
     groupedtoDoTasks: Map<String, List<ToDoTask>>,
@@ -7801,23 +7814,34 @@ fun ExpandableContainer(
             }
 
             if (expanded) {
-                groupedtoDoTasks.forEach { (label, schedtasks) ->
+                if (groupedtoDoTasks.isEmpty()) {
                     Text(
-                        text = label,
+                        text = "No tasks in common for this team",
                         style = typography.labelMedium,
-                        fontSize = 18.sp,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier
-                            .padding(horizontal = 16.dp)
-                            .padding(top = 12.dp, bottom = 8.dp)
+                            .padding(top = 12.dp, bottom = 8.dp, start = 25.dp)
                     )
-                    for (task in schedtasks) {
-                        ToDoTaskEntry(
-                            scheduledtask = task,
-                            viewOnlyMode = true,
-                            teamId = "",
-                            taskId = ""
+                } else {
+                    groupedtoDoTasks.forEach { (label, schedtasks) ->
+                        Text(
+                            text = label,
+                            style = typography.labelMedium,
+                            fontSize = 18.sp,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(top = 12.dp, bottom = 8.dp)
                         )
-                        Spacer(modifier = Modifier.height(5.dp))
+                        for (task in schedtasks) {
+                            ToDoTaskEntry(
+                                scheduledtask = task,
+                                viewOnlyMode = true,
+                                teamId = "",
+                                taskId = ""
+                            )
+                            Spacer(modifier = Modifier.height(5.dp))
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(20.dp))
@@ -8005,4 +8029,6 @@ fun ShowProfile(
         }
     }
 }
+
+
 

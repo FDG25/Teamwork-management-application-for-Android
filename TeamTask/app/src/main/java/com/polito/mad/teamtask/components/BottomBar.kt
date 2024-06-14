@@ -82,7 +82,7 @@ fun BottomBar (
                             onClick = {
                                 clearTempState()
                                 if (teamId != null) {
-                                    Actions.getInstance().goToTeamTasks(teamId)
+                                    Actions.getInstance().navigateBack()
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(
@@ -108,7 +108,7 @@ fun BottomBar (
                                 applyTempState()
                                 sortTasks()
                                 if (teamId != null) {
-                                    Actions.getInstance().goToTeamTasks(teamId)
+                                    Actions.getInstance().navigateBack()
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(

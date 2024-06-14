@@ -80,8 +80,10 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.polito.mad.teamtask.Actions
 import com.polito.mad.teamtask.ui.theme.CaribbeanCurrent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 
 class ProfileFormViewModel : ViewModel() {
@@ -132,7 +134,7 @@ class ProfileFormViewModel : ViewModel() {
 
 
     fun validateEmailForDeleteAccount(onLogout: () -> Unit, updateAccountBeenDeletedStatus: (Boolean) -> Unit) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
                 if (emailAddressValueForDelete == auth.currentUser?.email) {
                     deleteAccount(onLogout)
                     setShwDeleteAccountModal(false)
@@ -232,7 +234,9 @@ class ProfileFormViewModel : ViewModel() {
             userDocument.update(updatedData).await()
             // Successfully updated
             isLoading = false // Hide loading screen
-            Actions.getInstance().goToProfile()
+            withContext(Dispatchers.Main) {
+                Actions.getInstance().goToProfile()
+            }
             isEditingProfile = false
         } catch (e: Exception) {
             isLoading = false // Hide loading screen
@@ -242,7 +246,7 @@ class ProfileFormViewModel : ViewModel() {
     }
 
     fun validate(userId: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             checkName()
             checkSurname()
             //checkEmailAddress()
@@ -398,7 +402,7 @@ class ProfileFormViewModel : ViewModel() {
 
 
     fun deleteAccount(onLogout: () -> Unit) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 deleteDocumentByUid(onLogout)
                 //onLogout()
@@ -590,7 +594,7 @@ class ProfileFormViewModel : ViewModel() {
     )))
 
     fun fetchProfileImage(userId: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val storage = FirebaseStorage.getInstance()
 
             //isLoading = true

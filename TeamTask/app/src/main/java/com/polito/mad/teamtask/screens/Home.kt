@@ -28,6 +28,7 @@ import com.polito.mad.teamtask.Team
 import com.polito.mad.teamtask.components.TaskEntry
 import com.polito.mad.teamtask.components.TeamCard
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -41,7 +42,7 @@ class HomeViewModel : ViewModel() {
     val teamImages: StateFlow<Map<String, Uri?>> = _teamImages
 
     fun fetchTeamImage(imageName: String, teamId: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val imageRef = storage.reference.child("teamImages/$imageName").downloadUrl.await()
 

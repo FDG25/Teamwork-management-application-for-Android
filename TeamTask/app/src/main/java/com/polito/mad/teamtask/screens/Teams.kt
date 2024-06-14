@@ -98,7 +98,7 @@ class TeamsViewModel(private val myModel: AppModel) : ViewModel() {
 
 
     fun fetchTeamImage(imageName: String, teamId: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val imageRef = storage.reference.child("teamImages/$imageName").downloadUrl.await()
 
@@ -198,11 +198,13 @@ class TeamsViewModel(private val myModel: AppModel) : ViewModel() {
         //no image for the team
         if (imageUri==null) myImageUri = null
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             isLoading = true
             myModel.updateTeamStatus(teamId, teamNameValue, teamCategory, myImageUri)
             isLoading = false
-            Actions.getInstance().navigateBack()
+            withContext(Dispatchers.Main) {
+                Actions.getInstance().navigateBack()
+            }
         }
     }
 
