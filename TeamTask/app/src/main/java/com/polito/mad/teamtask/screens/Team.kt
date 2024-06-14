@@ -5474,6 +5474,7 @@ fun ToDoTaskEntry(
                             }
                         },
                         style = typography.bodySmall,
+                        color = palette.onSurface,
                         fontSize = if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
                             13.sp
                         } else {

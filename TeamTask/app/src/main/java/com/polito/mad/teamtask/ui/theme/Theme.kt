@@ -17,8 +17,8 @@ import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
     primary = MaizeDarkMode,                    // Primary
-    primaryContainer = LightYellowDarkMode,   // Message back
-    secondary = CaribbeanCurrent,       // Secondary
+    primaryContainer = DarkCaribbean,   // Message back
+    secondary = CaribbeanCurrentDarkMode,       // Secondary
     tertiary = Amethyst,                // Tertiary
     surface = MyBlack,                   // Background
     surfaceVariant = DarkGreyDarkMode,  // Card back

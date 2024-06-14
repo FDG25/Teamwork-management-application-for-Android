@@ -2,7 +2,9 @@ package com.polito.mad.teamtask.components
 
 import android.util.Log
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -26,6 +29,7 @@ import androidx.navigation.NavHostController
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,7 +45,8 @@ fun BottomBar (
     onSearchQueryChanged: (String) -> Unit,
     validateCreateTask: (String) -> Unit,
     clearTempState: () -> Unit, applyTempState: () -> Unit,
-    sortTasks: () -> Unit
+    sortTasks: () -> Unit,
+    areThereNotificationsToRead: Boolean
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
@@ -299,6 +304,7 @@ fun BottomBar (
                                 "home" -> FontWeight.ExtraBold
                                 else -> FontWeight.Light
                             },
+                            color = palette.secondary,
                             modifier = Modifier.offset(y = (-10).dp))
                     }
 
@@ -343,6 +349,7 @@ fun BottomBar (
 
                                 else -> FontWeight.Light
                             },
+                            color = palette.secondary,
                             modifier = Modifier.offset(y = (-10).dp))
                     }
 
@@ -369,6 +376,7 @@ fun BottomBar (
                                 "chats", "chats/{chatId}" -> FontWeight.Bold
                                 else -> FontWeight.Light
                             },
+                            color = palette.secondary,
                             modifier = Modifier.offset(y = (-10).dp))
                     }
 
@@ -377,20 +385,31 @@ fun BottomBar (
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.weight(1f)
                     ) {
-                        IconButton(onClick = Actions.getInstance().goToNotifications) {
-                            Image(
-                                painter = painterResource(
-                                    id =
-                                    if (currentRoute == "notifications") R.drawable.baseline_notifications_24
-                                    else R.drawable.outline_notifications_24
-                                ),
-                                contentDescription = "Notifications",
-                                modifier = Modifier.size(32.dp),
-                                colorFilter = ColorFilter.tint(palette.secondary),
-                            )
+                        Box {
+                            IconButton(onClick = Actions.getInstance().goToNotifications) {
+                                Image(
+                                    painter = painterResource(
+                                        id =
+                                        if (currentRoute == "notifications") R.drawable.baseline_notifications_24
+                                        else R.drawable.outline_notifications_24
+                                    ),
+                                    contentDescription = "Notifications",
+                                    modifier = Modifier.size(32.dp),
+                                    colorFilter = ColorFilter.tint(palette.secondary),
+                                )
+                            }
+                            if(areThereNotificationsToRead)
+                                Box(
+                                    modifier = Modifier
+                                        .offset(x = 28.dp, y = (10).dp)
+                                        .size(12.dp)
+                                        .clip(CircleShape)
+                                        .background(palette.error)
+                                )
                         }
                         Text("Notifications", style = typography.titleSmall,
                             fontWeight = if (currentRoute == "notifications") FontWeight.Bold else FontWeight.Light,
+                            color = palette.secondary,
                             modifier = Modifier.offset(y = (-10).dp))
                     }
 
@@ -413,6 +432,7 @@ fun BottomBar (
                         }
                         Text("Profile", style = typography.titleSmall,
                             fontWeight = if (currentRoute == "profile") FontWeight.Bold else FontWeight.Light,
+                            color = palette.secondary,
                             modifier = Modifier.offset(y = (-10).dp))
                     }
                 }

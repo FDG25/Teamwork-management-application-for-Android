@@ -2612,6 +2612,8 @@ fun AppMainScreen(
         .collectAsState(initial = listOf())
     val userNotifications by appVM.getUserNotifications().collectAsState(initial = listOf())
 
+    val areThereNotificationsToRead = userNotifications.any { !it.read }
+
     // Get the list of team IDs the user is part of
     val teamIds = teams.map { it.first }
 
@@ -2659,7 +2661,8 @@ fun AppMainScreen(
                 teamVM::goToPreviousStep,
                 teamVM::onSearchQueryChanged, teamVM::validateCreateTask,
                 teamVM::clearTempState, teamVM::applyTempState,
-                teamVM::sortTasks
+                teamVM::sortTasks,
+                areThereNotificationsToRead
             )
         },
         floatingActionButton = { FloatingButton(navController) }

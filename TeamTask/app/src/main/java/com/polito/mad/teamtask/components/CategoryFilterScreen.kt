@@ -61,6 +61,7 @@ fun CategoryFilterScreen(
             Text(
                 text = "Category",
                 style = typography.labelMedium,
+                color = palette.onSurface
             )
 
             Spacer(modifier = Modifier.height(8.dp))

@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -203,7 +204,8 @@ fun TopBar(
                             leadingIcon = {
                                 Image(
                                     painter = painterResource(id = R.drawable.outline_edit_24),
-                                    contentDescription = "Edit Profile"
+                                    contentDescription = "Edit Profile",
+                                    colorFilter = ColorFilter.tint(palette.secondary)
                                 )
                             }
                         )
@@ -503,7 +505,8 @@ fun TopBar(
                         Image(
                             painter = painterResource(id = R.drawable.outline_arrow_back_24),
                             contentDescription = "Back",
-                            modifier = Modifier.scale(1.2f)
+                            modifier = Modifier.scale(1.2f),
+                            colorFilter = ColorFilter.tint(palette.secondary)
                         )
                     }
                 },
@@ -569,7 +572,8 @@ fun TopBar(
                                 contentDescription = "Chat",
                                 modifier = Modifier
                                     .scale(1.2f)
-                                    .padding(top = 3.dp)
+                                    .padding(top = 3.dp),
+                                colorFilter = ColorFilter.tint(palette.secondary)
                             )
                         }
                         // Dropdown
@@ -599,7 +603,8 @@ fun TopBar(
                                     leadingIcon = {
                                         Image(
                                             painter = painterResource(id = R.drawable.outline_edit_24),
-                                            contentDescription = "Edit Team Info"
+                                            contentDescription = "Edit Team Info",
+                                            colorFilter = ColorFilter.tint(palette.secondary)
                                         )
                                     }
                                 )
@@ -726,7 +731,8 @@ fun TopBar(
                         Image(
                             painter = painterResource(id = R.drawable.outline_arrow_back_24),
                             contentDescription = "Back",
-                            modifier = Modifier.scale(1.2f)
+                            modifier = Modifier.scale(1.2f),
+                            colorFilter = ColorFilter.tint(palette.secondary)
                         )
                     }
                 },
@@ -1206,7 +1212,8 @@ fun TopBar(
                         Image(
                             painter = painterResource(id = R.drawable.outline_arrow_back_24),
                             contentDescription = "Back",
-                            modifier = Modifier.scale(1.2f)
+                            modifier = Modifier.scale(1.2f),
+                            colorFilter = ColorFilter.tint(palette.secondary)
                         )
                     }
                 },
@@ -1393,7 +1400,8 @@ fun TopBar(
                                     contentDescription = "Chat",
                                     modifier = Modifier
                                         .scale(1.2f)
-                                        .padding(top = 3.dp)
+                                        .padding(top = 3.dp),
+                                    colorFilter = ColorFilter.tint(palette.secondary)
                                 )
                             }
                             //DropDownButton(onClick = { /* TODO: Handle click */ })

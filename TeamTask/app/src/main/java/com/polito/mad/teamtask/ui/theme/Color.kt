@@ -17,5 +17,6 @@ val LightGrey = Color(0xFFE3E3E3)
 //dark mode support
 val MyBlack = Color(0xFF000000)
 val DarkGreyDarkMode = Color(0xFF404040)
-val LightYellowDarkMode = Color(0xFFA09656)
-val MaizeDarkMode = Color(0xFFAF9C21)
+val DarkCaribbean = Color(0xFF0C4147)
+val MaizeDarkMode = Color(0xFF323232)
+val CaribbeanCurrentDarkMode = Color(0xFF4EA3AB)

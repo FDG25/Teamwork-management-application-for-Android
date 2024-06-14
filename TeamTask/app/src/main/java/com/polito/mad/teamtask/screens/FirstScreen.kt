@@ -479,6 +479,7 @@ fun FirstScreenComponent (
                         Text(
                             text = "TeamTask",
                             style = typography.bodyLarge,
+                            color = palette.onSurface,
                             modifier = Modifier.align(Alignment.CenterHorizontally)
                         )
 
@@ -574,6 +575,7 @@ fun FirstScreenComponent (
                 Text(
                     text = "TeamTask",
                     style = typography.bodyLarge,
+                    color = palette.onSurface,
                     textAlign = TextAlign.Center
                 )
 
@@ -671,6 +673,7 @@ fun FirstScreenComponent (
                         text = if (isShowingLogin) {"Log In"} else {"Sign up"},
                         style = typography.labelMedium,
                         fontWeight = FontWeight.Bold,
+                        color = palette.onSurface,
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
                             .padding(bottom = 10.dp)
@@ -833,7 +836,7 @@ fun LoginWithEmail(
                 },
 
                 // Title
-                title = { Text("Log in", style = typography.titleLarge) },
+                title = { Text("Log in", style = typography.titleLarge, color = palette.onSurface,) },
 
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary),
             )
@@ -979,7 +982,7 @@ fun SignupWithEmail (
                 },
 
                 // Title
-                title = { Text("Sign up", style = typography.titleLarge) },
+                title = { Text("Sign up", style = typography.titleLarge, color = palette.onSurface,) },
 
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary),
             )
@@ -1261,6 +1264,7 @@ fun SignupWithEmail (
                         text = "By signing up, I confirm that I accept TeamTask's Terms and Condition and have read the Privacy Policy",
                         modifier = Modifier.padding(start = 8.dp),
                         overflow = TextOverflow.Ellipsis,
+                        color = palette.onSurface,
                         style = typography.bodySmall
                     )
                 }
@@ -1369,7 +1373,8 @@ fun CompleteSignupWithGoogle (
                         text = "By signing up, I confirm that I accept TeamTask's Terms and Condition and have read the Privacy Policy",
                         modifier = Modifier.padding(start = 8.dp),
                         overflow = TextOverflow.Ellipsis,
-                        style = typography.bodySmall
+                        style = typography.bodySmall,
+                        color = palette.onSurface
                     )
                 }
                 if(checkedStateError.isNotBlank()){
@@ -1523,7 +1528,7 @@ fun FirstScreen(
                 },
 
                 // Title
-                title = { Text("Sign up", style = typography.titleLarge) },
+                title = { Text("Sign up", style = typography.titleLarge, color = palette.onSurface) },
 
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary),
             )
