@@ -60,7 +60,7 @@ fun TeamEntry (
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(imageUri)
                     .crossfade(true)
-                    //.error()
+                    .error(R.drawable.baseline_groups_24)
                     .build(),
                 contentDescription = "Team Image",
                 Modifier

@@ -1034,6 +1034,7 @@ class AppModel(
             awaitClose { listener.remove() }
         }
 
+    /*
     // --- Generators ---
     // People
     private fun generatePeople() {
@@ -1796,6 +1797,7 @@ class AppModel(
         generateTeamParticipants()
         generateUserNotifications()
     }
+    */
 
     //OTHER POST REQUESTS:
     //Send message

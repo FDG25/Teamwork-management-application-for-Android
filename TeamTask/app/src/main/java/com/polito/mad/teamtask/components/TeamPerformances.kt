@@ -133,7 +133,11 @@ fun TeamPerformances(
     }
 
     val bestMember = members
-        .toList().maxByOrNull { p -> p.totalTasksCompleted }!!
+        .toList().maxByOrNull {
+                p ->
+            if (p.totalTasksCompleted==0) p.totalTasksAssigned
+            else p.totalTasksAssigned / p.totalTasksCompleted
+        }!!
 
     LazyColumn(
         horizontalAlignment = Alignment.CenterHorizontally,
