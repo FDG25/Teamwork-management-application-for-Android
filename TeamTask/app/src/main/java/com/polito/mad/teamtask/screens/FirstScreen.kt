@@ -70,7 +70,6 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.firebase.firestore.FirebaseFirestore
 import com.polito.mad.teamtask.components.BackButton
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.security.MessageDigest
@@ -235,7 +234,7 @@ class LoginSignupViewModel: ViewModel() {
         loginError = ""
     }
     fun validateSignup(signUpWithEmail: (String, String, String, String, String) -> Unit ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             checkName()
             checkSurname()
             checkEmailAddress()
@@ -315,7 +314,7 @@ class LoginSignupViewModel: ViewModel() {
     }
 
     fun validateLogin(signInWithEmail: (String, String) -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             loginError = ""
             var flag = 0
 
@@ -344,7 +343,7 @@ class LoginSignupViewModel: ViewModel() {
         performPendingGoogleSignIn: (String) -> Unit,
         appViewModel: AppViewModel
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             checkUsername()
             checkCheckState()
 
