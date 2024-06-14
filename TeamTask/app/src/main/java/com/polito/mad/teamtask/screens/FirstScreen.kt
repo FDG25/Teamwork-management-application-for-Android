@@ -246,9 +246,9 @@ class LoginSignupViewModel: ViewModel() {
                 passwordError.isBlank() && confirmPasswordError.isBlank() && checkedStateError.isBlank()
             ) {
                 val isEmailValid = verifyEmailAddress()
-                //val isUsernameValid = verifyUsername()
+                val isUsernameValid = verifyUsername()
 
-                if (isEmailValid) {
+                if (isEmailValid && isUsernameValid) {
                     signUpWithEmail(
                         nameValue,
                         surnameValue,
@@ -267,8 +267,11 @@ class LoginSignupViewModel: ViewModel() {
                     setShowLogin(true)
                     setShowForm(true)
                 } else {
-                    if(!isEmailValid) {
+                    if (!isEmailValid) {
                         emailAddressError = "Email already exists!"
+                    }
+                    if (!isUsernameValid) {
+                        usernameError = "Username already exists!"
                     }
                 }
             }
