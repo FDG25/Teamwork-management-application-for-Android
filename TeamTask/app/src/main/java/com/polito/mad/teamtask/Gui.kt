@@ -2458,6 +2458,11 @@ class AppFactory(
             // model.generateData()
             @Suppress("UNCHECKED_CAST")
             return InfoViewModel(model) as T
+        }
+        else if (modelClass.isAssignableFrom(ProfileFormViewModel::class.java)) {
+            // model.generateData()
+            @Suppress("UNCHECKED_CAST")
+            return ProfileFormViewModel(model) as T
         } else throw IllegalArgumentException("Unexpected ViewModel class")
     }
 }
@@ -2575,7 +2580,7 @@ fun AppMainScreen(
     signUpWithEmail: (String, String, String, String, String) -> Unit,
     signInWithEmail: (String, String) -> Unit,
     appVM: AppViewModel = viewModel(factory = AppFactory(LocalContext.current)),
-    profileVM: ProfileFormViewModel = viewModel(),
+    profileVM: ProfileFormViewModel = viewModel(factory = AppFactory(LocalContext.current)),
     teamVM: SpecificTeamViewModel = viewModel()
 ) {
     val navController = rememberNavController()

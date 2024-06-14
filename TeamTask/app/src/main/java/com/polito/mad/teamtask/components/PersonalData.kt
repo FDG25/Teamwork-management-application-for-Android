@@ -63,7 +63,7 @@ fun ProfilePictureSection (
                 .background(color = palette.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
-            if (imageUri != null) { // User set an image
+            if (imageUri != null && imageUri != Uri.EMPTY) { // User set an image
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(imageUri)

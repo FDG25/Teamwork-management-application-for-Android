@@ -1,6 +1,9 @@
 package com.polito.mad.teamtask.utils
 
+import android.content.ContentResolver
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
@@ -11,16 +14,19 @@ import com.polito.mad.teamtask.components.getFileNameWithExtension
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileOutputStream
 
 suspend fun uploadTeamImage(uri: Uri, teamId: String, context: Context): String {
     try {
         val storage = FirebaseStorage.getInstance()
         val fileName = getFileNameWithExtension(uri, context.contentResolver)
             ?: throw Exception("File not found")
+        val newUri = compressImage(uri, context)
         val fileRef = storage.reference.child("teamImages/$teamId-$fileName")
         withContext(Dispatchers.IO) {
-            fileRef.putFile(uri).await()
+            fileRef.putFile(newUri).await()
         }
         return "$teamId-$fileName"
     } catch (e: Exception) {
@@ -272,4 +278,37 @@ fun deleteFilesFromFirebaseStorage(fileRef: Set<String>) {
     ) {
         throw e
     }
+}
+
+fun compressImage(imageUri: Uri, context: Context): Uri {
+    // Step 1: Convert Uri to Bitmap
+    val inputStream = context.contentResolver.openInputStream(imageUri) // imageUri is the Uri of your image file
+    val bitmap = BitmapFactory.decodeStream(inputStream)
+
+// Step 2: Compress the Bitmap
+    val outputStream = ByteArrayOutputStream()
+
+// Adjust the quality as needed. Lower values will result in smaller image sizes.
+    var quality = 90
+    bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+    var byteArray = outputStream.toByteArray()
+
+    while (byteArray.size / 1024 > 500) {
+        if(quality==10) break
+        outputStream.reset()
+        quality -= 10
+        bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+        byteArray = outputStream.toByteArray()
+    }
+
+// Step 3: Convert the compressed Bitmap back to Uri
+    val file = File(context.cacheDir, "compressed_image.jpg") // context is your Activity or Application context
+    file.createNewFile()
+
+    val fileOutputStream = FileOutputStream(file)
+    fileOutputStream.write(outputStream.toByteArray())
+    fileOutputStream.flush()
+    fileOutputStream.close()
+
+    return Uri.fromFile(file)
 }

@@ -104,7 +104,7 @@ class TaskViewModel(val model: AppModel, val taskId: String, val teamId: String)
                         it.second.username,
                         role?.role ?: "",
                         permission = permission,
-                        imageUri.toString(),
+                        imageUri?.toString() ?: "",
                     )
                 }
         }

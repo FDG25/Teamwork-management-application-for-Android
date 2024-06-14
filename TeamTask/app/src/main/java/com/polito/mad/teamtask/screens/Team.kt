@@ -6144,14 +6144,16 @@ private fun PeopleEntry(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(palette.onSurfaceVariant),
+                    .border(1.dp, palette.secondary, CircleShape)
+                    .background(palette.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (person.name.isNotEmpty() && person.surname.isNotEmpty()) "${person.name[0]}${person.surname[0]}"
-                    else if (person.name.isNotEmpty()) "${person.name[0]}"
+                    text = if (person.name.isNotEmpty() && person.surname.isNotEmpty()) "${person.name[0].uppercaseChar()}${person.surname[0].uppercaseChar()}"
+                    else if (person.name.isNotEmpty()) "${person.name[0].uppercaseChar()}"
                     else "",
-                    color = palette.onSurface
+                    color = palette.onSurface,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -6349,14 +6351,16 @@ private fun PeopleEntryForTask(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(palette.onSurfaceVariant),
+                    .border(1.dp, palette.secondary, CircleShape)
+                    .background(palette.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (person.name.isNotEmpty() && person.surname.isNotEmpty()) "${person.name[0]}${person.surname[0]}"
-                    else if (person.name.isNotEmpty()) "${person.name[0]}"
+                    text = if (person.name.isNotEmpty() && person.surname.isNotEmpty()) "${person.name[0].uppercaseChar()}${person.surname[0].uppercaseChar()}"
+                    else if (person.name.isNotEmpty()) "${person.name[0].uppercaseChar()}"
                     else "",
-                    color = palette.onSurface
+                    color = palette.onSurface,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -6778,14 +6782,16 @@ private fun PeopleEntryForTeam(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(palette.onSurfaceVariant),
+                    .border(1.dp, palette.secondary, CircleShape)
+                    .background(palette.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (person.name.isNotEmpty() && person.surname.isNotEmpty()) "${person.name[0]}${person.surname[0]}"
-                    else if (person.name.isNotEmpty()) "${person.name[0]}"
+                    text = if (person.name.isNotEmpty() && person.surname.isNotEmpty()) "${person.name[0].uppercaseChar()}${person.surname[0].uppercaseChar()}"
+                    else if (person.name.isNotEmpty()) "${person.name[0].uppercaseChar()}"
                     else "",
-                    color = palette.onSurface
+                    color = palette.onSurface,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }

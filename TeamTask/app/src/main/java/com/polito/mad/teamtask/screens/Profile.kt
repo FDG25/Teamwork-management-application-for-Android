@@ -79,14 +79,17 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.polito.mad.teamtask.Actions
+import com.polito.mad.teamtask.AppFactory
+import com.polito.mad.teamtask.AppModel
 import com.polito.mad.teamtask.ui.theme.CaribbeanCurrent
+import com.polito.mad.teamtask.utils.compressImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 
-class ProfileFormViewModel : ViewModel() {
+class ProfileFormViewModel(private val model: AppModel) : ViewModel() {
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
 
@@ -207,7 +210,8 @@ class ProfileFormViewModel : ViewModel() {
         val storage = FirebaseStorage.getInstance()
         val storageRef = storage.reference.child("profileImages/${userId}")
         return try {
-            val uploadTask = storageRef.putFile(imageUri!!).await()
+            val newUri = compressImage(imageUri!!, model.applicationContext)
+            val uploadTask = storageRef.putFile(newUri).await()
             storageRef.downloadUrl.await().toString()
         } catch (e: Exception) {
             // Handle error
@@ -645,7 +649,7 @@ fun ProfileScreen (
     user: Pair<String, Person>,
     userId: String,
     teams: List<Pair<String, Team>>, teamParticipants: List<TeamParticipant>,
-    vm: ProfileFormViewModel = viewModel(), onLogout: () -> Unit, updateAccountBeenDeletedStatus: (Boolean) -> Unit,
+    vm: ProfileFormViewModel = viewModel(factory = AppFactory(LocalContext.current)), onLogout: () -> Unit, updateAccountBeenDeletedStatus: (Boolean) -> Unit,
     numTeams: Int,
     completedTasks: Int, totalTasks: Int,
     completedTasksPerTeam: List<Pair<String, Int>>, totalTasksPerTeam: List<Pair<String, Int>>
@@ -894,7 +898,7 @@ fun ProfileScreen (
 fun EditProfilePane(
     user: Pair<String, Person>,
     userId: String,
-    vm: ProfileFormViewModel = viewModel()
+    vm: ProfileFormViewModel = viewModel(factory = AppFactory(LocalContext.current))
 ) {
     val sheetState = rememberModalBottomSheetState()
     val palette = MaterialTheme.colorScheme
