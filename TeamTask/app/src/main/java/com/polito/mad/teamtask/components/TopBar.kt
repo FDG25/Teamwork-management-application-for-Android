@@ -977,44 +977,60 @@ fun TopBar(
                             // Edit profile
                             if (team != null) {
                                 if(team.ownerId == auth.uid || team.admins.contains(auth.uid)){
-                                    DropdownMenuItem(
-                                        text = {
-                                            if (task != null) {
-                                                Text(if(task.status=="Scheduled"){"Mark as Completed"}else{"Mark as Scheduled"}, style = typography.headlineSmall)
-                                            }
-                                        },
-                                        onClick = {
-                                            if (teamId != null) {
-                                                if (taskId != null) {
-                                                    markAsCompletedOrScheduled(teamId, taskId)
+                                    if (task != null) {
+                                        if(task.status != "Expired") {
+                                            DropdownMenuItem(
+                                                text = {
+                                                    if (task != null) {
+                                                        Text(
+                                                            if (task.status == "Scheduled") {
+                                                                "Mark as Completed"
+                                                            } else {
+                                                                "Mark as Scheduled"
+                                                            }, style = typography.headlineSmall
+                                                        )
+                                                    }
+                                                },
+                                                onClick = {
+                                                    if (teamId != null) {
+                                                        if (taskId != null) {
+                                                            markAsCompletedOrScheduled(teamId, taskId)
+                                                        }
+                                                    }
+                                                    setShowMen(false)
+                                                },
+                                                leadingIcon = {
+                                                    if (task != null) {
+                                                        if (task.status == "Scheduled") {
+                                                            Image(
+                                                                painter = painterResource(id = R.drawable.outline_done_24),
+                                                                contentDescription = "Status",
+                                                                modifier = Modifier
+                                                                    .background(
+                                                                        palette.inversePrimary,
+                                                                        shape = CircleShape
+                                                                    )
+                                                                    .scale(0.8f),
+                                                                colorFilter = ColorFilter.tint(palette.background)
+                                                            )
+                                                        } else {
+                                                            Image(
+                                                                painter = painterResource(id = R.drawable.outline_access_time_24),
+                                                                contentDescription = "Status",
+                                                                modifier = Modifier
+                                                                    .background(
+                                                                        palette.inverseSurface,
+                                                                        shape = CircleShape
+                                                                    )
+                                                                    .scale(0.8f),
+                                                                colorFilter = ColorFilter.tint(palette.background)
+                                                            )
+                                                        }
+                                                    }
                                                 }
-                                            }
-                                            setShowMen(false)
-                                        },
-                                        leadingIcon = {
-                                            if (task != null) {
-                                                if(task.status=="Scheduled"){
-                                                    Image(
-                                                        painter = painterResource(id = R.drawable.outline_done_24),
-                                                        contentDescription = "Status",
-                                                        modifier = Modifier
-                                                            .background(palette.inversePrimary, shape = CircleShape)
-                                                            .scale(0.8f),
-                                                        colorFilter = ColorFilter.tint(palette.background)
-                                                    )
-                                                } else {
-                                                    Image(
-                                                        painter = painterResource(id = R.drawable.outline_access_time_24),
-                                                        contentDescription = "Status",
-                                                        modifier = Modifier
-                                                            .background(palette.inverseSurface, shape = CircleShape)
-                                                            .scale(0.8f),
-                                                        colorFilter = ColorFilter.tint(palette.background)
-                                                    )
-                                                }
-                                            }
+                                            )
                                         }
-                                    )
+                                    }
                                 }
                             }
                             DropdownMenuItem(
