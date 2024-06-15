@@ -168,15 +168,22 @@ fun TeamPerformances(
         }
     }
 
-    val bestMember = members
-        .toList()
-        .maxByOrNull { p ->
+    val allMembersHaveZeroCompleted = members.all { it.totalTasksCompleted == 0 }
+
+    val bestMember = if (allMembersHaveZeroCompleted) {
+        members.toList().maxByOrNull { p ->
+            p.totalTasksAssigned.toDouble()
+        }!!
+    } else {
+        members.toList().maxByOrNull { p ->
             if (p.totalTasksAssigned == 0) {
                 0.0
             } else {
                 p.totalTasksCompleted.toDouble() / p.totalTasksAssigned
             }
         }!!
+    }
+
 
     LazyColumn(
         horizontalAlignment = Alignment.CenterHorizontally,
