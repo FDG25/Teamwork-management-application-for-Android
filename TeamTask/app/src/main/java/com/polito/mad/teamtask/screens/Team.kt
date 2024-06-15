@@ -141,6 +141,8 @@ import com.polito.mad.teamtask.ui.theme.Jet
 import com.polito.mad.teamtask.ui.theme.Mulish
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
@@ -394,6 +396,10 @@ class SpecificTeamViewModel : ViewModel() {
         }
     }
 
+    // ViewModel variable to track if the join operation is in progress
+    private val _isJoiningTeam = MutableStateFlow(false)
+    val isJoiningTeam: StateFlow<Boolean> = _isJoiningTeam
+
     // Function to add the current logged-in user to a team and navigate if successful
     fun joinTeam(teamId: String) {
         val currentUser = auth.currentUser
@@ -403,6 +409,9 @@ class SpecificTeamViewModel : ViewModel() {
 
         val userId = currentUser.uid
         viewModelScope.launch(Dispatchers.IO) {
+            if (_isJoiningTeam.value) return@launch // Prevent multiple clicks
+            _isJoiningTeam.emit(true) // Update the value using emit
+
             try {
                 val teamRef = db.collection("teams").document(teamId)
                 val teamDocument = teamRef.get().await()
@@ -474,7 +483,7 @@ class SpecificTeamViewModel : ViewModel() {
         val userId = currentUser.uid
         viewModelScope.launch {
             try {
-                isLoadingExitFromTeam.value = true
+                //isLoadingExitFromTeam.value = true
                 // Remove the user from the team's members
                 val teamRef = db.collection("teams").document(teamId)
                 val teamDocument = teamRef.get().await()
@@ -553,8 +562,8 @@ class SpecificTeamViewModel : ViewModel() {
                 // Handle any errors that occur during the database operation
                 Log.e("SpecificTeamViewModel", "Error exiting team", e)
             }
+            //isLoadingExitFromTeam.value = true
         }
-        isLoadingExitFromTeam.value = true
     }
 
     // Function to remove the current logged-in user from a task and navigate if successful
@@ -4001,7 +4010,6 @@ fun AddMemberToTeamScreen(
         teamId
     )
 
-
     AddMemberTeamPresentationScreen(
         showSnackbar,
         //showQrCodeDialog,
@@ -4039,6 +4047,8 @@ fun InviteConfirmationScreen(
         }
         Log.e("InviteConfirmationScreen", status)
     }
+
+    val isJoiningTeam by vm.isJoiningTeam.collectAsState()
 
     if (LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE) {
         LazyColumn(
@@ -4183,6 +4193,7 @@ fun InviteConfirmationScreen(
 
                         Button(
                             onClick = { vm.joinTeam(teamId) },
+                            enabled = !isJoiningTeam,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(48.dp),
@@ -4384,6 +4395,7 @@ fun InviteConfirmationScreen(
                         Column {
                             Button(
                                 onClick = { vm.joinTeam(teamId) },
+                                enabled = !isJoiningTeam,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(48.dp),
