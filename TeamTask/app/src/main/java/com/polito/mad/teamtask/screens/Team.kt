@@ -984,6 +984,7 @@ class SpecificTeamViewModel : ViewModel() {
         setTaskPriority(1)
         onSearchQueryForNewTaskChanged("")
         clearSelectedTagsForNewTask()
+        clearSelectedPeople()
         clearErrors()
         resetCurrentStep()
     }
@@ -1501,6 +1502,7 @@ class SpecificTeamViewModel : ViewModel() {
 
                             addTaskToFirestore(newTask, teamId)
                             cancelCreateTask()
+                            clearTempState()
                             withContext(Dispatchers.Main) {
                                 Actions.getInstance().navigateBack()
                             }
@@ -1586,6 +1588,7 @@ class SpecificTeamViewModel : ViewModel() {
         setTempDueDateEndDateTime("")
         setDueDateStartDateTime("")
         setDueDateEndDateTime("")
+        peopleOrTaskNameError = ""
     }
 
     fun applyTempState() {
@@ -7517,6 +7520,7 @@ fun PeopleSectionCreation(
         val maxWidth = this.maxWidth
 
         Column {
+            /*
             if (teampeople.isNotEmpty() || !isInTeamPeople && taskpeople.isNotEmpty()) {
                 // Search bar
                 CustomSearchBar(
@@ -7526,6 +7530,7 @@ fun PeopleSectionCreation(
                     onSearchQueryChanged
                 )
             }
+            */
             if (peopleOrTaskNameError.isNotEmpty()) {
                 Text(
                     text = peopleOrTaskNameError,
@@ -7545,7 +7550,7 @@ fun PeopleSectionCreation(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
                     .heightIn(max = if (maxHeight > maxWidth) 140.dp else 40.dp)
-                    .padding(start = 10.dp, bottom = 15.dp)
+                    .padding(start = 10.dp, bottom = 15.dp, top = 15.dp)
             ) {
                 items(selectedPeople) { person ->
                     PersonBadge(

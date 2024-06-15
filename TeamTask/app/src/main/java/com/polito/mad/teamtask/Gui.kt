@@ -2885,6 +2885,8 @@ fun AppMainScreen(
                     composable("teams/{teamId}/tasks") { backStackEntry ->
                         val teamId = backStackEntry.arguments?.getString("teamId")
 
+                        teamVM.cancelCreateTask() //TO RESET EVENTUAL FIELD SELECTED IN CREATING A NEW TASK AND THEN CANCELLING
+
                         // Filter tasks that belong to the specified team
                         val filteredTasks = tasks.filter { it.second.teamId == teamId }
 
@@ -2986,6 +2988,9 @@ fun AppMainScreen(
 
                     composable("teams/{teamId}/newTask/status") { backStackEntry ->
                         val teamId = backStackEntry.arguments?.getString("teamId")
+
+                        teamVM.clearTempState()
+
                         teamId?.let {
                             NewTask(teamId, teamVM)
                         }
