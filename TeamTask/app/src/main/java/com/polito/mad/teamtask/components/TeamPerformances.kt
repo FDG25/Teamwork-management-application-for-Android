@@ -427,7 +427,7 @@ fun TeamPerformances(
         item {
             Column {
                 //teamStatisticsVM.teamData.people
-                members
+                members.sortedBy { it.person.name }
                     .forEach { p ->
                         val person = p.person
                         val imageUri = teamStatisticsVM.personImages.collectAsState().value[person.personId]

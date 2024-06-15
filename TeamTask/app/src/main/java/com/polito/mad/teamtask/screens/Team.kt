@@ -7089,7 +7089,7 @@ fun PeopleSection(
                     }
                 }
 
-                items(taskpeople) {
+                items(taskpeople.sortedBy { it.name }) {
                     PeopleEntry(
                         teamId,
                         person = it,
@@ -7281,7 +7281,7 @@ fun AddPeopleInTaskSection(
             LazyColumn(
                 modifier = Modifier.fillMaxHeight()
             ) {
-                items(teampeople) {
+                items(teampeople.sortedBy { it.name }) {
                     PeopleEntryForTask(
                         teamId,
                         person = it,
@@ -7398,7 +7398,7 @@ fun PeopleSectionForTeam(
                 }
 
 
-                items(taskpeople) {
+                items(taskpeople.sortedBy { it.name }) {
                     PeopleEntryForTeam(
                         teamId,
                         person = it,
@@ -7561,7 +7561,7 @@ fun PeopleSectionCreation(
             LazyColumn(
                 modifier = Modifier.fillMaxHeight()
             ) {
-                items(filteredPeople) {
+                items(filteredPeople.sortedBy { it.name }) {
                     PeopleEntry(
                         teamId,
                         person = it,
@@ -7843,7 +7843,7 @@ fun PeopleSectionForFilters(
                     LazyColumn(
                         modifier = Modifier.fillMaxHeight()
                     ) {
-                        items(filteredPeople) {
+                        items(filteredPeople.sortedBy { it.name }) {
                             val imageUri = teamStatisticsVM.personImages.collectAsState().value[it.personId]
 
                             LaunchedEffect(it.personId) {

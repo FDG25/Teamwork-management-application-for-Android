@@ -2822,6 +2822,8 @@ fun AppMainScreen(
 //                }
 
                     composable("teams") {
+                        teamVM.clearTempState() //RESET EVENTUAL FILTERS SELECTED FOR TASKS
+
                         TeamsScreen(
                             teams.sortedBy { it.second.name },
                             Actions.getInstance().goToTeamTasks, teamsVM
