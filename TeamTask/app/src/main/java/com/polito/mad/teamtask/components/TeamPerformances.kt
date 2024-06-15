@@ -172,7 +172,7 @@ fun TeamPerformances(
         .toList().maxByOrNull {
                 p ->
             if (p.totalTasksCompleted==0) p.totalTasksAssigned
-            else p.totalTasksAssigned / p.totalTasksCompleted
+            else p.totalTasksCompleted / p.totalTasksAssigned
         }!!
 
     LazyColumn(

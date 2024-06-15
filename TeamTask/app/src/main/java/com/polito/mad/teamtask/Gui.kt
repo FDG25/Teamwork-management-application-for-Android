@@ -556,6 +556,43 @@ class AppModel(
         }
     }
 
+    fun getAllTasks(): Flow<List<Pair<String, Task>>> = callbackFlow {
+        val listener = db.collection("tasks")
+            .addSnapshotListener { r, e ->
+                if (r != null) {
+                    val l = mutableListOf<Pair<String, Task>>()
+
+                    for (obj in r) {
+                        val id = obj.id
+                        val teamId = obj.getString("teamId") ?: "Toy team 1"
+                        val title = obj.getString("title") ?: ""
+                        val description = obj.getString("description") ?: ""
+                        val creatorId = obj.getString("creatorId") ?: ""
+                        val creationDate = obj.getString("creationDate") ?: currentDateTime
+                        val deadline = obj.getString("deadline") ?: currentDateTime
+                        val prioritized = obj.getBoolean("prioritized") ?: false
+                        val status = obj.getString("status") ?: ""
+                        val tags = obj.get("tags") as List<String>
+                        val recurrence = obj.getString("recurrence") ?: ""
+                        val people = obj.get("people") as List<String>
+
+                        val task = Task(
+                            teamId, title, description, creatorId,
+                            creationDate, deadline, prioritized, status,
+                            tags, recurrence, people
+                        )
+
+                        l.add(Pair(id, task))
+                    }
+
+                    trySend(l)
+                } else {
+                    Log.e("ERROR", e.toString())
+                    trySend(emptyList())
+                }
+            }
+        awaitClose { listener.remove() }
+    }
 
     // Comments
     fun getComments(): Flow<List<Pair<String, Comment>>> = callbackFlow {
@@ -2553,6 +2590,8 @@ class AppViewModel(
     // Tasks
     fun getTasks() = appModel.getTasks()
 
+    fun getAllTasks() = appModel.getAllTasks()
+
     // Comments
     fun getComments() = appModel.getComments()
 
@@ -2610,6 +2649,7 @@ fun AppMainScreen(
     val personal by appVM.getPersonal().collectAsState(initial = Pair("", Person()))
     val people by appVM.getPeople().collectAsState(initial = listOf())
     val tasks by appVM.getTasks().collectAsState(initial = listOf())
+    val allTasks by appVM.getAllTasks().collectAsState(initial = listOf())
     val privateMessages by appVM.getPrivateMessages().collectAsState(initial = listOf())
     val teams by appVM.getTeams().collectAsState(initial = listOf())
     val notifications by appVM.getNotifications().collectAsState(initial = listOf())
@@ -2811,7 +2851,7 @@ fun AppMainScreen(
 
                         val tps = realTeamParticipants
                             .filter { tp -> tp.teamId.equals(teamId) }
-                        val filteredTasks = tasks
+                        val filteredTasks = allTasks
                             .filter { t -> t.second.teamId.equals(teamId) }
 
                         TeamPerformances(tps, people, filteredTasks)
