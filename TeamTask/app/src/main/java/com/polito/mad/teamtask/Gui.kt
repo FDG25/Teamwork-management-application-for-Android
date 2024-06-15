@@ -77,6 +77,7 @@ import com.polito.mad.teamtask.screens.ChatScreen
 import com.polito.mad.teamtask.screens.EditProfilePane
 import com.polito.mad.teamtask.screens.FilterTasksScreen
 import com.polito.mad.teamtask.screens.HomeScreen
+import com.polito.mad.teamtask.screens.HomeViewModel
 import com.polito.mad.teamtask.screens.InviteConfirmationScreen
 import com.polito.mad.teamtask.screens.NewTask
 import com.polito.mad.teamtask.screens.NotificationsScreen
@@ -2592,7 +2593,8 @@ fun AppMainScreen(
     signInWithEmail: (String, String) -> Unit,
     appVM: AppViewModel = viewModel(factory = AppFactory(LocalContext.current)),
     profileVM: ProfileFormViewModel = viewModel(factory = AppFactory(LocalContext.current)),
-    teamVM: SpecificTeamViewModel = viewModel()
+    teamVM: SpecificTeamViewModel = viewModel(),
+    homeVM: HomeViewModel = viewModel()
 ) {
     val navController = rememberNavController()
     Actions.initialize(navController) // Initialize Actions here
@@ -2660,7 +2662,8 @@ fun AppMainScreen(
                         people,
                         teams,
                         tasks,
-                        teamParticipants
+                        teamParticipants,
+                        homeVM
                     )
                 }
             }
@@ -2824,11 +2827,17 @@ fun AppMainScreen(
                         val teamId = backStackEntry.arguments?.getString("teamId")
                         val teamName = backStackEntry.arguments?.getString("teamName")
 
-                        AddMemberToTeamScreen(
-                            showSnackbar = true,
-                            teamId = teamId ?: "",
-                            teamName = teamName ?: ""
-                        )
+                        val team = teams.find { it.first == teamId }
+
+                        if (team != null) {
+                            AddMemberToTeamScreen(
+                                showSnackbar = true,
+                                teamId = teamId ?: "",
+                                teamName = teamName ?: "",
+                                team,
+                                teamVM, homeVM
+                            )
+                        }
                     } //TODO: HARDCODED TEAMID and teamName
 
                     composable("teams/{teamId}/tasks") { backStackEntry ->
@@ -2920,15 +2929,16 @@ fun AppMainScreen(
                     }
                     composable("teams/{teamId}/edit/people") { backStackEntry ->
                         val teamId = backStackEntry.arguments?.getString("teamId")
-                        val teamName = teams.find { it.first == teamId }?.second?.name
-                        teamId?.let {
-                            if (teamName != null) {
-                                AddMemberToTeamScreen(
-                                    showSnackbar = false,
-                                    teamId = teamId,
-                                    teamName = teamName
-                                )
-                            }
+                        val team = teams.find { it.first == teamId }
+
+                        if (team != null) {
+                            AddMemberToTeamScreen(
+                                showSnackbar = false,
+                                teamId = teamId ?: "",
+                                teamName = team.second.name ?: "",
+                                team,
+                                teamVM, homeVM
+                            )
                         }
                     }
 

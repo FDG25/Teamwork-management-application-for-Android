@@ -127,6 +127,7 @@ import com.polito.mad.teamtask.R
 import com.polito.mad.teamtask.Task
 import com.polito.mad.teamtask.Team
 import com.polito.mad.teamtask.TeamParticipant
+import com.polito.mad.teamtask.TeamStatisticsViewModel
 import com.polito.mad.teamtask.components.CustomSearchBar
 import com.polito.mad.teamtask.components.ProfileInfoSection
 import com.polito.mad.teamtask.components.ProfilePictureSection
@@ -3699,7 +3700,8 @@ fun AddMemberTeamPresentationScreen(
     showSnackbar: Boolean,
     setShowQrDialog: (Boolean) -> Unit,
     textState: String,
-    teamName: String
+    teamName: String,
+    imageUri: Uri?
 ) {
     val palette = MaterialTheme.colorScheme
     var currentRoute = Actions.getInstance().getCurrentRoute()
@@ -3750,14 +3752,34 @@ fun AddMemberTeamPresentationScreen(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.group_2),
-                            contentDescription = "Team Image",
-                            modifier = Modifier
-                                .border(1.dp, palette.secondary, RoundedCornerShape(5))
-                                .width(120.dp)
-                                .height(120.dp),
-                        )
+                        if (imageUri != null) { // User set an image
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(imageUri)
+                                    .crossfade(true)
+                                    //.error()
+                                    .build(),
+                                contentDescription = "Team Image",
+                                modifier =
+                                Modifier
+                                    .padding(horizontal = 2.dp, vertical = 4.dp)
+                                    .size(120.dp)
+                                    .border(1.dp, palette.secondary),
+                                //.padding(4.dp)
+                                contentScale = ContentScale.Crop
+                            )
+                        } else { // No image set
+                            Image (
+                                painter = painterResource(id = R.drawable.baseline_groups_24), // TODO: Replace with placeholder for teams
+                                contentDescription = "Default Team image",
+                                modifier =  Modifier
+                                    .padding(horizontal = 2.dp, vertical = 4.dp)
+                                    .size(120.dp)
+                                    .border(1.dp, palette.secondary, RoundedCornerShape(5.dp))
+                                    .background(color = palette.surfaceVariant)
+                                    .padding(4.dp)
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -3959,7 +3981,9 @@ fun AddMemberToTeamScreen(
     showSnackbar: Boolean,
     teamId: String,
     teamName: String,
+    team: Pair<String, Team>,
     vm: SpecificTeamViewModel = viewModel(),
+    homeViewModel: HomeViewModel = viewModel()
 ) {
     val urlPrefix = "https://teamtask.com/invite/"
     val hashedString = generateHash(teamId)
@@ -3968,10 +3992,21 @@ fun AddMemberToTeamScreen(
 
     val bitmap = generateQRCode(textState.value)
 
+    val imageUri =
+        homeViewModel.teamImages.collectAsState().value[teamId]
+
+    //Log.e("imageuriCalendar", imageUri.toString()) --> TODO: IMAGEURI IS EMPTY HERE
+    homeViewModel.fetchTeamImage(
+        team?.second?.image ?: "",
+        teamId
+    )
+
+
     AddMemberTeamPresentationScreen(
         showSnackbar,
         //showQrCodeDialog,
-        vm::setShowQrDialog, textState.value, teamName
+        vm::setShowQrDialog, textState.value, teamName,
+        imageUri
     )
     if (vm.showQrCodeDialog) {
         ShowQRCodeDialog(
@@ -5236,16 +5271,24 @@ fun EventList(
                                             },
                                         )
                                     ) {
+                                        Log.e("imageuriCalendar", pair.first)
+
+                                        Log.e("imageuriCalendar", team?.second?.image ?: "")
+
                                         val imageUri =
                                             homeViewModel.teamImages.collectAsState().value[team?.first]
 
-                                        //Log.e("imageuriCalendar", imageUri.toString()) --> TODO: IMAGEURI IS EMPTY HERE
-                                        homeViewModel.fetchTeamImage(
-                                            team?.second?.image ?: "",
-                                            pair.first
-                                        )
+                                        Log.e("imageuriCalendar", imageUri.toString())
+                                        team?.first?.let {
+                                            homeViewModel.fetchTeamImage(
+                                                team?.second?.image ?: "",
+                                                it
+                                            )
+                                        }
 
-                                        TaskEntry(pair.second, team?.second, imageUri)
+                                        TaskEntry(pair.second, team?.second,
+                                            imageUri
+                                        )
                                     }
                                 }
 
@@ -6137,7 +6180,8 @@ private fun PeopleEntry(
                 contentDescription = "Member Pic",
                 Modifier
                     .size(48.dp)
-                    .clip(CircleShape),
+                    .clip(CircleShape)
+                    .border(1.dp, palette.secondary, CircleShape),
                 contentScale = ContentScale.Crop
             )
         } else {
@@ -6344,7 +6388,8 @@ private fun PeopleEntryForTask(
                 contentDescription = "Member Pic",
                 Modifier
                     .size(48.dp)
-                    .clip(CircleShape),
+                    .clip(CircleShape)
+                    .border(1.dp, palette.secondary, CircleShape),
                 contentScale = ContentScale.Crop
             )
         } else {
@@ -6775,7 +6820,8 @@ private fun PeopleEntryForTeam(
                 contentDescription = "Member Pic",
                 Modifier
                     .size(48.dp)
-                    .clip(CircleShape),
+                    .clip(CircleShape)
+                    .border(1.dp, palette.secondary, CircleShape),
                 contentScale = ContentScale.Crop
             )
         } else {
@@ -7558,6 +7604,7 @@ fun PeopleSectionCreation(
 private fun PeopleEntryForFilters(
     person: PersonData, selectedPeople: List<PersonData>,
     addPerson: (PersonData) -> Unit, removePerson: (PersonData) -> Unit,
+    imageUri: Uri?
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
@@ -7605,22 +7652,41 @@ private fun PeopleEntryForFilters(
             )
         }
 
-        // Account image
-        Image(
-            painter = painterResource(
-                id = when (person.name.length % 5) {
-                    1 -> userImages[0]
-                    2 -> userImages[1]
-                    3 -> userImages[2]
-                    4 -> userImages[3]
-                    else -> userImages[2]
-                }
-            ),
-            contentDescription = "Task Image",
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-        )
+
+        if (imageUri != null) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(person.image)
+                    .error(R.drawable.avatar)
+                    .crossfade(true)
+                    .placeholder(R.drawable.avatar)
+                    //.error()
+                    .build(),
+                contentDescription = "Member Pic",
+                Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .border(1.dp, palette.secondary, CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .border(1.dp, palette.secondary, CircleShape)
+                    .background(palette.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (person.name.isNotEmpty() && person.surname.isNotEmpty()) "${person.name[0].uppercaseChar()}${person.surname[0].uppercaseChar()}"
+                    else if (person.name.isNotEmpty()) "${person.name[0].uppercaseChar()}"
+                    else "",
+                    color = palette.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.width(8.dp))
 
@@ -7710,6 +7776,7 @@ fun PeopleSectionForFilters(
     searchQuery: String, onSearchQueryChanged: (String) -> Unit,
     //showFilterMemberInFilters: Boolean,
     setShowingFilterMemberInFilters: (Boolean) -> Unit,
+    teamStatisticsVM: TeamStatisticsViewModel = viewModel()
 ) {
     val typography = TeamTaskTypography
     val palette = MaterialTheme.colorScheme
@@ -7765,11 +7832,18 @@ fun PeopleSectionForFilters(
                         modifier = Modifier.fillMaxHeight()
                     ) {
                         items(filteredPeople) {
+                            val imageUri = teamStatisticsVM.personImages.collectAsState().value[it.personId]
+
+                            LaunchedEffect(it.personId) {
+                                teamStatisticsVM.fetchPersonImage(it.personId, it.personId)
+                            }
+                            Log.e("testo", it.image + " - " + it.personId)
                             PeopleEntryForFilters(
                                 person = it,
                                 selectedPeople,
                                 addPerson,
-                                removePerson
+                                removePerson,
+                                imageUri
                             )
                         }
 

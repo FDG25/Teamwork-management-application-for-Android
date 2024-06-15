@@ -2,6 +2,7 @@ package com.polito.mad.teamtask.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -25,18 +27,25 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.google.firebase.auth.FirebaseAuth
 import com.polito.mad.teamtask.Actions
 import com.polito.mad.teamtask.Person
@@ -44,6 +53,7 @@ import com.polito.mad.teamtask.R
 import com.polito.mad.teamtask.Task
 import com.polito.mad.teamtask.Team
 import com.polito.mad.teamtask.TeamParticipant
+import com.polito.mad.teamtask.screens.HomeViewModel
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,7 +85,8 @@ fun TopBar(
     people: List<Pair<String, Person>>,
     teams: List<Pair<String, Team>>,
     tasks: List<Pair<String, Task>>,
-    teamParticipants: List<TeamParticipant>
+    teamParticipants: List<TeamParticipant>,
+    homeVM: HomeViewModel = viewModel()
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
@@ -494,7 +505,15 @@ fun TopBar(
                     "Not Member of this team"
                 }
 
+            val imageUri = homeVM.teamImages.collectAsState().value[teamId]
 
+            LaunchedEffect(teamId) {
+                if (team != null) {
+                    if (teamId != null) {
+                        homeVM.fetchTeamImage(team.second.image, teamId)
+                    }
+                }
+            }
 
             TopAppBar(
                 // Back button
@@ -516,11 +535,32 @@ fun TopBar(
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.teamtasklogo),  // TODO: Adapt team image
-                            contentDescription = "Team logo",
-                            modifier = Modifier.size(38.dp)
-                        )
+                        if (imageUri != null) { // User set an image
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(imageUri)
+                                    .crossfade(true)
+                                    //.error()
+                                    .build(),
+                                contentDescription = "Team Image",
+                                modifier =
+                                Modifier
+                                    .padding(horizontal = 2.dp, vertical = 4.dp)
+                                    .size(38.dp),
+                                //.padding(4.dp)
+                                contentScale = ContentScale.Crop
+                            )
+                        } else { // No image set
+                            Image (
+                                painter = painterResource(id = R.drawable.baseline_groups_24),
+                                contentDescription = "Default Team image",
+                                modifier =  Modifier
+                                    .padding(horizontal = 2.dp, vertical = 4.dp)
+                                    .size(38.dp)
+                                    .border(1.dp, palette.secondary, RoundedCornerShape(5.dp))
+                                    .padding(4.dp)
+                            )
+                        }
                         Spacer(modifier = Modifier.width(5.dp))
                         if (team?.second?.name != null) {
                             Column(
@@ -722,6 +762,16 @@ fun TopBar(
 
             val team = teams.find { it.first == teamId }
 
+            val imageUri = homeVM.teamImages.collectAsState().value[teamId]
+
+            LaunchedEffect(teamId) {
+                if (team != null) {
+                    if (teamId != null) {
+                        homeVM.fetchTeamImage(team.second.image, teamId)
+                    }
+                }
+            }
+
             TopAppBar(
                 // Back button
                 navigationIcon = {
@@ -742,11 +792,32 @@ fun TopBar(
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.teamtasklogo),  // TODO: Adapt team image
-                            contentDescription = "Team logo",
-                            modifier = Modifier.size(38.dp)
-                        )
+                        if (imageUri != null) { // User set an image
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(imageUri)
+                                    .crossfade(true)
+                                    //.error()
+                                    .build(),
+                                contentDescription = "Team Image",
+                                modifier =
+                                Modifier
+                                    .padding(horizontal = 2.dp, vertical = 4.dp)
+                                    .size(38.dp),
+                                //.padding(4.dp)
+                                contentScale = ContentScale.Crop
+                            )
+                        } else { // No image set
+                            Image (
+                                painter = painterResource(id = R.drawable.baseline_groups_24),
+                                contentDescription = "Default Team image",
+                                modifier =  Modifier
+                                    .padding(horizontal = 2.dp, vertical = 4.dp)
+                                    .size(38.dp)
+                                    .border(1.dp, palette.secondary, RoundedCornerShape(5.dp))
+                                    .padding(4.dp)
+                            )
+                        }
                         Spacer(modifier = Modifier.width(5.dp))
                         if (team?.second?.name != null) {
                             Column(
