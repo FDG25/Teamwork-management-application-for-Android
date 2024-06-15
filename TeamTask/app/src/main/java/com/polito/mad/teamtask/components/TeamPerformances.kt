@@ -169,10 +169,13 @@ fun TeamPerformances(
     }
 
     val bestMember = members
-        .toList().maxByOrNull {
-                p ->
-            if (p.totalTasksCompleted==0) p.totalTasksAssigned
-            else p.totalTasksCompleted / p.totalTasksAssigned
+        .toList()
+        .maxByOrNull { p ->
+            if (p.totalTasksAssigned == 0) {
+                0.0
+            } else {
+                p.totalTasksCompleted.toDouble() / p.totalTasksAssigned
+            }
         }!!
 
     LazyColumn(
