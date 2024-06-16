@@ -127,6 +127,7 @@ import com.polito.mad.teamtask.R
 import com.polito.mad.teamtask.Task
 import com.polito.mad.teamtask.Team
 import com.polito.mad.teamtask.TeamParticipant
+import com.polito.mad.teamtask.TeamStatisticsViewModel
 import com.polito.mad.teamtask.components.CustomSearchBar
 import com.polito.mad.teamtask.components.ProfileInfoSection
 import com.polito.mad.teamtask.components.ProfilePictureSection
@@ -140,6 +141,8 @@ import com.polito.mad.teamtask.ui.theme.Jet
 import com.polito.mad.teamtask.ui.theme.Mulish
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
@@ -393,6 +396,10 @@ class SpecificTeamViewModel : ViewModel() {
         }
     }
 
+    // ViewModel variable to track if the join operation is in progress
+    private val _isJoiningTeam = MutableStateFlow(false)
+    val isJoiningTeam: StateFlow<Boolean> = _isJoiningTeam
+
     // Function to add the current logged-in user to a team and navigate if successful
     fun joinTeam(teamId: String) {
         val currentUser = auth.currentUser
@@ -402,6 +409,9 @@ class SpecificTeamViewModel : ViewModel() {
 
         val userId = currentUser.uid
         viewModelScope.launch(Dispatchers.IO) {
+            if (_isJoiningTeam.value) return@launch // Prevent multiple clicks
+            _isJoiningTeam.emit(true) // Update the value using emit
+
             try {
                 val teamRef = db.collection("teams").document(teamId)
                 val teamDocument = teamRef.get().await()
@@ -473,7 +483,7 @@ class SpecificTeamViewModel : ViewModel() {
         val userId = currentUser.uid
         viewModelScope.launch {
             try {
-                isLoadingExitFromTeam.value = true
+                //isLoadingExitFromTeam.value = true
                 // Remove the user from the team's members
                 val teamRef = db.collection("teams").document(teamId)
                 val teamDocument = teamRef.get().await()
@@ -552,8 +562,8 @@ class SpecificTeamViewModel : ViewModel() {
                 // Handle any errors that occur during the database operation
                 Log.e("SpecificTeamViewModel", "Error exiting team", e)
             }
+            //isLoadingExitFromTeam.value = true
         }
-        isLoadingExitFromTeam.value = true
     }
 
     // Function to remove the current logged-in user from a task and navigate if successful
@@ -974,6 +984,7 @@ class SpecificTeamViewModel : ViewModel() {
         setTaskPriority(1)
         onSearchQueryForNewTaskChanged("")
         clearSelectedTagsForNewTask()
+        clearSelectedPeople()
         clearErrors()
         resetCurrentStep()
     }
@@ -1491,6 +1502,7 @@ class SpecificTeamViewModel : ViewModel() {
 
                             addTaskToFirestore(newTask, teamId)
                             cancelCreateTask()
+                            clearTempState()
                             withContext(Dispatchers.Main) {
                                 Actions.getInstance().navigateBack()
                             }
@@ -1576,6 +1588,7 @@ class SpecificTeamViewModel : ViewModel() {
         setTempDueDateEndDateTime("")
         setDueDateStartDateTime("")
         setDueDateEndDateTime("")
+        peopleOrTaskNameError = ""
     }
 
     fun applyTempState() {
@@ -3699,7 +3712,8 @@ fun AddMemberTeamPresentationScreen(
     showSnackbar: Boolean,
     setShowQrDialog: (Boolean) -> Unit,
     textState: String,
-    teamName: String
+    teamName: String,
+    imageUri: Uri?
 ) {
     val palette = MaterialTheme.colorScheme
     var currentRoute = Actions.getInstance().getCurrentRoute()
@@ -3750,14 +3764,34 @@ fun AddMemberTeamPresentationScreen(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.group_2),
-                            contentDescription = "Team Image",
-                            modifier = Modifier
-                                .border(1.dp, palette.secondary, RoundedCornerShape(5))
-                                .width(120.dp)
-                                .height(120.dp),
-                        )
+                        if (imageUri != null) { // User set an image
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(imageUri)
+                                    .crossfade(true)
+                                    //.error()
+                                    .build(),
+                                contentDescription = "Team Image",
+                                modifier =
+                                Modifier
+                                    .padding(horizontal = 2.dp, vertical = 4.dp)
+                                    .size(120.dp)
+                                    .border(1.dp, palette.secondary),
+                                //.padding(4.dp)
+                                contentScale = ContentScale.Crop
+                            )
+                        } else { // No image set
+                            Image (
+                                painter = painterResource(id = R.drawable.baseline_groups_24), // TODO: Replace with placeholder for teams
+                                contentDescription = "Default Team image",
+                                modifier =  Modifier
+                                    .padding(horizontal = 2.dp, vertical = 4.dp)
+                                    .size(120.dp)
+                                    .border(1.dp, palette.secondary, RoundedCornerShape(5.dp))
+                                    .background(color = palette.surfaceVariant)
+                                    .padding(4.dp)
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -3959,7 +3993,9 @@ fun AddMemberToTeamScreen(
     showSnackbar: Boolean,
     teamId: String,
     teamName: String,
+    team: Pair<String, Team>,
     vm: SpecificTeamViewModel = viewModel(),
+    homeViewModel: HomeViewModel = viewModel()
 ) {
     val urlPrefix = "https://teamtask.com/invite/"
     val hashedString = generateHash(teamId)
@@ -3968,10 +4004,20 @@ fun AddMemberToTeamScreen(
 
     val bitmap = generateQRCode(textState.value)
 
+    val imageUri =
+        homeViewModel.teamImages.collectAsState().value[teamId]
+
+    //Log.e("imageuriCalendar", imageUri.toString()) --> TODO: IMAGEURI IS EMPTY HERE
+    homeViewModel.fetchTeamImage(
+        team?.second?.image ?: "",
+        teamId
+    )
+
     AddMemberTeamPresentationScreen(
         showSnackbar,
         //showQrCodeDialog,
-        vm::setShowQrDialog, textState.value, teamName
+        vm::setShowQrDialog, textState.value, teamName,
+        imageUri
     )
     if (vm.showQrCodeDialog) {
         ShowQRCodeDialog(
@@ -4004,6 +4050,8 @@ fun InviteConfirmationScreen(
         }
         Log.e("InviteConfirmationScreen", status)
     }
+
+    val isJoiningTeam by vm.isJoiningTeam.collectAsState()
 
     if (LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE) {
         LazyColumn(
@@ -4148,6 +4196,7 @@ fun InviteConfirmationScreen(
 
                         Button(
                             onClick = { vm.joinTeam(teamId) },
+                            enabled = !isJoiningTeam,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(48.dp),
@@ -4349,6 +4398,7 @@ fun InviteConfirmationScreen(
                         Column {
                             Button(
                                 onClick = { vm.joinTeam(teamId) },
+                                enabled = !isJoiningTeam,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(48.dp),
@@ -5236,16 +5286,24 @@ fun EventList(
                                             },
                                         )
                                     ) {
+                                        Log.e("imageuriCalendar", pair.first)
+
+                                        Log.e("imageuriCalendar", team?.second?.image ?: "")
+
                                         val imageUri =
                                             homeViewModel.teamImages.collectAsState().value[team?.first]
 
-                                        //Log.e("imageuriCalendar", imageUri.toString()) --> TODO: IMAGEURI IS EMPTY HERE
-                                        homeViewModel.fetchTeamImage(
-                                            team?.second?.image ?: "",
-                                            pair.first
-                                        )
+                                        Log.e("imageuriCalendar", imageUri.toString())
+                                        team?.first?.let {
+                                            homeViewModel.fetchTeamImage(
+                                                team?.second?.image ?: "",
+                                                it
+                                            )
+                                        }
 
-                                        TaskEntry(pair.second, team?.second, imageUri)
+                                        TaskEntry(pair.second, team?.second,
+                                            imageUri
+                                        )
                                     }
                                 }
 
@@ -6137,7 +6195,8 @@ private fun PeopleEntry(
                 contentDescription = "Member Pic",
                 Modifier
                     .size(48.dp)
-                    .clip(CircleShape),
+                    .clip(CircleShape)
+                    .border(1.dp, palette.secondary, CircleShape),
                 contentScale = ContentScale.Crop
             )
         } else {
@@ -6344,7 +6403,8 @@ private fun PeopleEntryForTask(
                 contentDescription = "Member Pic",
                 Modifier
                     .size(48.dp)
-                    .clip(CircleShape),
+                    .clip(CircleShape)
+                    .border(1.dp, palette.secondary, CircleShape),
                 contentScale = ContentScale.Crop
             )
         } else {
@@ -6775,7 +6835,8 @@ private fun PeopleEntryForTeam(
                 contentDescription = "Member Pic",
                 Modifier
                     .size(48.dp)
-                    .clip(CircleShape),
+                    .clip(CircleShape)
+                    .border(1.dp, palette.secondary, CircleShape),
                 contentScale = ContentScale.Crop
             )
         } else {
@@ -7031,7 +7092,7 @@ fun PeopleSection(
                     }
                 }
 
-                items(taskpeople) {
+                items(taskpeople.sortedBy { it.name }) {
                     PeopleEntry(
                         teamId,
                         person = it,
@@ -7223,7 +7284,7 @@ fun AddPeopleInTaskSection(
             LazyColumn(
                 modifier = Modifier.fillMaxHeight()
             ) {
-                items(teampeople) {
+                items(teampeople.sortedBy { it.name }) {
                     PeopleEntryForTask(
                         teamId,
                         person = it,
@@ -7340,7 +7401,7 @@ fun PeopleSectionForTeam(
                 }
 
 
-                items(taskpeople) {
+                items(taskpeople.sortedBy { it.name }) {
                     PeopleEntryForTeam(
                         teamId,
                         person = it,
@@ -7459,6 +7520,7 @@ fun PeopleSectionCreation(
         val maxWidth = this.maxWidth
 
         Column {
+            /*
             if (teampeople.isNotEmpty() || !isInTeamPeople && taskpeople.isNotEmpty()) {
                 // Search bar
                 CustomSearchBar(
@@ -7468,6 +7530,7 @@ fun PeopleSectionCreation(
                     onSearchQueryChanged
                 )
             }
+            */
             if (peopleOrTaskNameError.isNotEmpty()) {
                 Text(
                     text = peopleOrTaskNameError,
@@ -7487,7 +7550,7 @@ fun PeopleSectionCreation(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
                     .heightIn(max = if (maxHeight > maxWidth) 140.dp else 40.dp)
-                    .padding(start = 10.dp, bottom = 15.dp)
+                    .padding(start = 10.dp, bottom = 15.dp, top = 15.dp)
             ) {
                 items(selectedPeople) { person ->
                     PersonBadge(
@@ -7503,7 +7566,7 @@ fun PeopleSectionCreation(
             LazyColumn(
                 modifier = Modifier.fillMaxHeight()
             ) {
-                items(filteredPeople) {
+                items(filteredPeople.sortedBy { it.name }) {
                     PeopleEntry(
                         teamId,
                         person = it,
@@ -7558,6 +7621,7 @@ fun PeopleSectionCreation(
 private fun PeopleEntryForFilters(
     person: PersonData, selectedPeople: List<PersonData>,
     addPerson: (PersonData) -> Unit, removePerson: (PersonData) -> Unit,
+    imageUri: Uri?
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
@@ -7605,22 +7669,41 @@ private fun PeopleEntryForFilters(
             )
         }
 
-        // Account image
-        Image(
-            painter = painterResource(
-                id = when (person.name.length % 5) {
-                    1 -> userImages[0]
-                    2 -> userImages[1]
-                    3 -> userImages[2]
-                    4 -> userImages[3]
-                    else -> userImages[2]
-                }
-            ),
-            contentDescription = "Task Image",
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-        )
+
+        if (imageUri != null) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(person.image)
+                    .error(R.drawable.avatar)
+                    .crossfade(true)
+                    .placeholder(R.drawable.avatar)
+                    //.error()
+                    .build(),
+                contentDescription = "Member Pic",
+                Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .border(1.dp, palette.secondary, CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .border(1.dp, palette.secondary, CircleShape)
+                    .background(palette.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (person.name.isNotEmpty() && person.surname.isNotEmpty()) "${person.name[0].uppercaseChar()}${person.surname[0].uppercaseChar()}"
+                    else if (person.name.isNotEmpty()) "${person.name[0].uppercaseChar()}"
+                    else "",
+                    color = palette.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.width(8.dp))
 
@@ -7710,6 +7793,7 @@ fun PeopleSectionForFilters(
     searchQuery: String, onSearchQueryChanged: (String) -> Unit,
     //showFilterMemberInFilters: Boolean,
     setShowingFilterMemberInFilters: (Boolean) -> Unit,
+    teamStatisticsVM: TeamStatisticsViewModel = viewModel()
 ) {
     val typography = TeamTaskTypography
     val palette = MaterialTheme.colorScheme
@@ -7764,12 +7848,19 @@ fun PeopleSectionForFilters(
                     LazyColumn(
                         modifier = Modifier.fillMaxHeight()
                     ) {
-                        items(filteredPeople) {
+                        items(filteredPeople.sortedBy { it.name }) {
+                            val imageUri = teamStatisticsVM.personImages.collectAsState().value[it.personId]
+
+                            LaunchedEffect(it.personId) {
+                                teamStatisticsVM.fetchPersonImage(it.personId, it.personId)
+                            }
+                            Log.e("testo", it.image + " - " + it.personId)
                             PeopleEntryForFilters(
                                 person = it,
                                 selectedPeople,
                                 addPerson,
-                                removePerson
+                                removePerson,
+                                imageUri
                             )
                         }
 

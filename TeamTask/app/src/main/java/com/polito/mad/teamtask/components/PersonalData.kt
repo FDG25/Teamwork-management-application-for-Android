@@ -60,6 +60,7 @@ fun ProfilePictureSection (
             modifier = Modifier
                 .size(140.dp)
                 .clip(CircleShape)
+                .border(1.dp, palette.secondary, CircleShape)
                 .background(color = palette.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
@@ -73,7 +74,8 @@ fun ProfilePictureSection (
                     contentDescription = "Profile",
                     modifier = Modifier
                         .fillMaxSize()
-                        .clip(CircleShape),
+                        .clip(CircleShape)
+                        .border(1.dp, palette.secondary, CircleShape),
                     contentScale = ContentScale.Crop
                 )
             } else { // No image set

@@ -1,5 +1,7 @@
 package com.polito.mad.teamtask
 
+import android.net.Uri
+import android.util.Log
 import com.polito.mad.teamtask.screens.PersonData
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -24,6 +26,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,6 +36,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -40,9 +46,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.google.firebase.storage.FirebaseStorage
 import com.polito.mad.teamtask.components.ProgressBar
 import com.polito.mad.teamtask.ui.theme.TeamTaskTypography
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlin.math.truncate
 
 data class StatisticsDataPerson(
@@ -90,6 +105,27 @@ class TeamStatisticsViewModel : ViewModel() {
         )
     )
     */
+
+    private val storage = FirebaseStorage.getInstance()
+    private val _personImages = MutableStateFlow<Map<String, Uri?>>(emptyMap())
+    val personImages: StateFlow<Map<String, Uri?>> = _personImages
+
+    fun fetchPersonImage(imageName: String, personId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val imageRef = storage.reference.child("profileImages/$imageName").downloadUrl.await()
+
+                if (imageRef != null) {
+                    _personImages.value =
+                        _personImages.value.toMutableMap().apply { put(personId, imageRef) }
+                } else {
+                    _personImages.value = _personImages.value.toMutableMap().apply { put(personId, null) }
+                }
+            } catch (e: Exception) {
+                _personImages.value = _personImages.value.toMutableMap().apply { put(personId, null) }
+            }
+        }
+    }
 }
 
 
@@ -116,7 +152,7 @@ fun TeamPerformances(
         val personId = tp.personId
         val role = tp.role
         val permission = ""
-        val image = ""
+        val image = tp.personId
         val totalTasksAssigned = tp.totalTasks
         val totalTasksCompleted = tp.completedTasks
         val person = people.firstOrNull { p -> p.first.equals(tp.personId) }
@@ -132,12 +168,22 @@ fun TeamPerformances(
         }
     }
 
-    val bestMember = members
-        .toList().maxByOrNull {
-                p ->
-            if (p.totalTasksCompleted==0) p.totalTasksAssigned
-            else p.totalTasksAssigned / p.totalTasksCompleted
+    val allMembersHaveZeroCompleted = members.all { it.totalTasksCompleted == 0 }
+
+    val bestMember = if (allMembersHaveZeroCompleted) {
+        members.toList().maxByOrNull { p ->
+            p.totalTasksAssigned.toDouble()
         }!!
+    } else {
+        members.toList().maxByOrNull { p ->
+            if (p.totalTasksAssigned == 0) {
+                0.0
+            } else {
+                p.totalTasksCompleted.toDouble() / p.totalTasksAssigned
+            }
+        }!!
+    }
+
 
     LazyColumn(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -286,11 +332,49 @@ fun TeamPerformances(
                             .border(1.dp, palette.primary, shape = CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.person_1), // TODO: ${bestMember.person.image}
-                            contentDescription = "Account Image",
-                            modifier = Modifier.size(48.dp)
-                        )
+                        Log.e("propic", bestMember.person.personId)
+                        Log.e("propic", bestMember.person.image)
+                        val imageUri = teamStatisticsVM.personImages.collectAsState().value[bestMember.person.personId]
+
+                        LaunchedEffect(bestMember.person.personId) {
+                            teamStatisticsVM.fetchPersonImage(bestMember.person.image, bestMember.person.personId)
+                        }
+
+                        Log.e("propic", imageUri.toString())
+
+                        if (imageUri != null) { // User set an image
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(imageUri)
+                                    .error(R.drawable.avatar)
+                                    .crossfade(true)
+                                    .placeholder(R.drawable.avatar)
+                                    //.error()
+                                    .build(),
+                                contentDescription = "Member Pic",
+                                Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .border(1.dp, palette.secondary, CircleShape)
+                                    .background(palette.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (bestMember.person.name.isNotEmpty() && bestMember.person.surname.isNotEmpty()) "${bestMember.person.name[0].uppercaseChar()}${bestMember.person.surname[0].uppercaseChar()}"
+                                    else if (bestMember.person.name.isNotEmpty()) "${bestMember.person.name[0].uppercaseChar()}"
+                                    else "",
+                                    color = palette.onSurface,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
 
                     // Notification icon
@@ -353,8 +437,17 @@ fun TeamPerformances(
         item {
             Column {
                 //teamStatisticsVM.teamData.people
-                members
-                    .forEach { p -> TeamPeopleEntry(p) }
+                members.sortedBy { it.person.name }
+                    .forEach { p ->
+                        val person = p.person
+                        val imageUri = teamStatisticsVM.personImages.collectAsState().value[person.personId]
+
+                        LaunchedEffect(person.personId) {
+                            teamStatisticsVM.fetchPersonImage(person.image, person.personId)
+                        }
+
+                        TeamPeopleEntry(p, imageUri)
+                    }
             }
         }
     }
@@ -362,7 +455,8 @@ fun TeamPerformances(
 
 @Composable
 private fun TeamPeopleEntry (
-    data: StatisticsDataPerson
+    data: StatisticsDataPerson,
+    imageUri: Uri?,
 ) {
     val palette = MaterialTheme.colorScheme
     val typography = TeamTaskTypography
@@ -389,19 +483,40 @@ private fun TeamPeopleEntry (
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Account image
-        Image( // TODO: data.person.image
-            painter = painterResource(id = when (data.person.name.length % 5) {
-                1 -> userImages[0]
-                2 -> userImages[1]
-                3 -> userImages[2]
-                4 -> userImages[3]
-                else -> userImages[2]
-            }),
-            contentDescription = "Account Image",
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-        )
+        if (imageUri != null) { // User set an image
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(imageUri)
+                    .error(R.drawable.avatar)
+                    .crossfade(true)
+                    .placeholder(R.drawable.avatar)
+                    //.error()
+                    .build(),
+                contentDescription = "Member Pic",
+                Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .border(1.dp, palette.secondary, CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .border(1.dp, palette.secondary, CircleShape)
+                    .background(palette.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (data.person.name.isNotEmpty() && data.person.surname.isNotEmpty()) "${data.person.name[0].uppercaseChar()}${data.person.surname[0].uppercaseChar()}"
+                    else if (data.person.name.isNotEmpty()) "${data.person.name[0].uppercaseChar()}"
+                    else "",
+                    color = palette.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.width(10.dp))
 

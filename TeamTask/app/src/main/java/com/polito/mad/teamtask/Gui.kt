@@ -77,6 +77,7 @@ import com.polito.mad.teamtask.screens.ChatScreen
 import com.polito.mad.teamtask.screens.EditProfilePane
 import com.polito.mad.teamtask.screens.FilterTasksScreen
 import com.polito.mad.teamtask.screens.HomeScreen
+import com.polito.mad.teamtask.screens.HomeViewModel
 import com.polito.mad.teamtask.screens.InviteConfirmationScreen
 import com.polito.mad.teamtask.screens.NewTask
 import com.polito.mad.teamtask.screens.NotificationsScreen
@@ -555,6 +556,43 @@ class AppModel(
         }
     }
 
+    fun getAllTasks(): Flow<List<Pair<String, Task>>> = callbackFlow {
+        val listener = db.collection("tasks")
+            .addSnapshotListener { r, e ->
+                if (r != null) {
+                    val l = mutableListOf<Pair<String, Task>>()
+
+                    for (obj in r) {
+                        val id = obj.id
+                        val teamId = obj.getString("teamId") ?: "Toy team 1"
+                        val title = obj.getString("title") ?: ""
+                        val description = obj.getString("description") ?: ""
+                        val creatorId = obj.getString("creatorId") ?: ""
+                        val creationDate = obj.getString("creationDate") ?: currentDateTime
+                        val deadline = obj.getString("deadline") ?: currentDateTime
+                        val prioritized = obj.getBoolean("prioritized") ?: false
+                        val status = obj.getString("status") ?: ""
+                        val tags = obj.get("tags") as List<String>
+                        val recurrence = obj.getString("recurrence") ?: ""
+                        val people = obj.get("people") as List<String>
+
+                        val task = Task(
+                            teamId, title, description, creatorId,
+                            creationDate, deadline, prioritized, status,
+                            tags, recurrence, people
+                        )
+
+                        l.add(Pair(id, task))
+                    }
+
+                    trySend(l)
+                } else {
+                    Log.e("ERROR", e.toString())
+                    trySend(emptyList())
+                }
+            }
+        awaitClose { listener.remove() }
+    }
 
     // Comments
     fun getComments(): Flow<List<Pair<String, Comment>>> = callbackFlow {
@@ -2552,6 +2590,8 @@ class AppViewModel(
     // Tasks
     fun getTasks() = appModel.getTasks()
 
+    fun getAllTasks() = appModel.getAllTasks()
+
     // Comments
     fun getComments() = appModel.getComments()
 
@@ -2592,7 +2632,8 @@ fun AppMainScreen(
     signInWithEmail: (String, String) -> Unit,
     appVM: AppViewModel = viewModel(factory = AppFactory(LocalContext.current)),
     profileVM: ProfileFormViewModel = viewModel(factory = AppFactory(LocalContext.current)),
-    teamVM: SpecificTeamViewModel = viewModel()
+    teamVM: SpecificTeamViewModel = viewModel(),
+    homeVM: HomeViewModel = viewModel()
 ) {
     val navController = rememberNavController()
     Actions.initialize(navController) // Initialize Actions here
@@ -2608,6 +2649,7 @@ fun AppMainScreen(
     val personal by appVM.getPersonal().collectAsState(initial = Pair("", Person()))
     val people by appVM.getPeople().collectAsState(initial = listOf())
     val tasks by appVM.getTasks().collectAsState(initial = listOf())
+    val allTasks by appVM.getAllTasks().collectAsState(initial = listOf())
     val privateMessages by appVM.getPrivateMessages().collectAsState(initial = listOf())
     val teams by appVM.getTeams().collectAsState(initial = listOf())
     val notifications by appVM.getNotifications().collectAsState(initial = listOf())
@@ -2660,7 +2702,8 @@ fun AppMainScreen(
                         people,
                         teams,
                         tasks,
-                        teamParticipants
+                        teamParticipants,
+                        homeVM
                     )
                 }
             }
@@ -2779,6 +2822,8 @@ fun AppMainScreen(
 //                }
 
                     composable("teams") {
+                        teamVM.clearTempState() //RESET EVENTUAL FILTERS SELECTED FOR TASKS
+
                         TeamsScreen(
                             teams.sortedBy { it.second.name },
                             Actions.getInstance().goToTeamTasks, teamsVM
@@ -2808,7 +2853,7 @@ fun AppMainScreen(
 
                         val tps = realTeamParticipants
                             .filter { tp -> tp.teamId.equals(teamId) }
-                        val filteredTasks = tasks
+                        val filteredTasks = allTasks
                             .filter { t -> t.second.teamId.equals(teamId) }
 
                         TeamPerformances(tps, people, filteredTasks)
@@ -2824,15 +2869,23 @@ fun AppMainScreen(
                         val teamId = backStackEntry.arguments?.getString("teamId")
                         val teamName = backStackEntry.arguments?.getString("teamName")
 
-                        AddMemberToTeamScreen(
-                            showSnackbar = true,
-                            teamId = teamId ?: "",
-                            teamName = teamName ?: ""
-                        )
+                        val team = teams.find { it.first == teamId }
+
+                        if (team != null) {
+                            AddMemberToTeamScreen(
+                                showSnackbar = true,
+                                teamId = teamId ?: "",
+                                teamName = teamName ?: "",
+                                team,
+                                teamVM, homeVM
+                            )
+                        }
                     } //TODO: HARDCODED TEAMID and teamName
 
                     composable("teams/{teamId}/tasks") { backStackEntry ->
                         val teamId = backStackEntry.arguments?.getString("teamId")
+
+                        teamVM.cancelCreateTask() //TO RESET EVENTUAL FIELD SELECTED IN CREATING A NEW TASK AND THEN CANCELLING
 
                         // Filter tasks that belong to the specified team
                         val filteredTasks = tasks.filter { it.second.teamId == teamId }
@@ -2920,20 +2973,24 @@ fun AppMainScreen(
                     }
                     composable("teams/{teamId}/edit/people") { backStackEntry ->
                         val teamId = backStackEntry.arguments?.getString("teamId")
-                        val teamName = teams.find { it.first == teamId }?.second?.name
-                        teamId?.let {
-                            if (teamName != null) {
-                                AddMemberToTeamScreen(
-                                    showSnackbar = false,
-                                    teamId = teamId,
-                                    teamName = teamName
-                                )
-                            }
+                        val team = teams.find { it.first == teamId }
+
+                        if (team != null) {
+                            AddMemberToTeamScreen(
+                                showSnackbar = false,
+                                teamId = teamId ?: "",
+                                teamName = team.second.name ?: "",
+                                team,
+                                teamVM, homeVM
+                            )
                         }
                     }
 
                     composable("teams/{teamId}/newTask/status") { backStackEntry ->
                         val teamId = backStackEntry.arguments?.getString("teamId")
+
+                        teamVM.clearTempState()
+
                         teamId?.let {
                             NewTask(teamId, teamVM)
                         }
