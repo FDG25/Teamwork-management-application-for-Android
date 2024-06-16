@@ -192,7 +192,6 @@ class SpecificTeamViewModel : ViewModel() {
     ) {
         _taskpeople.value = taskPeople
         _teampeople.value = teamPeople
-        Log.d("SpecificTeamViewModelLoggone", "TaskPeople: $teampeople")
     }
 
     fun init(
@@ -2414,6 +2413,7 @@ fun NewTask(
     if (vm.isLoadingTaskCreation.value) {
         LoadingScreen()
     }
+
     Scaffold(
         bottomBar = {
             BottomAppBar(
@@ -2493,7 +2493,7 @@ fun NewTask(
                     vm.notPriorityValue,
                     vm::setTaskPriority,
                     vm.taskTagsList,
-                    vm.selectedTags,
+                    vm.selectedTagsForNewTask,
                     vm::addTagForNewTask,
                     vm::removeTagForNewTask,
                 )
