@@ -5255,7 +5255,6 @@ fun EventList(
         ) {
             groupedTasks.forEach { (date, tasks) ->
                 item {
-                    Column {
                         /*
                         Text(
                             text = date,
@@ -5276,7 +5275,7 @@ fun EventList(
 
                             when (Actions.getInstance().getCurrentRoute()) {
                                 "homeCalendar" -> {
-                                    Box(
+                                    Column(
                                         modifier = Modifier.clickable(
                                             onClick = {
                                                 Actions.getInstance().goToTaskComments(
@@ -5304,6 +5303,8 @@ fun EventList(
                                         TaskEntry(pair.second, team?.second,
                                             imageUri
                                         )
+
+                                        Spacer(Modifier.height(5.dp))
                                     }
                                 }
 
@@ -5338,8 +5339,6 @@ fun EventList(
                                 }
                             }
                         }
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
                 }
             }
         }
