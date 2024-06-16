@@ -110,7 +110,7 @@ fun TopBar(
                             modifier = Modifier.size(40.dp)
                         )
                         Spacer(Modifier.width(6.dp))
-                        Text("TeamTask", style = typography.titleLarge, color = palette.onSurface)
+                        Text("TeamTask", style = typography.titleLarge, color = palette.secondary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary)
@@ -129,7 +129,7 @@ fun TopBar(
                     Text(
                         "Personal Agenda",
                         style = typography.titleLarge,
-                        color = palette.onSurface
+                        color = palette.secondary
                     )
                 },
 
@@ -143,7 +143,7 @@ fun TopBar(
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Teams", style = typography.titleLarge, color = palette.onSurface)
+                        Text("Teams", style = typography.titleLarge, color = palette.secondary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary)
@@ -156,7 +156,7 @@ fun TopBar(
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Chats", style = typography.titleLarge, color = palette.onSurface)
+                        Text("Chats", style = typography.titleLarge, color = palette.secondary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary)
@@ -172,7 +172,7 @@ fun TopBar(
                         Text(
                             "Notifications",
                             style = typography.titleLarge,
-                            color = palette.onSurface
+                            color = palette.secondary
                         )
                     }
                 },
@@ -187,7 +187,7 @@ fun TopBar(
                     Text(
                         "Profile",
                         style = typography.titleLarge,
-                        color = palette.onSurface
+                        color = palette.secondary
                     )
                 },
                 actions = {
@@ -205,7 +205,7 @@ fun TopBar(
                                 Text(
                                     "Edit Profile",
                                     style = typography.headlineSmall,
-                                    color = palette.onSurface
+                                    color = palette.secondary
                                 )
                             },
                             onClick = {
@@ -307,7 +307,7 @@ fun TopBar(
                         Text(
                             text = "Attention",
                             style = typography.bodyMedium,
-                            color = palette.secondary,
+                            color = palette.onSurface,
                             fontWeight = FontWeight.Bold
                         )
                     },
@@ -468,7 +468,7 @@ fun TopBar(
                     Text(
                         "Add people",
                         style = typography.titleLarge,
-                        color = palette.onSurface
+                        color = palette.secondary
                     )
                 },
 
@@ -572,7 +572,7 @@ fun TopBar(
                                 Text(
                                     team.second.name,
                                     style = typography.titleMedium,
-                                    color = palette.onSurface,
+                                    color = palette.secondary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -580,13 +580,13 @@ fun TopBar(
                                     Text(
                                         team.second.category,
                                         style = typography.labelSmall,
-                                        color = palette.onSurface,
+                                        color = palette.secondary,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
                                         " | " + team.second.creationDate.split("T")[0],
-                                        color = palette.onSurface,
+                                        color = palette.secondary,
                                         style = typography.labelSmall,
                                         maxLines = 1,
                                     )
@@ -829,7 +829,7 @@ fun TopBar(
                                 Text(
                                     team.second.name,
                                     style = typography.titleMedium,
-                                    color = palette.onSurface,
+                                    color = palette.secondary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -837,14 +837,14 @@ fun TopBar(
                                     Text(
                                         team.second.category,
                                         style = typography.labelSmall,
-                                        color = palette.onSurface,
+                                        color = palette.secondary,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
                                         " | " + team.second.creationDate.split("T")[0],
                                         style = typography.labelSmall,
-                                        color = palette.onSurface,
+                                        color = palette.secondary,
                                         maxLines = 1,
                                     )
                                 }
@@ -889,7 +889,7 @@ fun TopBar(
                     Text(
                         if (currentRoute != "teams/filter") "Filter Tasks" else "Filter Teams",
                         style = typography.titleLarge,
-                        color = palette.onSurface
+                        color = palette.secondary
                     )
                 },
 
@@ -964,7 +964,7 @@ fun TopBar(
                 title = {
                     Text(
                         "Replies",
-                        color = palette.onSurface,
+                        color = palette.secondary,
                         style = typography.titleLarge
                     )
                 },
@@ -985,7 +985,7 @@ fun TopBar(
                     Text(
                         "Edit Team Info",
                         style = typography.titleLarge,
-                        color = palette.onSurface,
+                        color = palette.secondary,
                     )
                 },
 
@@ -1016,7 +1016,7 @@ fun TopBar(
                         Text(
                             "Team name", // TODO: Adapt team name
                             style = typography.titleLarge,
-                            color = palette.onSurface
+                            color = palette.secondary
                         )
                     }
                 },
@@ -1037,7 +1037,7 @@ fun TopBar(
                     Text(
                         "Add people",
                         style = typography.titleLarge,
-                        color = palette.onSurface
+                        color = palette.secondary
                     )
                 },
 
@@ -1064,7 +1064,7 @@ fun TopBar(
                 title = {
                     Text(
                         "New Task",
-                        color = palette.onSurface,
+                        color = palette.secondary,
                         style = typography.titleLarge
                     )
                 },
@@ -1107,7 +1107,7 @@ fun TopBar(
                         if (task != null) {
                             Text(
                                 task.title,
-                                color = palette.onSurface,
+                                color = palette.secondary,
                                 style = typography.titleMedium
                             )
                         }
@@ -1245,7 +1245,7 @@ fun TopBar(
                     Text(
                         "Add People to Task",
                         style = typography.titleLarge,
-                        color = palette.onSurface
+                        color = palette.secondary
                     )
                 },
 
@@ -1263,11 +1263,11 @@ fun TopBar(
 
             if (isGroupChat) {
                 val team = teams.find { it.first == id }
-                topAppBarLabel = team?.second?.name
-                teamCategory = team?.second?.category
+                topAppBarLabel = team?.second?.name ?: "Deleted Team"
+                teamCategory = team?.second?.category ?: ""
             } else {
                 val person = people.find { it.first == id }
-                topAppBarLabel = person?.second?.name + " " + person?.second?.surname
+                topAppBarLabel = if(person != null) person.second.name + " " + person.second.surname else "Deleted User"
             }
 
             TopAppBar(
@@ -1311,7 +1311,7 @@ fun TopBar(
                             Text(
                                 topAppBarLabel ?: "",
                                 style = if (!isGroupChat) typography.titleLarge else typography.titleMedium,
-                                color = palette.onSurface,
+                                color = palette.secondary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -1319,7 +1319,7 @@ fun TopBar(
                                 Text(
                                     teamCategory ?: "",
                                     style = typography.labelSmall,
-                                    color = palette.onSurface,
+                                    color = palette.secondary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -1447,7 +1447,7 @@ fun TopBar(
                     Text(
                         "Contact name", // TODO: Adapt contact name
                         style = typography.titleLarge,
-                        color = palette.onSurface
+                        color = palette.secondary
                     )
                 },
 
@@ -1492,7 +1492,7 @@ fun TopBar(
                             modifier = Modifier.size(32.dp)
                         )
                         Spacer(Modifier.width(10.dp))
-                        Text("TeamTask", style = typography.titleLarge, color = palette.onSurface)
+                        Text("TeamTask", style = typography.titleLarge, color = palette.secondary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary)

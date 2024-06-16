@@ -142,13 +142,13 @@ class ChatViewModel : ViewModel() {
                         val userProfilePicRef =
                             FirebaseStorage.getInstance().reference.child("profileImages/${sender.image}")
                         userProfilePicRef.downloadUrl.addOnSuccessListener { uri ->
-                                _messages.value = _messages.value.map {
-                                    if (it.username == (sender.name + " " + sender.surname)) {
-                                        it.copy(profilePic = uri.toString())
-                                    } else {
-                                        it
-                                    }
+                            _messages.value = _messages.value.map {
+                                if (it.username == (sender.name + " " + sender.surname)) {
+                                    it.copy(profilePic = uri.toString())
+                                } else {
+                                    it
                                 }
+                            }
                         }
                     }
 
@@ -261,7 +261,9 @@ fun MessageEntry(
                 // User or team name
                 Text(
                     modifier = Modifier.weight(1f),
-                    text = message.username,
+                    text = if (message.username != "null null") message.username else {
+                        if (message.isATeam) "Deleted Team" else "Deleted User"
+                    },
                     style = typography.bodyMedium,
                     color = palette.onSurface,
                     fontWeight = FontWeight.Bold,
