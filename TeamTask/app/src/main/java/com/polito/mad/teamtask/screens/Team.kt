@@ -1827,6 +1827,9 @@ class SpecificTeamViewModel : ViewModel() {
                             .await()
                     }
 
+                    Log.e("listOfMembersForFilter", listOfMembersForFilter.map{it -> it.personId}.toString())
+                    Log.e("listOfMembersForFilter", personId)
+
                     // Update the filters
                     listOfMembersForFilter =
                         listOfMembersForFilter.filter { it.personId != personId }
