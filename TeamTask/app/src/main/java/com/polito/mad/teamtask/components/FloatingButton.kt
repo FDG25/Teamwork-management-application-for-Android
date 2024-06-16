@@ -53,6 +53,7 @@ fun FloatingButton (
 //                )
 //            }
         }
+        /*
         "chats" -> {
             FloatingActionButton(
                 onClick = {},
@@ -65,6 +66,7 @@ fun FloatingButton (
                 )
             }
         }
+        */
         else -> {
 
 
