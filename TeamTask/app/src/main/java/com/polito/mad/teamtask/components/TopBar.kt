@@ -485,7 +485,7 @@ fun TopBar(
         }
 
         "teams/{teamId}/tasks", "teams/{teamId}/description", "teams/{teamId}/people",
-        "teams/{teamId}/tasksCalendar" -> {
+        "teams/{teamId}/tasksCalendar", "teams/{teamId}/statistics" -> {
             val teamId = Actions.getInstance().getStringParameter("teamId")
 
             val team = teams.find { it.first == teamId }
@@ -601,35 +601,59 @@ fun TopBar(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.End
                     ) {
-                        // Chat
-                        IconButton(onClick = {
-                            if (teamId != null) {
-                                Actions.getInstance().goToChat(teamId, true)
+                        if(currentRoute != "teams/{teamId}/statistics") {
+                            // Chat
+                            IconButton(onClick = {
+                                if (teamId != null) {
+                                    Actions.getInstance().goToChat(teamId, true)
+                                }
+                            }) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.outline_chat_24),
+                                    contentDescription = "Chat",
+                                    modifier = Modifier
+                                        .scale(1.2f)
+                                        .padding(top = 3.dp),
+                                    colorFilter = ColorFilter.tint(palette.secondary)
+                                )
                             }
-                        }) {
-                            Image(
-                                painter = painterResource(id = R.drawable.outline_chat_24),
-                                contentDescription = "Chat",
-                                modifier = Modifier
-                                    .scale(1.2f)
-                                    .padding(top = 3.dp),
-                                colorFilter = ColorFilter.tint(palette.secondary)
-                            )
-                        }
-                        // Dropdown
-                        DropDownButton(onClick = { setShowMen(true) })
+                            // Dropdown
+                            DropDownButton(onClick = { setShowMen(true) })
 
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { setShowMen(false) },
-                            modifier = Modifier.background(palette.background)
-                        ) {
-                            // Edit profile
-                            if (userPermissionInTeam == "Owner" || userPermissionInTeam == "Admin") {
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { setShowMen(false) },
+                                modifier = Modifier.background(palette.background)
+                            ) {
+                                // Edit profile
+                                if (userPermissionInTeam == "Owner" || userPermissionInTeam == "Admin") {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                "Edit Team Info",
+                                                style = typography.headlineSmall,
+                                                color = palette.onSurface
+                                            )
+                                        },
+                                        onClick = {
+                                            setShowMen(false)
+                                            if (teamId != null) {
+                                                Actions.getInstance().goToEditTeamStatus(teamId)
+                                            }
+                                        },
+                                        leadingIcon = {
+                                            Image(
+                                                painter = painterResource(id = R.drawable.outline_edit_24),
+                                                contentDescription = "Edit Team Info",
+                                                colorFilter = ColorFilter.tint(palette.secondary)
+                                            )
+                                        }
+                                    )
+                                }
                                 DropdownMenuItem(
                                     text = {
                                         Text(
-                                            "Edit Team Info",
+                                            if (!frequentlyAccessed) "Mark as favourite" else "Remove from favourites",
                                             style = typography.headlineSmall,
                                             color = palette.onSurface
                                         )
@@ -637,119 +661,97 @@ fun TopBar(
                                     onClick = {
                                         setShowMen(false)
                                         if (teamId != null) {
-                                            Actions.getInstance().goToEditTeamStatus(teamId)
+                                            // Add/remove team to/from frequentlyAccessed
+                                            addOrRemoveTeamToFavourites(teamId, frequentlyAccessed)
+                                        }
+                                    },
+                                    leadingIcon = {
+                                        Box {
+                                            Image(
+                                                painter = painterResource(id = R.drawable.outline_star_24),
+                                                contentDescription = "Mark as favourite",
+                                                colorFilter = ColorFilter.tint(palette.secondary)
+                                            )
+                                            if (frequentlyAccessed) {
+                                                Image(
+                                                    painter = painterResource(id = R.drawable.outline_remove_24),
+                                                    contentDescription = "Remove from favourites",
+                                                    colorFilter = ColorFilter.tint(palette.error),
+                                                    modifier = Modifier
+                                                        .align(Alignment.Center)
+                                                        .rotate(45f) // Rotate the remove icon to make it diagonal
+                                                )
+                                            }
+                                        }
+                                    }
+                                )
+
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            "Show Statistics",
+                                            style = typography.headlineSmall,
+                                            color = palette.onSurface
+                                        )
+                                    },
+                                    onClick = {
+                                        setShowMen(false)
+                                        if (teamId != null) {
+                                            Actions.getInstance().goToTeamStatistics(teamId)
                                         }
                                     },
                                     leadingIcon = {
                                         Image(
-                                            painter = painterResource(id = R.drawable.outline_edit_24),
-                                            contentDescription = "Edit Team Info",
+                                            painter = painterResource(id = R.drawable.outline_query_stats_24),
+                                            contentDescription = "Show Statistics",
                                             colorFilter = ColorFilter.tint(palette.secondary)
                                         )
                                     }
                                 )
-                            }
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        if (!frequentlyAccessed) "Mark as favourite" else "Remove from favourites",
-                                        style = typography.headlineSmall,
-                                        color = palette.onSurface
-                                    )
-                                },
-                                onClick = {
-                                    setShowMen(false)
-                                    if (teamId != null) {
-                                        // Add/remove team to/from frequentlyAccessed
-                                        addOrRemoveTeamToFavourites(teamId, frequentlyAccessed)
-                                    }
-                                },
-                                leadingIcon = {
-                                    Box {
-                                        Image(
-                                            painter = painterResource(id = R.drawable.outline_star_24),
-                                            contentDescription = "Mark as favourite",
-                                            colorFilter = ColorFilter.tint(palette.secondary)
-                                        )
-                                        if (frequentlyAccessed) {
+                                if (userPermissionInTeam != "Owner") {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                "Leave Team",
+                                                style = typography.headlineSmall,
+                                                color = palette.inverseSurface
+                                            )
+                                        },
+                                        onClick = {
+                                            setShwExitFromTeamModal(true)
+                                            setShowMen(false)
+                                        },
+                                        leadingIcon = {
                                             Image(
-                                                painter = painterResource(id = R.drawable.outline_remove_24),
-                                                contentDescription = "Remove from favourites",
-                                                colorFilter = ColorFilter.tint(palette.error),
-                                                modifier = Modifier
-                                                    .align(Alignment.Center)
-                                                    .rotate(45f) // Rotate the remove icon to make it diagonal
+                                                painter = painterResource(id = R.drawable.outline_logout_24),
+                                                contentDescription = "Leave Team",
+                                                colorFilter = ColorFilter.tint(palette.inverseSurface)
                                             )
                                         }
-                                    }
-                                }
-                            )
-
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        "Show Statistics",
-                                        style = typography.headlineSmall,
-                                        color = palette.onSurface
-                                    )
-                                },
-                                onClick = {
-                                    setShowMen(false)
-                                    if (teamId != null) {
-                                        Actions.getInstance().goToTeamStatistics(teamId)
-                                    }
-                                },
-                                leadingIcon = {
-                                    Image(
-                                        painter = painterResource(id = R.drawable.outline_query_stats_24),
-                                        contentDescription = "Show Statistics",
-                                        colorFilter = ColorFilter.tint(palette.secondary)
                                     )
                                 }
-                            )
-                            if (userPermissionInTeam != "Owner") {
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            "Leave Team",
-                                            style = typography.headlineSmall,
-                                            color = palette.inverseSurface
-                                        )
-                                    },
-                                    onClick = {
-                                        setShwExitFromTeamModal(true)
-                                        setShowMen(false)
-                                    },
-                                    leadingIcon = {
-                                        Image(
-                                            painter = painterResource(id = R.drawable.outline_logout_24),
-                                            contentDescription = "Leave Team",
-                                            colorFilter = ColorFilter.tint(palette.inverseSurface)
-                                        )
-                                    }
-                                )
-                            }
-                            if (userPermissionInTeam == "Owner") {
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            "Delete Team",
-                                            style = typography.headlineSmall,
-                                            color = palette.error
-                                        )
-                                    },
-                                    onClick = {
-                                        setShwDeleteTeamModal(true)
-                                        setShowMen(false)
-                                    },
-                                    leadingIcon = {
-                                        Image(
-                                            painter = painterResource(id = R.drawable.outline_delete_outline_24),
-                                            contentDescription = "Delete Team",
-                                            colorFilter = ColorFilter.tint(palette.error)
-                                        )
-                                    }
-                                )
+                                if (userPermissionInTeam == "Owner") {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                "Delete Team",
+                                                style = typography.headlineSmall,
+                                                color = palette.error
+                                            )
+                                        },
+                                        onClick = {
+                                            setShwDeleteTeamModal(true)
+                                            setShowMen(false)
+                                        },
+                                        leadingIcon = {
+                                            Image(
+                                                painter = painterResource(id = R.drawable.outline_delete_outline_24),
+                                                contentDescription = "Delete Team",
+                                                colorFilter = ColorFilter.tint(palette.error)
+                                            )
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -757,6 +759,7 @@ fun TopBar(
             )
         }
 
+        /*
         "teams/{teamId}/statistics" -> {
             val teamId = Actions.getInstance().getStringParameter("teamId")
 
@@ -876,6 +879,7 @@ fun TopBar(
                 */
             )
         }
+        */
 
         "teams/{teamId}/filterTasks", "teams/filter" -> {
             CenterAlignedTopAppBar(
