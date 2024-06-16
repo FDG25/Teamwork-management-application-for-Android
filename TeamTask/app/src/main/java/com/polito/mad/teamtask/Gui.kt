@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -2501,8 +2502,7 @@ class AppFactory(
             // model.generateData()
             @Suppress("UNCHECKED_CAST")
             return InfoViewModel(model) as T
-        }
-        else if (modelClass.isAssignableFrom(ProfileFormViewModel::class.java)) {
+        } else if (modelClass.isAssignableFrom(ProfileFormViewModel::class.java)) {
             // model.generateData()
             @Suppress("UNCHECKED_CAST")
             return ProfileFormViewModel(model) as T
@@ -3017,8 +3017,9 @@ fun AppMainScreen(
                                 )
                             }
                         }
-
-                        //NotImplementedScreen()
+                        else {
+                            NotImplementedScreen("task")
+                        }
 
                     } // TODO: Implement
                     composable("teams/{teamId}/tasks/{taskId}/comments/{commentId}/{areRepliesOn}") { backStackEntry ->
@@ -3141,6 +3142,9 @@ fun AppMainScreen(
                                 tasksInCommon
                             )
                         }
+                        else {
+                            NotImplementedScreen("account")
+                        }
                     }
 
                     composable("profile") {
@@ -3206,8 +3210,11 @@ fun AppMainScreen(
 
 @Composable
 fun NotImplementedScreen(
+    option: String = ""
 ) {
     val typography = TeamTaskTypography
+
+
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -3224,9 +3231,11 @@ fun NotImplementedScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                "This section of the app is still under development!",
+                if (option.isEmpty()) "This section of the app is still under development!"
+                else "Oops! This $option doesn't exist anymore!",
                 style = typography.bodyMedium,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }

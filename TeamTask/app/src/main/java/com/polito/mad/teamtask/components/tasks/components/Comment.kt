@@ -2,6 +2,7 @@ package com.polito.mad.teamtask.components.tasks.components
 
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +38,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -191,15 +193,15 @@ fun Comment(
                         Spacer(modifier = Modifier.weight(1f))
 
                         // Forward button
-                        IconButton(modifier = Modifier.size(30.dp),
-                            onClick = { /*TODO*/ }) {
-                            Icon(
-                                tint = palette.onSurface,
-                                painter = painterResource(id = R.drawable.baseline_arrow_forward_24),
-                                contentDescription = "options",
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
+//                        IconButton(modifier = Modifier.size(30.dp),
+//                            onClick = { /*TODO*/ }) {
+//                            Icon(
+//                                tint = palette.onSurface,
+//                                painter = painterResource(id = R.drawable.baseline_arrow_forward_24),
+//                                contentDescription = "options",
+//                                modifier = Modifier.size(24.dp)
+//                            )
+//                        }
 
                         Spacer(modifier = Modifier.width(5.dp))
 
@@ -243,14 +245,16 @@ fun Comment(
                                                     tint = palette.onSurface,
                                                     painter = painterResource(id = R.drawable.outline_edit_24),
                                                     contentDescription = "edit",
-                                                    modifier = Modifier.size(25.dp)
+                                                    modifier = Modifier.size(25.dp),
+
                                                 )
                                                 Spacer(modifier = Modifier.size(5.dp))
                                                 Text(
                                                     "Edit",
                                                     style = typography.labelSmall.copy(
                                                         fontSize = 15.sp
-                                                    )
+                                                    ),
+                                                    color = palette.onSurface
                                                 )
                                             }
                                         }
@@ -276,7 +280,8 @@ fun Comment(
                                                         "Turn Off Replies",
                                                         style = typography.labelSmall.copy(
                                                             fontSize = 15.sp
-                                                        )
+                                                        ),
+                                                        color = palette.onSurface
                                                     )
                                                 }
                                             } else {
@@ -286,14 +291,15 @@ fun Comment(
                                                         tint = palette.onSurface,
                                                         painter = painterResource(id = R.drawable.baseline_reply_24),
                                                         contentDescription = "Turn on replies",
-                                                        modifier = Modifier.size(25.dp)
+                                                        modifier = Modifier.size(25.dp),
                                                     )
                                                     Spacer(modifier = Modifier.size(5.dp))
                                                     Text(
                                                         "Turn On Replies",
                                                         style = typography.labelSmall.copy(
                                                             fontSize = 15.sp
-                                                        )
+                                                        ),
+                                                        color = palette.onSurface
                                                     )
                                                 }
                                             }
@@ -389,37 +395,39 @@ fun Comment(
                 modifier = Modifier
                     .height(50.dp)
                     .fillMaxWidth()
-                    .background(color = palette.primaryContainer)
-                    .padding(9.dp),
+                    .background(color = palette.primaryContainer),
                 contentAlignment = Alignment.CenterStart
             ) {
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
+                        .clickable { commentsVM.goToReplies(comment.id, comment.areRepliesOn) }
                 ) {
                     Text(
-                        text = "${comment.repliesNumber} Replies",
+                        text = if (comment.areRepliesOn) "${comment.repliesNumber} Replies" else "${comment.repliesNumber} Replies (replies disabled)",
                         style = typography.labelSmall.copy(
                             color = palette.onSurface,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Normal
                         ),
+                        textDecoration = TextDecoration.Underline,
+                        modifier = Modifier.padding(9.dp)
                     )
 
-                    //Reply button
-                    IconButton(modifier = Modifier.size(30.dp),
-                        onClick = {
-                            commentsVM.goToReplies(comment.id, comment.areRepliesOn)
-                        }
-                    ) {
-                        Icon(
-                            tint = palette.onSurface,
-                            painter = painterResource(id = R.drawable.baseline_reply_24),
-                            contentDescription = "options",
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+//                    //Reply button
+//                    IconButton(modifier = Modifier.size(30.dp),
+//                        onClick = {
+//                            commentsVM.goToReplies(comment.id, comment.areRepliesOn)
+//                        }
+//                    ) {
+//                        Icon(
+//                            tint = palette.onSurface,
+//                            painter = painterResource(id = R.drawable.baseline_reply_24),
+//                            contentDescription = "options",
+//                            modifier = Modifier.size(24.dp)
+//                        )
+//                    }
                 }
             }
         } else {

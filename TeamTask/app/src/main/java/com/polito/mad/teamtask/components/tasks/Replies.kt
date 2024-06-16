@@ -101,7 +101,7 @@ class RepliesViewModel(
                     id = reply.first,
                     commentId = reply.second.commentId,
                     profilePic = user?.profilePic ?: Uri.EMPTY,
-                    username = user?.username ?: "",
+                    username = if (user?.memberId != FirebaseAuth.getInstance().currentUser?.uid) (user?.username ?: "") else ("${user?.username} (You)"),
                     role = "",
                     text = reply.second.body,
                     date = messageDateTime,

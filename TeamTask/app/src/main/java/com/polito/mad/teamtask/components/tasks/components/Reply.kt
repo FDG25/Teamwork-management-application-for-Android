@@ -184,15 +184,15 @@ fun Reply(
                     Spacer(modifier = Modifier.weight(1f))
 
                     // Forward button
-                    IconButton(modifier = Modifier.size(30.dp),
-                        onClick = { /* TODO */ }) {
-                        Icon(
-                            tint = palette.onSurface,
-                            painter = painterResource(id = R.drawable.baseline_arrow_forward_24),
-                            contentDescription = "options",
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+//                    IconButton(modifier = Modifier.size(30.dp),
+//                        onClick = { /* TODO */ }) {
+//                        Icon(
+//                            tint = palette.onSurface,
+//                            painter = painterResource(id = R.drawable.baseline_arrow_forward_24),
+//                            contentDescription = "options",
+//                            modifier = Modifier.size(24.dp)
+//                        )
+//                    }
 
                     Spacer(modifier = Modifier.width(5.dp))
 
@@ -245,7 +245,8 @@ fun Reply(
                                                 "Edit",
                                                 style = typography.labelSmall.copy(
                                                     fontSize = 15.sp
-                                                )
+                                                ),
+                                                color = palette.onSurface
                                             )
                                         }
                                     }

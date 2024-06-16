@@ -168,13 +168,12 @@ fun NotificationEntry (
                     senderName,
                     style = typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    color = palette.onSurface
+                    color = if(senderName != "deleted task") palette.onSurface else palette.error
                 )
             }
 
             Spacer(Modifier.height(5.dp))
 
-            // Notification body
             // Notification body
             Row(
                 modifier = Modifier.fillMaxWidth(),

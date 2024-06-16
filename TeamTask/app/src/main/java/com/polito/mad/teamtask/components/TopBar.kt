@@ -1115,6 +1115,7 @@ fun TopBar(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(palette.primary),
                 actions = {
+                    if(task != null && team != null)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.End

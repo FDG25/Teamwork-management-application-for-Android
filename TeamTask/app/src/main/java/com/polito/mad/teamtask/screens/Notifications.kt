@@ -175,13 +175,13 @@ fun NotificationsScreen (
 
                         notifications.forEach { (id, n) ->
                             val senderName = if (n.fromGroup) {
-                                localTeams[n.senderId]?.name ?: ""
+                                localTeams[n.senderId]?.name ?: "deleted task"
                             } else {
                                 if(n.typology.toInt()==2 || n.typology.toInt()==3) {
-                                    localTeams[n.teamId]?.name ?: ""
+                                    localTeams[n.teamId]?.name ?: "deleted task"
                                 } else {
                                     (localPeople[n.senderId]?.name
-                                        ?: "") + " " + (localPeople[n.senderId]?.surname ?: "")
+                                        ?: "") + " " + (localPeople[n.senderId]?.surname ?: "deleted task")
                                 }
                             }
 

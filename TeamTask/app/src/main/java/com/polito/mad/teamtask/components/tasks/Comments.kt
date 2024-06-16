@@ -107,7 +107,7 @@ class CommentsViewModel(
                 CommentObject(
                     id = comment.first,
                     profilePic = user?.profilePic ?: Uri.EMPTY,
-                    username = user?.username ?: "",
+                    username = if (user?.memberId != FirebaseAuth.getInstance().currentUser?.uid) (user?.username ?: "") else ("${user?.username} (You)"),
                     role = "",
                     text = comment.second.body ?: "",
                     date = messageDateTime,
