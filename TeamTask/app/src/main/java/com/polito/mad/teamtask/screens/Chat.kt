@@ -36,6 +36,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -221,26 +222,35 @@ fun MessageEntry(
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(message.profilePic ?: R.drawable.baseline_person_24)
+                        .error(R.drawable.avatar)
                         .crossfade(true)
-                        .error(R.drawable.baseline_person_24)
+                        .placeholder(R.drawable.avatar)
+                        //.error()
                         .build(),
-                    contentDescription = "Profile Image",
-                    contentScale = ContentScale.Crop,
-                    modifier =
+                    contentDescription = "Member Pic",
                     Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .border(1.dp, palette.secondary, CircleShape)
+                        .border(1.dp, palette.secondary, CircleShape),
+                    contentScale = ContentScale.Crop
                 )
             } else {
-                Image(
-                    painter = painterResource(id = R.drawable.baseline_person_24), // TODO: Replace with placeholder for teams
-                    contentDescription = "Default Team image",
+                Box(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
                         .border(1.dp, palette.secondary, CircleShape)
-                )
+                        .background(palette.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (message.username.split(" ")[0].isNotEmpty() && message.username.split(" ")[1].isNotEmpty()) "${message.username.split(" ")[0][0].uppercaseChar()}${message.username.split(" ")[1][0].uppercaseChar()}"
+                        else if (message.username.split(" ")[0].isNotEmpty()) "${message.username.split(" ")[0][0].uppercaseChar()}"
+                        else "",
+                        color = palette.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 
