@@ -2949,7 +2949,10 @@ fun AppMainScreen(
                         NotImplementedScreen()
                     } // TODO: Implement
 
-                    composable("teams/{teamId}/filterTasks") { FilterTasksScreen(teamVM) }
+                    composable("teams/{teamId}/filterTasks") {
+                        teamVM.setTempMembersInFilterPage()
+                        FilterTasksScreen(teamVM)
+                    }
                     composable("teams/{teamId}/edit/status") { backStackEntry ->
                         val teamId = backStackEntry.arguments?.getString("teamId")
                         val team = teams.find { it.first == teamId }

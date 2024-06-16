@@ -1203,8 +1203,23 @@ class SpecificTeamViewModel : ViewModel() {
         listOfMembersForFilter = emptyList()
     }
 
+    fun setTempMembersInFilterPage() {
+        listOfMembersForFilter.forEach { person ->
+            if (!_selectedPeople.contains(person)) {
+                _selectedPeople.add(person)
+            }
+        }
+    }
+
+
     fun setMembersInFilterPage() {
-        listOfMembersForFilter = tempListOfMembersForFilter.toList()
+        listOfMembersForFilter = selectedPeople.toList()
+    }
+
+    fun removeMemberFromFilter(member: PersonData) {
+        Log.e("selectedPeople", selectedPeople.toList().toString())
+        Log.e("selectedPeople2", listOfMembersForFilter.toString())
+        listOfMembersForFilter = listOfMembersForFilter - member
     }
 
     var tempListOfMembersForFilter by mutableStateOf(emptyList<PersonData>())
@@ -3357,6 +3372,7 @@ private fun TaskList(
     clearSelectedPeople: () -> Unit,
     //tempListOfMembersForFilter: List<PersonData>, addTempMemberToFilter: (PersonData) -> Unit,
     removeTempMemberToFilter: (PersonData) -> Unit, //clearTempMembersInFilterPage: () -> Unit,
+    removeMemberFromFilter: (PersonData) -> Unit,
     selectedTags: List<String>,
     setSelectedTags: () -> Unit,
     removeTempSelectedTags: (String) -> Unit,
@@ -3509,8 +3525,8 @@ private fun TaskList(
                                 FilterBadge(
                                     label = "${person.name} ${person.surname}",
                                     onRemove = {
-                                        removeTempMemberToFilter(person)
-                                        setMembersInFilterPage()
+                                        removeMemberFromFilter(person)
+                                        //setMembersInFilterPage()
                                     }
                                 )
                             }
@@ -4458,6 +4474,7 @@ fun Tab3Screen(
     //clearTempMembersInFilterPage: () -> Unit,
     addSelectedTeamPeopleToTask: () -> Unit,
     removePersonFromTask: (String, String) -> Unit,
+    removeMemberFromFilter: (PersonData) -> Unit,
     removePersonFromTeam: (String, String) -> Unit,
     filteredPeople: List<PersonData>,
     tabs: List<String>,
@@ -4598,6 +4615,7 @@ fun Tab3Screen(
                 filteredTasks, searchQueryForTask, onSearchQueryForTask,
                 listOfMembersForFilter, setMembersInFilterPage, clearSelectedPeople,
                 removeTempMemberToFilter,
+                removeMemberFromFilter,
                 selectedTags, setSelectedTags, removeTempSelectedTags,
                 clearSelectedDateRangeError,
                 setTempDueDateStartDateTime,
@@ -5767,6 +5785,7 @@ fun SpecificTeamScreen(
             vm::removeTempMemberToFilter,
             vm::addSelectedTeamPeopleToTask,
             vm::removePersonFromTask,
+            vm::removeMemberFromFilter,
             vm::removePersonFromTeam,
             vm.filteredPeople,
             tabs,

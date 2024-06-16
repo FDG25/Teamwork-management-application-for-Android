@@ -98,6 +98,7 @@ fun TeamEntry (
             )
 
             // Unread messages
+            /*
             if (unreadNotifications > 0) {
                 Badge (
                     modifier = Modifier
@@ -114,6 +115,7 @@ fun TeamEntry (
                     )
                 }
             }
+             */
         }
     }
 }
