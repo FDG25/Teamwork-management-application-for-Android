@@ -1722,7 +1722,7 @@ class SpecificTeamViewModel : ViewModel() {
 
 
     // Method to remove a person from taskpeople
-    fun removePersonFromTask(teamId: String, personId: String) {
+    fun removePersonFromTask(taskId: String, personId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 // Update local state
@@ -1730,33 +1730,34 @@ class SpecificTeamViewModel : ViewModel() {
                 _taskpeople.value = updatedTaskPeople
 
                 val updatedTasks = _toDoTasks.value.map { task ->
-                    task.copy(taskpeople = task.taskpeople.filter { it.personId != personId })
+                    if (task.taskId == taskId) {
+                        task.copy(taskpeople = task.taskpeople.filter { it.personId != personId })
+                    } else {
+                        task
+                    }
                 }
                 _toDoTasks.value = updatedTasks
 
                 // Update Firestore tasks collection
-                val tasksSnapshot =
-                    db.collection("tasks").whereEqualTo("teamId", teamId).get().await()
-                tasksSnapshot.documents.forEach { taskDoc ->
-                    val taskPeople =
-                        taskDoc.get("people") as? MutableList<String> ?: mutableListOf()
+                val taskDoc = db.collection("tasks").document(taskId).get().await()
+                if (taskDoc.exists()) {
+                    val taskPeople = taskDoc.get("people") as? MutableList<String> ?: mutableListOf()
                     if (taskPeople.contains(personId)) {
                         taskPeople.remove(personId)
-                        db.collection("tasks").document(taskDoc.id).update("people", taskPeople)
-                            .await()
+                        db.collection("tasks").document(taskDoc.id).update("people", taskPeople).await()
                     }
                 }
 
                 // Update the filters
-                listOfMembersForFilter = listOfMembersForFilter.filter { it.personId != personId }
-                tempListOfMembersForFilter =
-                    tempListOfMembersForFilter.filter { it.personId != personId }
+                //listOfMembersForFilter = listOfMembersForFilter.filter { it.personId != personId }
+                //tempListOfMembersForFilter = tempListOfMembersForFilter.filter { it.personId != personId }
             } catch (e: Exception) {
                 // Handle any errors that occur during the database operation
                 e.printStackTrace()
             }
         }
     }
+
 
     fun removePersonFromTeam(teamId: String, personId: String) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -1831,6 +1832,7 @@ class SpecificTeamViewModel : ViewModel() {
                         listOfMembersForFilter.filter { it.personId != personId }
                     tempListOfMembersForFilter =
                         tempListOfMembersForFilter.filter { it.personId != personId }
+                    setTempMembersInFilterPage()
                 }
             } catch (e: Exception) {
                 // Handle any errors that occur during the database operation
@@ -5966,6 +5968,7 @@ fun CustomToggle(
 @Composable
 private fun PeopleEntry(
     teamId: String,
+    taskId: String,
     person: PersonData,
     selectedPeople: List<PersonData>,
     addPerson: (PersonData) -> Unit,
@@ -6025,7 +6028,7 @@ private fun PeopleEntry(
                                 if (isInTeamPeople) {
                                     vm.removePersonFromTeam(teamId, person.personId)
                                 } else {
-                                    removePersonFromTask(teamId, person.personId)
+                                    removePersonFromTask(taskId, person.personId)
 
                                 }
                                 showMenu = false  // Close the dialog after action
@@ -6625,10 +6628,11 @@ private fun PeopleEntryForTeam(
                             onClick = {
                                 if (isInTeamPeople) {
                                     vm.removePersonFromTeam(teamId, person.personId)
-                                } else {
-                                    removePersonFromTask(teamId, person.personId)
-
                                 }
+                                /*else {
+                                    removePersonFromTask(taskId, person.personId)
+                                }
+                                 */
                                 showMenu = false  // Close the dialog after action
                             },
                             colors = ButtonDefaults.buttonColors(
@@ -7113,6 +7117,7 @@ fun PeopleSection(
                 items(taskpeople.sortedBy { it.name }) {
                     PeopleEntry(
                         teamId,
+                        taskId,
                         person = it,
                         selectedPeople,
                         addPerson,
@@ -7587,6 +7592,7 @@ fun PeopleSectionCreation(
                 items(filteredPeople.sortedBy { it.name }) {
                     PeopleEntry(
                         teamId,
+                        taskId = "",
                         person = it,
                         selectedPeople,
                         addPerson,
