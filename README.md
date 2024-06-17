@@ -1,6 +1,10 @@
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-24ddc0f5d75046c5622901739e7c5dd533143b0c8e959d652212380cedb1ea36.svg)](https://classroom.github.com/a/I9qcx08w)
 
-# FIRESTORE DATABASE RULES:
+## SCREENSHOTS SHOWING THE MAIN SCREENS OF OUR APP
+Inserted in [screenshots_g03.zip](screenshots_g03.zip) inside the repository.
+
+## FIRESTORE DATABASE RULES:
+```
 rules_version = '2';
 
 service cloud.firestore {
@@ -62,5 +66,4 @@ service cloud.firestore {
     
   }
 }
-
-# SCREENSHOTS SHOWING THE MAIN SCREENS OF OUR APP
+```

@@ -387,7 +387,7 @@ fun TopBar(
                     Text(
                         "New Team",
                         style = typography.titleLarge,
-                        color = palette.onSurface
+                        color = palette.secondary
                     )
                 },
 
