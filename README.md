@@ -4,6 +4,7 @@
 Inserted in [screenshots_g03.zip](screenshots_g03.zip) inside the repository.
 
 ## FIRESTORE DATABASE RULES:
+```
 rules_version = '2';
 
 service cloud.firestore {
@@ -65,4 +66,4 @@ service cloud.firestore {
     
   }
 }
-
+```
