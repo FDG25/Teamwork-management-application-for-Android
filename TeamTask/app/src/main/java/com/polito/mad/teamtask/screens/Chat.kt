@@ -235,20 +235,43 @@ fun MessageEntry(
                     contentScale = ContentScale.Crop
                 )
             } else {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .border(1.dp, palette.secondary, CircleShape)
-                        .background(palette.surfaceVariant),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (message.username.split(" ")[0].isNotEmpty() && message.username.split(" ")[1].isNotEmpty()) "${message.username.split(" ")[0][0].uppercaseChar()}${message.username.split(" ")[1][0].uppercaseChar()}"
-                        else if (message.username.split(" ")[0].isNotEmpty()) "${message.username.split(" ")[0][0].uppercaseChar()}"
-                        else "",
-                        color = palette.onSurface,
-                        fontWeight = FontWeight.Bold
+                if (message.username != "null null") {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .border(1.dp, palette.secondary, CircleShape)
+                            .background(palette.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (message.username.split(" ")[0].isNotEmpty() && message.username.split(
+                                    " "
+                                )[1].isNotEmpty()
+                            ) "${message.username.split(" ")[0][0].uppercaseChar()}${
+                                message.username.split(
+                                    " "
+                                )[1][0].uppercaseChar()
+                            }"
+                            else if (message.username.split(" ")[0].isNotEmpty()) "${
+                                message.username.split(
+                                    " "
+                                )[0][0].uppercaseChar()
+                            }"
+                            else "",
+                            color = palette.onSurface,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.baseline_person_24),
+                        contentDescription = "Default User image",
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .border(1.dp, palette.secondary, CircleShape)
+                            .padding(4.dp)
                     )
                 }
             }
